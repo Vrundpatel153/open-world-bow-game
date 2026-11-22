@@ -250,12 +250,15 @@ export default function ProductionFPSController({
       stepTimer.current = 0
     }
 
-    // Dynamic Aim-Down-Sights (ADS) Field of View Zoom
+    // Dynamic Aim-Down-Sights (ADS) Field of View Zoom (Smooth archer focus zoom)
     const isAiming = useQuestStore.getState().isAiming
-    const targetFov = isAiming ? 46 : 68
+    const drawProgress = useQuestStore.getState().drawProgress
+    const isBowEquipped = useQuestStore.getState().isBowEquipped
+    const zoomActive = isBowEquipped && (isAiming || drawProgress > 0.05)
+    const targetFov = zoomActive ? 68 - Math.max(isAiming ? 14 : 0, drawProgress * 16) : 68
     if (camera instanceof THREE.PerspectiveCamera) {
       if (Math.abs(camera.fov - targetFov) > 0.05) {
-        camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, 14, dt)
+        camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, 12, dt)
         camera.updateProjectionMatrix()
       }
     }

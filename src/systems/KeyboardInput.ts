@@ -138,8 +138,13 @@ class InputManager {
     return this._isMouseDown
   }
 
+  public mouseDeltaX = 0
+  public mouseDeltaY = 0
+
   public consumeMouseDelta(): { dx: number; dy: number } {
     const delta = { dx: this._mouseDeltaX, dy: this._mouseDeltaY }
+    this.mouseDeltaX = this._mouseDeltaX
+    this.mouseDeltaY = this._mouseDeltaY
     this._mouseDeltaX = 0
     this._mouseDeltaY = 0
     return delta

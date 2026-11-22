@@ -121,6 +121,26 @@ class SoundSynthesizer {
     osc.stop(now + 0.35)
   }
 
+  // ── Arrow Nock / Reload: Soft wood slide & nock click onto string ───────────
+  public playArrowNock() {
+    if (this.isMuted) return
+    this.ensureContext()
+    if (!this.ctx || !this.masterGain) return
+    const now = this.ctx.currentTime
+
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(440, now)
+    osc.frequency.exponentialRampToValueAtTime(780, now + 0.04)
+    gain.gain.setValueAtTime(0.08, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06)
+    osc.connect(gain)
+    gain.connect(this.masterGain)
+    osc.start(now)
+    osc.stop(now + 0.06)
+  }
+
   // ── Bow Equip: Leather rustle & subtle string twang ─────────────────────────
   public playBowEquip() {
     if (this.isMuted) return
