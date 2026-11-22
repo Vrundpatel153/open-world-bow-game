@@ -92,7 +92,12 @@ export default function ProductionFPSController({
     const handleCanvasClick = (e: MouseEvent) => {
       if ((e.target as HTMLElement)?.closest('button, [class*="leva"], a, input')) return
       if (!inputManager.isLocked) {
-        canvas.requestPointerLock()
+        try {
+          const promise = (canvas as any).requestPointerLock?.()
+          if (promise && typeof promise.catch === 'function') {
+            promise.catch(() => {})
+          }
+        } catch (_) {}
       }
     }
 

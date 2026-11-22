@@ -57,7 +57,12 @@ export default function FirstPersonController({
       isMouseDown.current = true
       // Request pointer lock on canvas click
       if (!isLocked.current && e.target === gl.domElement) {
-        gl.domElement.requestPointerLock()
+        try {
+          const promise = (gl.domElement as any).requestPointerLock?.()
+          if (promise && typeof promise.catch === 'function') {
+            promise.catch(() => {})
+          }
+        } catch (_) {}
       }
     }
 

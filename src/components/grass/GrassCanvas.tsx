@@ -114,7 +114,14 @@ export default function GrassCanvas() {
         <div
           onClick={() => {
             const canvas = document.querySelector('canvas')
-            canvas?.requestPointerLock()
+            if (canvas) {
+              try {
+                const promise = (canvas as any).requestPointerLock?.()
+                if (promise && typeof promise.catch === 'function') {
+                  promise.catch(() => {})
+                }
+              } catch (_) {}
+            }
             inputManager.setLocked(true)
           }}
           style={{

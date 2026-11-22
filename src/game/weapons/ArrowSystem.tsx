@@ -93,7 +93,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
     shaft.rotateX(Math.PI / 2)
     shaft.translate(0, 0, -0.321) // Centered at -0.321, spans [-0.070, -0.572]
 
-    // 4. White Turkey Shield-Cut Feathers (3 vanes at rear tail, z = -0.495 to -0.565)
+    // 4. White Turkey Shield-Cut Feathers (3 vanes at rear tail, z = -0.502 to -0.572, mount flush to nock)
     const fletchShape = new THREE.Shape()
     fletchShape.moveTo(0, 0)
     fletchShape.lineTo(0.0085, -0.012)
@@ -107,10 +107,10 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
     const thread = new THREE.CylinderGeometry(0.0033, 0.0033, 0.0035, 12)
     thread.rotateX(Math.PI / 2)
 
-    // 5. Carved Bone Nock (at rear tail z = -0.572 to -0.584)
-    const nock = new THREE.CylinderGeometry(0.0035, 0.0035, 0.012, 12)
+    // 5. Carved Bone Nock (at rear tail z = -0.572 to -0.582)
+    const nock = new THREE.CylinderGeometry(0.0034, 0.0034, 0.010, 12)
     nock.rotateX(Math.PI / 2)
-    nock.translate(0, 0, -0.578)
+    nock.translate(0, 0, -0.577)
 
     // Materials
     const sMat = new THREE.MeshStandardMaterial({
@@ -132,14 +132,14 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
     })
 
     const fMat = new THREE.MeshStandardMaterial({
-      color: '#ffffff', // Crisp bright white feathers (matches reference image)
-      roughness: 0.45,
+      color: '#f0f3f6', // Authentic white turkey feathers
+      roughness: 0.55,
       side: THREE.DoubleSide,
     })
 
     const nMat = new THREE.MeshStandardMaterial({
-      color: '#f5efe4',
-      roughness: 0.32,
+      color: '#ded6c9', // Natural bone nock
+      roughness: 0.48,
     })
 
     const thMat = new THREE.MeshStandardMaterial({
@@ -178,10 +178,9 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
     spawnArrow: (origin: THREE.Vector3, direction: THREE.Vector3, power: number) => {
       recordShot()
 
-      // Gameplay ballistic speed: 34 m/s to 48 m/s (punchy, readable frame-by-frame trajectory)
-      const speed = 34 + power * 14
+      // Ballistic velocity: directly along crosshair sightline
+      const speed = 38 + power * 14
       const vel = direction.clone().multiplyScalar(speed)
-      vel.y += 0.32 * power // subtle aerodynamic lift
 
       // Initial orientation: align local +Z (broadhead razor blade) strictly with direction of flight
       const fwd = direction.clone().normalize()
@@ -455,14 +454,6 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
               position={[a.pos.x, a.pos.y, a.pos.z]}
               quaternion={renderQuat}
             >
-              {/* Luminous flight tracer at rear nock for high-speed frame-by-frame visibility */}
-              {!a.stuck && (
-                <mesh position={[0, 0, -0.54]}>
-                  <sphereGeometry args={[0.016, 6, 6]} />
-                  <meshBasicMaterial color="#ffffff" transparent opacity={0.85} depthWrite={false} />
-                </mesh>
-              )}
-
               {/* 1. Silver Broadhead Razor Blade (at front z = 0, pointing +Z) */}
               <mesh geometry={tipGeo} material={tipMat} position={[0, 0, 0]} />
 
@@ -478,16 +469,16 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
               {/* 4. Carved Bone Nock */}
               <mesh geometry={nockGeo} material={nockMat} position={[0, 0, 0]} />
 
-              {/* 5. 3 White Turkey Shield-Cut Feathers (at rear tail z = -0.495 to -0.565) */}
+              {/* 5. 3 White Turkey Shield-Cut Feathers (at rear tail z = -0.502 to -0.572, mounted flush against nock) */}
               {[0, (Math.PI * 2) / 3, (Math.PI * 4) / 3].map((angle, i) => (
-                <group key={i} position={[0, 0, -0.495]} rotation={[0, 0, angle]}>
+                <group key={i} position={[0, 0, -0.502]} rotation={[0, 0, angle]}>
                   <mesh geometry={fletchGeo} material={fletchMat} position={[0, 0.0028, 0]} />
                 </group>
               ))}
 
               {/* Silk Thread Whipping Rings */}
-              <mesh geometry={threadGeo} material={threadMat} position={[0, 0, -0.494]} />
-              <mesh geometry={threadGeo} material={threadMat} position={[0, 0, -0.566]} />
+              <mesh geometry={threadGeo} material={threadMat} position={[0, 0, -0.502]} />
+              <mesh geometry={threadGeo} material={threadMat} position={[0, 0, -0.572]} />
             </group>
           </group>
         )

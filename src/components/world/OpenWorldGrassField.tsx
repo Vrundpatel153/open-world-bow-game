@@ -152,8 +152,8 @@ export default function OpenWorldGrassField({
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
   const { terrainMesh, coreBladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
-    // 1. High-Density Core Meadow Plane (86m x 86m covering active sanctuary gaplessly)
-    const coreMeadowGeo = new THREE.PlaneGeometry(86, 86, 96, 96)
+    // 1. High-Density Core Meadow Plane (116m x 116m covering sanctuary & rolling hills seamlessly)
+    const coreMeadowGeo = new THREE.PlaneGeometry(116, 116, 120, 120)
     coreMeadowGeo.rotateX(-Math.PI / 2)
     const cPosAttr = coreMeadowGeo.attributes.position
     for (let i = 0; i < cPosAttr.count; i++) {
@@ -163,12 +163,12 @@ export default function OpenWorldGrassField({
     }
     coreMeadowGeo.computeVertexNormals()
 
-    // 85,000 5-blade organic tufts (425,000 curved slender blades) across core sanctuary:
-    // Rich, lush, dense, completely gapless carpet
+    // 95,000 5-blade organic tufts (475,000 curved slender blades) across core sanctuary:
+    // Rich, lush, dense, completely gapless carpet that smoothly fades into horizon fog
     const coreBlades = scatterBlades(new THREE.Mesh(coreMeadowGeo), {
       uniforms: u.surface,
-      density: 16,
-      maxCount: 85_000,
+      density: 12,
+      maxCount: 95_000,
       minWidth: 0.16,
       maxWidth: 0.24,
       minLength: 0.30,

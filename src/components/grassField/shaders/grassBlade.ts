@@ -112,7 +112,7 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
   // Open-world Lazy Loading & Distance Culling:
   // Blades beyond draw distance smoothly fade into ground, eliminating distant ridge noise & GPU overhead
   float camDist = length(baseXZ - cameraPosition.xz);
-  float distFade = 1.0 - smoothstep(36.0, 48.0, camDist);
+  float distFade = 1.0 - smoothstep(50.0, 72.0, camDist);
   float shrink = (1.0 - uDirtCut * vDirt) * (1.0 - uRockFlatten * rockInfl) * distFade;
   transformed.y *= shrink;
 

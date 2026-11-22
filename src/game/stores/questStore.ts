@@ -205,7 +205,7 @@ export const useQuestStore = create<QuestState>((set, get) => ({
             ? 'Recurve Bow stowed'
             : item === 'torch'
             ? 'Wood Torch extinguished'
-            : 'Wooden Sword sheathed',
+            : 'Ancient Rune Blade sheathed',
       })
     } else {
       // Equip target item
@@ -220,7 +220,7 @@ export const useQuestStore = create<QuestState>((set, get) => ({
             ? 'Recurve Bow readied [1]'
             : item === 'torch'
             ? 'Forest Wood Torch ignited [2]'
-            : 'Wooden Training Blade drawn [3]',
+            : 'Ancient Rune Blade drawn [3]',
       })
     }
   },

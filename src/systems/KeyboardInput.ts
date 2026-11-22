@@ -83,7 +83,7 @@ class InputManager {
   }
 
   private handleMouseDown = (e: MouseEvent) => {
-    if ((e.target as HTMLElement)?.closest('[class*="leva"], button, a')) return
+    if (e.target instanceof Element && e.target.closest('[class*="leva"], button, a')) return
     this._isMouseDown = true
   }
 
