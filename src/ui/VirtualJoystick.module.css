@@ -1,0 +1,87 @@
+.container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.base {
+  position: absolute;
+  bottom: 28px;
+  left: 28px;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  touch-action: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.base.active {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: #c8e87a;
+}
+
+.knob {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #e2ff94, #8ec228);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.actionButtons {
+  position: absolute;
+  bottom: 28px;
+  right: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  pointer-events: auto;
+}
+
+.actionBtn {
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(10, 30, 8, 0.7);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s, background 0.15s, border-color 0.15s;
+}
+
+.actionBtn:active {
+  transform: scale(0.92);
+  background: rgba(200, 232, 122, 0.35);
+}
+
+.sprintActive {
+  background: rgba(142, 194, 40, 0.85);
+  border-color: #c8e87a;
+  color: #0d2005;
+}
+
+/* Hide on desktop by default if pointer is mouse, show if touch enabled or mobile */
+@media (hover: hover) and (pointer: fine) and (min-width: 900px) {
+  .container {
+    opacity: 0.85;
+  }
+}

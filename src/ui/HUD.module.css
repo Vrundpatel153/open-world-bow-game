@@ -1,0 +1,194 @@
+.wrapper {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px 20px;
+  user-select: none;
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #d6f285;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.skyPills {
+  display: flex;
+  gap: 6px;
+  background: rgba(12, 28, 8, 0.65);
+  backdrop-filter: blur(10px);
+  padding: 4px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.skyPill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.skyPill:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.activeSky {
+  background: #8ec228 !important;
+  color: #0b1a04 !important;
+  box-shadow: 0 2px 8px rgba(142, 194, 40, 0.4);
+}
+
+.skyIcon {
+  font-size: 13px;
+}
+
+/* ── First-Person Reticle & Click Prompt ─────────────────────────────────── */
+.centerReticle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  gap: 14px;
+}
+
+.crosshairDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(200, 232, 122, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.clickPrompt {
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e5f59f;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 20px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  animation: pulse 2s infinite ease-in-out;
+  white-space: nowrap;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.04); opacity: 1; }
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.controlsBadge {
+  background: rgba(8, 20, 6, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 6px 14px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.keyTag {
+  background: rgba(255, 255, 255, 0.16);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  color: #d6f285;
+  font-family: monospace;
+}
+
+.separator {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.statusGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggleTouchBtn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background 0.2s;
+}
+
+.toggleTouchBtn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.fps {
+  font-size: 12px;
+  font-family: monospace;
+  font-weight: 700;
+  color: #a3d93b;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+@media (max-width: 600px) {
+  .controlsBadge {
+    display: none;
+  }
+}
