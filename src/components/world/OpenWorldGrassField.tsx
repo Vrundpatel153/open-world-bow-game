@@ -152,8 +152,8 @@ export default function OpenWorldGrassField({
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
   const { terrainMesh, coreBladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
-    // 1. High-Density Core Meadow Plane (104m x 104m covering active sanctuary gaplessly)
-    const coreMeadowGeo = new THREE.PlaneGeometry(104, 104, 80, 80)
+    // 1. High-Density Core Meadow Plane (86m x 86m covering active sanctuary gaplessly)
+    const coreMeadowGeo = new THREE.PlaneGeometry(86, 86, 96, 96)
     coreMeadowGeo.rotateX(-Math.PI / 2)
     const cPosAttr = coreMeadowGeo.attributes.position
     for (let i = 0; i < cPosAttr.count; i++) {
@@ -163,16 +163,17 @@ export default function OpenWorldGrassField({
     }
     coreMeadowGeo.computeVertexNormals()
 
-    // High-Density Sanctuary Meadow with authentic slender blades cloned from the model
+    // 85,000 5-blade organic tufts (425,000 curved slender blades) across core sanctuary:
+    // Rich, lush, dense, completely gapless carpet
     const coreBlades = scatterBlades(new THREE.Mesh(coreMeadowGeo), {
       uniforms: u.surface,
-      density: 28,
-      maxCount: 75_000,
-      minWidth: 0.08,
-      maxWidth: 0.14,
-      minLength: 0.26,
-      maxLength: 0.48,
-      tiltMax: 0.22,
+      density: 16,
+      maxCount: 85_000,
+      minWidth: 0.16,
+      maxWidth: 0.24,
+      minLength: 0.30,
+      maxLength: 0.50,
+      tiltMax: 0.24,
       segments: 3,
     })
 
@@ -193,7 +194,7 @@ export default function OpenWorldGrassField({
     terrainGeo.computeVertexNormals()
 
     // Vibrant forest meadow moss ground material perfectly matching grass blade bases
-    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#2d5612'))
+    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#22460e'))
     const groundMesh = new THREE.Mesh(terrainGeo, groundMat)
     groundMesh.receiveShadow = true
     groundMesh.castShadow = false
@@ -464,26 +465,26 @@ export default function OpenWorldGrassField({
 
     // Colors (Authentic Studio Ghibli stylized meadow matching cloned model)
     const c = colorsRef.current
-    c.grassBottom.set('#2d5612')
-    c.grassTop.set('#7ea81e')
+    c.grassBottom.set('#22460e')
+    c.grassTop.set('#78a41c')
     s.uGrassBottom.value.copy(c.grassBottom)
     s.uGrassTop.value.copy(c.grassTop)
-    s.uGradStart.value = 0.10
-    s.uGradEnd.value = 0.95
+    s.uGradStart.value = 0.08
+    s.uGradEnd.value = 0.94
     s.uGradPower.value = 1.15
-    s.uBrightness.value = 0.94
+    s.uBrightness.value = 0.96
 
     // Lush vs Dry environmental patches
-    s.uPatchLush.value.set('#244a0e')
-    s.uPatchDry.value.set('#84aa22')
+    s.uPatchLush.value.set('#1e400c')
+    s.uPatchDry.value.set('#7ea420')
     s.uPatchStrength.value = 0.10
     s.uPatchScale.value = 0.08
     s.uPatchBias.value = 1.3
 
     // Translucency (Subsurface sun scatter — luminous golden-green leaf transmission from model)
-    c.transColor.set('#c2e646')
+    c.transColor.set('#c4e848')
     s.uTransColor.value.copy(c.transColor)
-    s.uTransStrength.value = 2.2
+    s.uTransStrength.value = 2.4
     s.uTransPower.value = 3.6
     s.uTransTip.value = 0.82
     s.uTransShadow.value = 1.0
