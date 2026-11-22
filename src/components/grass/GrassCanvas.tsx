@@ -81,7 +81,7 @@ export default function GrassCanvas() {
         style={{ background: "#060c04" }}
       >
         {/* Dynamic Atmospheric Fog synced with Day-Night Cycle */}
-        <fog attach="fog" args={[fogColor, 35, 230]} />
+        <fog attach="fog" args={[fogColor, 45, 120]} />
         <FpsSystem />
         <GrassSceneContent
           mode="Background"
@@ -115,6 +115,7 @@ export default function GrassCanvas() {
           onClick={() => {
             const canvas = document.querySelector('canvas')
             canvas?.requestPointerLock()
+            inputManager.setLocked(true)
           }}
           style={{
             position: "absolute",

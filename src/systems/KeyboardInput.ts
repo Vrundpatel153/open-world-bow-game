@@ -21,8 +21,17 @@ class InputManager {
   // Callbacks for pointer lock changes
   private lockListeners: ((locked: boolean) => void)[] = []
 
+  public setLocked(val: boolean) {
+    this._isLocked = val
+    for (const listener of this.lockListeners) {
+      listener(this._isLocked)
+    }
+  }
+
   constructor() {
     if (typeof window === 'undefined') return
+
+    ;(window as any).__inputManager = this
 
     window.addEventListener('keydown', this.handleKeyDown, { passive: false })
     window.addEventListener('keyup', this.handleKeyUp)

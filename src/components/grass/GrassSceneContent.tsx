@@ -95,7 +95,7 @@ export default function GrassSceneContent({
           <ProductionFPSController
             onPositionUpdate={(p) => playerPosRef?.current?.copy(p)}
             getTerrainHeight={getOpenWorldHeight}
-            worldRadius={64}
+            worldRadius={52}
             cameraYawRef={cameraYawRef}
           />
           <BowViewModel

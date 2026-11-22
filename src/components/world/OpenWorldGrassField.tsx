@@ -20,8 +20,8 @@ import {
 import { scatterBlades, scatterFlowers } from '../grassField/utils/scatter'
 import { worldCollisionSystem, type WorldCollider } from '@/game/physics/WorldCollisionSystem'
 
-export const WORLD_SIZE = 240
-export const WORLD_SEGMENTS = 120
+export const WORLD_SIZE = 140
+export const WORLD_SEGMENTS = 96
 
 // Sword swing wind pressure shockwave trigger
 export const grassWindImpulse = {
@@ -41,16 +41,16 @@ export const grassWindImpulse = {
   },
 }
 
-// Smooth rolling elevation across meadow, rising gracefully into distant horizon hills
+// Smooth rolling elevation across meadow, rising gracefully into distant boundary hills
 export function getOpenWorldHeight(x: number, z: number): number {
   const base =
     Math.sin(x * 0.045) * 1.2 +
     Math.cos(z * 0.042) * 1.1 +
     Math.sin(x * 0.095 + z * 0.08) * 0.45
   const dist = Math.hypot(x, z)
-  if (dist > 65) {
-    const t = Math.min(1.2, (dist - 65) / 45)
-    const hill = Math.pow(t, 2.0) * 14.0 + Math.sin(x * 0.05 + z * 0.04) * 2.5
+  if (dist > 40) {
+    const t = Math.min(1.2, (dist - 40) / 26)
+    const hill = Math.pow(t, 2.0) * 12.0 + Math.sin(x * 0.05 + z * 0.04) * 2.0
     return base + hill
   }
   return base
@@ -148,11 +148,12 @@ export default function OpenWorldGrassField({
     dirtColor: new THREE.Color('#1a340b'),
     barkTint: new THREE.Color('#2b2118'),
   })
+  const foliageClustersRef = useRef<THREE.Group[]>([])
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
-  const { terrainMesh, coreBladesMesh, worldBladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
-    // 1. High-Density Core Meadow Plane (180m x 180m covering all active player paths & shrines gaplessly)
-    const coreMeadowGeo = new THREE.PlaneGeometry(180, 180, 120, 120)
+  const { terrainMesh, coreBladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
+    // 1. High-Density Core Meadow Plane (104m x 104m covering active sanctuary gaplessly)
+    const coreMeadowGeo = new THREE.PlaneGeometry(104, 104, 80, 80)
     coreMeadowGeo.rotateX(-Math.PI / 2)
     const cPosAttr = coreMeadowGeo.attributes.position
     for (let i = 0; i < cPosAttr.count; i++) {
@@ -162,11 +163,11 @@ export default function OpenWorldGrassField({
     }
     coreMeadowGeo.computeVertexNormals()
 
-    // 120,000 5-blade clumps (600,000 blades) across core sanctuary: thick, lush, gapless carpet
+    // 55,000 5-blade clumps (275,000 blades) across core sanctuary: thick, lush, gapless carpet
     const coreBlades = scatterBlades(new THREE.Mesh(coreMeadowGeo), {
       uniforms: u.surface,
-      density: 24,
-      maxCount: 120_000,
+      density: 22,
+      maxCount: 55_000,
       minWidth: 0.32,
       maxWidth: 0.48,
       minLength: 0.72,
@@ -175,32 +176,7 @@ export default function OpenWorldGrassField({
       segments: 4,
     })
 
-    // 2. Full Open World Horizon Terrain Plane (240m x 240m)
-    // Covers all rolling hills and horizon bowls with continuous grass to eliminate any bare hill cutoffs
-    const worldMeadowGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, WORLD_SEGMENTS, WORLD_SEGMENTS)
-    worldMeadowGeo.rotateX(-Math.PI / 2)
-    const wPosAttr = worldMeadowGeo.attributes.position
-    for (let i = 0; i < wPosAttr.count; i++) {
-      const x = wPosAttr.getX(i)
-      const z = wPosAttr.getZ(i)
-      wPosAttr.setY(i, getOpenWorldHeight(x, z))
-    }
-    worldMeadowGeo.computeVertexNormals()
-
-    // 120,000 5-blade clumps (600,000 blades) across horizon hills: broad clumps blanket all ridges
-    const worldBlades = scatterBlades(new THREE.Mesh(worldMeadowGeo), {
-      uniforms: u.surface,
-      density: 20,
-      maxCount: 120_000,
-      minWidth: 0.42,
-      maxWidth: 0.65,
-      minLength: 0.85,
-      maxLength: 1.25,
-      tiltMax: 0.28,
-      segments: 4,
-    })
-
-    // 3. Horizon Open World Terrain Plane (240m x 240m)
+    // 2. Horizon Open World Terrain Plane (140m x 140m)
     const terrainGeo = new THREE.PlaneGeometry(
       WORLD_SIZE,
       WORLD_SIZE,
@@ -410,13 +386,14 @@ export default function OpenWorldGrassField({
     return {
       terrainMesh: groundMesh,
       coreBladesMesh: coreBlades,
-      worldBladesMesh: worldBlades,
       flowerMeshes: flowerInstances,
       foliageClusters: clusters,
       pathMarkers: stoneMarkers,
       colliders,
     }
   }, [scene, u])
+
+  foliageClustersRef.current = foliageClusters
 
   useEffect(() => {
     worldCollisionSystem.addColliders(colliders)
@@ -556,6 +533,29 @@ export default function OpenWorldGrassField({
     s.uLeafTop.value.set('#568c2e')
     s.uLeafBrightness.value = 1.35
     s.uLeafGradPower.value = 1.05
+
+    // Dynamic Distance-based Lazy Loading and Shadow Culling for Foliage Clusters
+    const camPos = state.camera.position
+    for (let ci = 0; ci < foliageClustersRef.current.length; ci++) {
+      const cl = foliageClustersRef.current[ci]
+      const dx = cl.position.x - camPos.x
+      const dz = cl.position.z - camPos.z
+      const distSq = dx * dx + dz * dz
+
+      // Dynamic distance lazy-loading: cull objects > 68m away
+      if (distSq > 68 * 68) {
+        cl.visible = false
+      } else {
+        cl.visible = true
+        // Shadow culling: only nearby clusters (< 36m) cast dynamic shadows
+        const castShadow = distSq < 36 * 36
+        cl.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            child.castShadow = castShadow
+          }
+        })
+      }
+    }
   })
 
   return (
@@ -563,9 +563,8 @@ export default function OpenWorldGrassField({
       {/* 1. Rolling Open World Terrain */}
       <primitive object={terrainMesh} />
 
-      {/* 2. 170,000 Dense, Wide, Lush Grass Blades (Gapless Core Meadow + Rolling Horizon Hills) */}
+      {/* 2. 55,000 Dense, Wide, Lush Grass Blades (Gapless Sanctuary Meadow) */}
       <primitive object={coreBladesMesh} />
-      <primitive object={worldBladesMesh} />
 
       {/* 3. Wildflowers */}
       {flowerMeshes.map((fm, i) => (

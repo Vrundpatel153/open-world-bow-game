@@ -27,7 +27,7 @@ import * as THREE from "three";
 // So the source pairs with the position: depth before the paint, luminance
 // after it. Which is not a free choice — see below.
 //
-// ⚠ The depth source outlines what the DEPTH BUFFER contains, which is not the
+// WARNING: The depth source outlines what the DEPTH BUFFER contains, which is not the
 // same set of things the viewer can see. Invisible helper geometry that still
 // writes depth gets outlined like anything else, and the classic offender is a
 // shadow-catching ground plane: transparent in colour, fully present in depth,

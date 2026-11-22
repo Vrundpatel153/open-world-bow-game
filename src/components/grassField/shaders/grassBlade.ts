@@ -109,7 +109,11 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
   // Grass thins out over dirt instead of stopping at a line, and is pressed down
   // under the rocks. Both are the same operation — a height scale — so they
   // compose into a single factor.
-  float shrink = (1.0 - uDirtCut * vDirt) * (1.0 - uRockFlatten * rockInfl);
+  // Open-world Lazy Loading & Distance Culling:
+  // Blades beyond draw distance smoothly fade into ground, eliminating distant ridge noise & GPU overhead
+  float camDist = length(baseXZ - cameraPosition.xz);
+  float distFade = 1.0 - smoothstep(36.0, 48.0, camDist);
+  float shrink = (1.0 - uDirtCut * vDirt) * (1.0 - uRockFlatten * rockInfl) * distFade;
   transformed.y *= shrink;
 
   // Everything downstream must use the SHRUNK height, not position.y:

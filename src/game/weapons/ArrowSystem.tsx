@@ -178,10 +178,10 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
     spawnArrow: (origin: THREE.Vector3, direction: THREE.Vector3, power: number) => {
       recordShot()
 
-      // Gameplay ballistic speed: 42 m/s to 60 m/s (punchy, readable frame-by-frame trajectory)
-      const speed = 42 + power * 18
+      // Gameplay ballistic speed: 34 m/s to 48 m/s (punchy, readable frame-by-frame trajectory)
+      const speed = 34 + power * 14
       const vel = direction.clone().multiplyScalar(speed)
-      vel.y += 0.28 * power // subtle aerodynamic lift
+      vel.y += 0.32 * power // subtle aerodynamic lift
 
       // Initial orientation: align local +Z (broadhead razor blade) strictly with direction of flight
       const fwd = direction.clone().normalize()
@@ -355,7 +355,10 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       // ── Collision Check 2: Ground Terrain Penetration ──────────────────────
       const terrainY = getOpenWorldHeight(a.pos.x, a.pos.z)
       if (a.pos.y <= terrainY) {
+        // Sink the broadhead razor point 8cm into the ground for authentic embedded arrowhead
+        const fwd = a.vel.clone().normalize()
         a.pos.y = terrainY
+        a.pos.addScaledVector(fwd, 0.08)
         a.stuck = true
         a.trail = []
         a.wobbleAmp = 0.07
@@ -399,28 +402,41 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
           renderQuat.multiply(wobbleQ)
         }
 
-        // Create aerodynamic ribbon mesh trail if flying
+        // Create aerodynamic ribbon mesh trail if flying (cross-plane ribbon for 360° visibility)
         const hasTrail = !a.stuck && a.trail.length > 1
         let ribbonMesh: THREE.Mesh | null = null
         if (hasTrail) {
           const pts = a.trail
           const n = pts.length
-          const pos = new Float32Array(n * 2 * 3)
+          const pos = new Float32Array(n * 4 * 3) // 4 vertices per step (cross plane)
           const indices: number[] = []
           for (let pi = 0; pi < n; pi++) {
             const p = pts[pi]
             const t = pi / (n - 1)
-            const halfW = 0.045 * t
-            pos[pi * 6 + 0] = p.x
-            pos[pi * 6 + 1] = p.y + halfW
-            pos[pi * 6 + 2] = p.z
-            pos[pi * 6 + 3] = p.x
-            pos[pi * 6 + 4] = p.y - halfW
-            pos[pi * 6 + 5] = p.z
+            const halfW = 0.040 * t
+            // Vertical plane
+            pos[pi * 12 + 0] = p.x
+            pos[pi * 12 + 1] = p.y + halfW
+            pos[pi * 12 + 2] = p.z
+            pos[pi * 12 + 3] = p.x
+            pos[pi * 12 + 4] = p.y - halfW
+            pos[pi * 12 + 5] = p.z
+            // Horizontal plane
+            pos[pi * 12 + 6] = p.x + halfW
+            pos[pi * 12 + 7] = p.y
+            pos[pi * 12 + 8] = p.z
+            pos[pi * 12 + 9] = p.x - halfW
+            pos[pi * 12 + 10] = p.y
+            pos[pi * 12 + 11] = p.z
+
             if (pi < n - 1) {
-              const b = pi * 2
-              indices.push(b, b + 1, b + 2)
-              indices.push(b + 1, b + 3, b + 2)
+              const b = pi * 4
+              // Vertical quads
+              indices.push(b, b + 1, b + 4)
+              indices.push(b + 1, b + 5, b + 4)
+              // Horizontal quads
+              indices.push(b + 2, b + 3, b + 6)
+              indices.push(b + 3, b + 7, b + 6)
             }
           }
           const geo = new THREE.BufferGeometry()
@@ -439,6 +455,14 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
               position={[a.pos.x, a.pos.y, a.pos.z]}
               quaternion={renderQuat}
             >
+              {/* Luminous flight tracer at rear nock for high-speed frame-by-frame visibility */}
+              {!a.stuck && (
+                <mesh position={[0, 0, -0.54]}>
+                  <sphereGeometry args={[0.016, 6, 6]} />
+                  <meshBasicMaterial color="#ffffff" transparent opacity={0.85} depthWrite={false} />
+                </mesh>
+              )}
+
               {/* 1. Silver Broadhead Razor Blade (at front z = 0, pointing +Z) */}
               <mesh geometry={tipGeo} material={tipMat} position={[0, 0, 0]} />
 
