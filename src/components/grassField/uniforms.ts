@@ -213,7 +213,7 @@ export function createGrassFieldUniforms(): GrassFieldUniforms {
       uPatchBias: { value: 1.3 },
 
       uShadowStrength: { value: 0.6 },
-      uShadowSamples: { value: 4 },
+      uShadowSamples: { value: 1 },
       uShadowSampleY: { value: 0.4 },
       uShadowRadius: { value: 0.3 },
 

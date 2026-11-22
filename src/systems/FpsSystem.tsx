@@ -3,14 +3,20 @@
 // Runs inside R3F <Canvas> via useFrame.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useRef, useEffect } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useGameStore } from '@/stores/gameStore'
+import { useQuestStore } from '@/game/stores/questStore'
 
 export default function FpsSystem() {
+  const { gl, scene, camera } = useThree()
   const setFps = useGameStore((s) => s.setFps)
   const frames = useRef(0)
   const last   = useRef(performance.now())
+
+  useEffect(() => {
+    ;(window as any).__threeInfo = { gl, scene, camera, questStore: useQuestStore }
+  }, [gl, scene, camera])
 
   useFrame(() => {
     frames.current++

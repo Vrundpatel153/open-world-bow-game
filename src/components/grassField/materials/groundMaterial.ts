@@ -161,29 +161,17 @@ export function makeGroundMaterial(
       "vec4 diffuseColor = vec4( diffuse, opacity );",
       `float _dirt = groundDirt( vGndXZ );
 
-      // Environmental patches — the SAME lush→dry gradient the blades apply, at
-      // the same world position, so the ground under a dry patch drifts to the
-      // same colour as the blade bases growing out of it. Without this the tinted
-      // ground stays plain green while the blades go dry, and the bases stop
-      // melting into the ground.
-      float _pt = pow( clamp( _gmFbm( vGndXZ * uPatchScale ), 0.0, 1.0 ), uPatchBias );
+      // Optimized single-octave procedural noise for high-framerate terrain shading
+      float _pt = pow( clamp( _gmNoise( vGndXZ * uPatchScale ), 0.0, 1.0 ), uPatchBias );
       vec3 _grassTint = mix( uGrassBottom, mix( uPatchLush, uPatchDry, _pt ), uPatchStrength );
 
       vec3 _gndCol = mix( diffuse, _grassTint * uBrightness, uTintFloor );
       _gndCol = mix( _gndCol, uDirtColor * uBrightness, _dirt );
 
-      // Two scales of tonal break-up toward the same variation color: a slow one
-      // for large patches of a different shade, and a fine one for close-up
-      // grain (without it the ground goes flat and plasticky as the camera nears).
-      //
-      // The noise is centred on 0.5, so (n - 0.5) is SIGNED: it pulls the ground
-      // toward the variation color in some places and away from it in others,
-      // which keeps the average tone put. A plain mix toward the variation color
-      // would just darken the whole ground as the strength went up.
-      float _var   = _gmFbm( vGndXZ * uGndVarScale )   - 0.5;
-      float _grain = _gmFbm( vGndXZ * uGndGrainScale ) - 0.5;
+      float _var   = _gmNoise( vGndXZ * uGndVarScale )   - 0.5;
+      float _grain = _gmNoise( vGndXZ * uGndGrainScale ) - 0.5;
       vec3  _varCol = uGndVarColor * uBrightness;
-      // Organic macro tone variation and micro soil grain applied everywhere to prevent flat plastic ground
+      // Organic macro tone variation and micro soil grain applied cleanly
       _gndCol += ( _varCol - _gndCol ) * _var   * uGndVarStrength   * max( 0.45, _dirt );
       _gndCol += ( _varCol - _gndCol ) * _grain * uGndGrainStrength * max( 0.55, _dirt );
       _gndCol = max( _gndCol, vec3( 0.0 ) );

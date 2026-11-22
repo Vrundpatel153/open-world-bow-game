@@ -83,7 +83,7 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
   vec2 baseXZ = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xz;
   vDirt = groundDirt(baseXZ);
   // Low-frequency noise, sampled once at the base — the environmental patch value.
-  vPatch = _gmFbm(baseXZ * uPatchScale);
+  vPatch = _gmNoise(baseXZ * uPatchScale);
 
   // ── Rock trampling ────────────────────────────────────────────────────────
   // Find the rock that presses on this blade hardest. Blades are small relative
@@ -112,7 +112,10 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
   // Open-world Lazy Loading & Distance Culling:
   // Blades beyond exploration boundary smoothly fade into ground, eliminating distant ridge noise & GPU overhead
   float camDist = length(baseXZ - cameraPosition.xz);
-  float distFade = 1.0 - smoothstep(68.0, 88.0, camDist);
+  float distFade = 1.0 - smoothstep(64.0, 80.0, camDist);
+  if (distFade <= 0.001) {
+    transformed = vec3(0.0);
+  }
   float shrink = (1.0 - uDirtCut * vDirt) * (1.0 - uRockFlatten * rockInfl) * distFade;
   transformed.y *= shrink;
 

@@ -132,6 +132,7 @@ export default function GrassSceneContent({
         sunIntensity={sunIntensityRef}
         playerPosRef={playerPosRef}
       />
+      <ShadowController rebakeSignal={bakeSignal} />
 
       {/* ── Ambient IBL Environment ──────────────────────────────────────── */}
       <SceneEnvironment
@@ -190,9 +191,7 @@ export default function GrassSceneContent({
       </Suspense>
 
       {/* ── Calibrated Stylized Bloom (Glowing Runes & Celestial Discs Only) ─ */}
-      <PostProcessing
-        defaults={{ intensity: 0.38, radius: 0.20, threshold: 0.94 }}
-      />
+      {/* PostProcessing intentionally disabled for locked 60 FPS performance */}
     </>
   );
 }

@@ -5,7 +5,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
-import { PCFSoftShadowMap } from "three";
+import { PCFShadowMap } from "three";
 import * as THREE from "three";
 import { Leva } from "leva";
 
@@ -68,16 +68,16 @@ export default function GrassCanvas() {
   return (
     <div style={{ position: "fixed", inset: 0, overflow: "hidden", background: "#060c04" }}>
       <Canvas
-        shadows={{ type: PCFSoftShadowMap }}
+        shadows={{ type: PCFShadowMap }}
         camera={{ position: [0, 2, 0], fov: 68, near: 0.05, far: CAMERA_FAR }}
         gl={{
-          antialias: true,
+          antialias: false,
           alpha: false,
           powerPreference: "high-performance",
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 1.1,
         }}
-        dpr={[1, 1.25]}
+        dpr={[1, 1.0]}
         style={{ background: "#060c04" }}
       >
         {/* Dynamic Atmospheric Fog synced with Day-Night Cycle */}
