@@ -41,22 +41,22 @@ export const grassWindImpulse = {
   },
 }
 
-// Smooth rolling elevation across meadow, rising into natural perimeter hills
+// Smooth rolling elevation across meadow, rising gracefully into distant horizon hills
 export function getOpenWorldHeight(x: number, z: number): number {
   const base =
-    Math.sin(x * 0.055) * 1.1 +
-    Math.cos(z * 0.048) * 0.95 +
-    Math.sin(x * 0.12 + z * 0.09) * 0.35
+    Math.sin(x * 0.045) * 1.2 +
+    Math.cos(z * 0.042) * 1.1 +
+    Math.sin(x * 0.095 + z * 0.08) * 0.45
   const dist = Math.hypot(x, z)
-  if (dist > 46) {
-    const t = Math.min(1.5, (dist - 46) / 36)
-    const hill = Math.pow(t, 2.2) * 18.0 + Math.sin(x * 0.06 + z * 0.05) * 3.2
+  if (dist > 65) {
+    const t = Math.min(1.2, (dist - 65) / 45)
+    const hill = Math.pow(t, 2.0) * 14.0 + Math.sin(x * 0.05 + z * 0.04) * 2.5
     return base + hill
   }
   return base
 }
 
-// Transform-aware world displacement helper accounting for nested parent scales (e.g. FBX 0.01 scale)
+// Transform-aware world displacement helper using parent.worldToLocal (immune to parent scales/rotations)
 function applyWorldYShift(obj: THREE.Object3D, deltaWorldY: number) {
   if (Math.abs(deltaWorldY) < 1e-5) return
   if (!obj.parent) {
@@ -64,14 +64,9 @@ function applyWorldYShift(obj: THREE.Object3D, deltaWorldY: number) {
     obj.updateMatrixWorld(true)
     return
   }
-  const worldDelta = new THREE.Vector3(0, deltaWorldY, 0)
-  const parentWorldQuat = obj.parent.getWorldQuaternion(new THREE.Quaternion())
-  const parentWorldScale = obj.parent.getWorldScale(new THREE.Vector3())
-  worldDelta.applyQuaternion(parentWorldQuat.invert())
-  if (Math.abs(parentWorldScale.y) > 1e-6) {
-    worldDelta.y /= parentWorldScale.y
-  }
-  obj.position.y += worldDelta.y
+  const curWorld = obj.getWorldPosition(new THREE.Vector3())
+  curWorld.y += deltaWorldY
+  obj.position.copy(obj.parent.worldToLocal(curWorld))
   obj.updateMatrixWorld(true)
 }
 
@@ -157,7 +152,8 @@ export default function OpenWorldGrassField({
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
   const { terrainMesh, coreBladesMesh, worldBladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
     // 1. High-Density Core Meadow Plane (100m x 100m covering all active player paths & shrines)
-    const coreMeadowGeo = new THREE.PlaneGeometry(100, 100, 90, 90)
+    // 1. High-Density Core Meadow Plane (120m x 120m covering all active player paths & shrines)
+    const coreMeadowGeo = new THREE.PlaneGeometry(120, 120, 100, 100)
     coreMeadowGeo.rotateX(-Math.PI / 2)
     const cPosAttr = coreMeadowGeo.attributes.position
     for (let i = 0; i < cPosAttr.count; i++) {
@@ -167,15 +163,15 @@ export default function OpenWorldGrassField({
     }
     coreMeadowGeo.computeVertexNormals()
 
-    // 100,000 multi-blade clumps (400,000 blades) concentrated across core sanctuary: 10 clumps/m² gapless lawn!
+    // 100,000 multi-blade clumps (400,000 blades) concentrated across core sanctuary: dense gapless lawn!
     const coreBlades = scatterBlades(new THREE.Mesh(coreMeadowGeo), {
       uniforms: u.surface,
-      density: 26,
+      density: 24,
       maxCount: 100_000,
-      minWidth: 0.038,
-      maxWidth: 0.058,
-      minLength: 0.46,
-      maxLength: 0.65,
+      minWidth: 0.040,
+      maxWidth: 0.062,
+      minLength: 0.48,
+      maxLength: 0.68,
       tiltMax: 0.28,
       segments: 4,
     })
@@ -192,15 +188,15 @@ export default function OpenWorldGrassField({
     }
     worldMeadowGeo.computeVertexNormals()
 
-    // 70,000 multi-blade clumps (280,000 blades) rolling all the way across perimeter hills
+    // 120,000 multi-blade clumps (480,000 blades) rolling all the way across perimeter hills
     const worldBlades = scatterBlades(new THREE.Mesh(worldMeadowGeo), {
       uniforms: u.surface,
-      density: 16,
-      maxCount: 70_000,
-      minWidth: 0.040,
-      maxWidth: 0.060,
-      minLength: 0.48,
-      maxLength: 0.68,
+      density: 20,
+      maxCount: 120_000,
+      minWidth: 0.050,
+      maxWidth: 0.072,
+      minLength: 0.55,
+      maxLength: 0.78,
       tiltMax: 0.28,
       segments: 4,
     })
@@ -275,8 +271,8 @@ export default function OpenWorldGrassField({
             const rcX = (rockBox.min.x + rockBox.max.x) * 0.5
             const rcZ = (rockBox.min.z + rockBox.max.z) * 0.5
             const groundY = getOpenWorldHeight(rcX, rcZ)
-            // Sunk 0.12m into the soil so rocks sit solidly without floating in air
-            const desiredBottom = groundY - 0.12 * scaleVal
+            // Sunk 0.18m into the soil so rock boulders sit solidly without floating in air
+            const desiredBottom = groundY - 0.18 * scaleVal
             const deltaWorldY = desiredBottom - rockBox.min.y
             applyWorldYShift(m, deltaWorldY)
 
@@ -304,7 +300,7 @@ export default function OpenWorldGrassField({
             const tcX = (trunkBox.min.x + trunkBox.max.x) * 0.5
             const tcZ = (trunkBox.min.z + trunkBox.max.z) * 0.5
             const groundY = getOpenWorldHeight(tcX, tcZ)
-            const desiredBottom = groundY - 0.20 * scaleVal
+            const desiredBottom = groundY - 0.26 * scaleVal
             const deltaWorldY = desiredBottom - trunkBox.min.y
             if (m.parent) {
               applyWorldYShift(m.parent, deltaWorldY)
@@ -514,9 +510,16 @@ export default function OpenWorldGrassField({
     s.uRockRadiusMul.value = 1.0
     s.uRockFalloff.value = 0.35
 
-    // Ground Dirt Mask - Zero coverage so no bare bald craters appear in the green field
+    // Ground Dirt & Moss Variation - Natural organic tonal depth and micro grain
     s.uTintFloor.value = 1
     s.uFlatFloorNormal.value = 1
+    s.uGndVarColor.value.set('#1e4412')
+    s.uGndVarScale.value = 0.35
+    s.uGndVarStrength.value = 0.35
+    s.uGndGrainScale.value = 4.2
+    s.uGndGrainStrength.value = 0.25
+    s.uGndReliefScale.value = 0.6
+    s.uGndReliefStrength.value = 0.12
     c.dirtColor.set('#243b12')
     s.uDirtColor.value.copy(c.dirtColor)
     s.uDirtCoverage.value = 0.0

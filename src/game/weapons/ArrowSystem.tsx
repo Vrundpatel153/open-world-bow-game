@@ -56,47 +56,47 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
 
   // ── Realistic 3D Arrow Mesh Template (Length 0.76m, tip at (0,0,0) facing +Z) ──
   const { shaftGeo, tipGeo, ferruleGeo, fletchGeo, nockGeo, shaftMat, tipMat, ferruleMat, fletchMat, nockMat, trailMat } = useMemo(() => {
-    // 1. Broadhead Razor Blade (Point at z = 0, barbs at z = -0.05, facing +Z)
+    // 1. Broadhead Razor Blade (Point at z = 0, barbs at z = -0.055, facing +Z)
     const tipShape = new THREE.Shape()
     tipShape.moveTo(0, 0.0) // Point
-    tipShape.lineTo(0.016, -0.05) // Right barb
-    tipShape.lineTo(0.005, -0.04)
-    tipShape.lineTo(0.005, -0.055)
-    tipShape.lineTo(-0.005, -0.055)
-    tipShape.lineTo(-0.005, -0.04)
-    tipShape.lineTo(-0.016, -0.05) // Left barb
+    tipShape.lineTo(0.018, -0.055) // Right barb
+    tipShape.lineTo(0.006, -0.045)
+    tipShape.lineTo(0.006, -0.060)
+    tipShape.lineTo(-0.006, -0.060)
+    tipShape.lineTo(-0.006, -0.045)
+    tipShape.lineTo(-0.018, -0.055) // Left barb
     tipShape.closePath()
 
     const tip = new THREE.ExtrudeGeometry(tipShape, {
-      depth: 0.0028,
+      depth: 0.0032,
       bevelEnabled: true,
       bevelSegments: 2,
-      bevelSize: 0.0012,
-      bevelThickness: 0.0012,
+      bevelSize: 0.0014,
+      bevelThickness: 0.0014,
     })
     // Rotate so tip is at (0,0,0) pointing +Z, barbs extend backward along -Z
     tip.rotateX(Math.PI / 2)
 
-    // 2. Metal Ferrule Collar connecting broadhead to shaft (z = -0.045 to -0.065)
-    const ferrule = new THREE.CylinderGeometry(0.0055, 0.0048, 0.024, 8)
+    // 2. Metal Ferrule Collar connecting broadhead to shaft (z = -0.05 to -0.07)
+    const ferrule = new THREE.CylinderGeometry(0.0065, 0.0055, 0.026, 8)
     ferrule.rotateX(Math.PI / 2)
 
-    // 3. Cedar Wood Shaft: diameter 10mm, length 0.68m, extends from z = -0.05 to z = -0.73
-    const shaft = new THREE.CylinderGeometry(0.005, 0.005, 0.68, 8)
+    // 3. Cedar Wood Shaft: diameter 11mm, length 0.68m, extends from z = -0.05 to z = -0.73
+    const shaft = new THREE.CylinderGeometry(0.0055, 0.0055, 0.68, 8)
     shaft.rotateX(Math.PI / 2)
 
     // 4. White Turkey Feathers (3 vanes at rear tail, z = -0.62 to -0.71)
     const fletchShape = new THREE.Shape()
     fletchShape.moveTo(0, 0)
-    fletchShape.lineTo(0.015, -0.014)
-    fletchShape.lineTo(0.012, -0.088)
+    fletchShape.lineTo(0.018, -0.016)
+    fletchShape.lineTo(0.014, -0.088)
     fletchShape.lineTo(0, -0.078)
     fletchShape.closePath()
     const fletch = new THREE.ShapeGeometry(fletchShape)
     fletch.rotateX(Math.PI / 2) // Extends backward along -Z
 
     // 5. Carved Bone Nock (at rear tail z = -0.73)
-    const nock = new THREE.CylinderGeometry(0.0055, 0.0055, 0.022, 8)
+    const nock = new THREE.CylinderGeometry(0.006, 0.006, 0.024, 8)
     nock.rotateX(Math.PI / 2)
 
     // Materials
@@ -120,7 +120,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
 
     const fMat = new THREE.MeshStandardMaterial({
       color: '#ffffff', // Crisp bright white feathers (matches reference image)
-      roughness: 0.50,
+      roughness: 0.45,
       side: THREE.DoubleSide,
     })
 
@@ -129,11 +129,12 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       roughness: 0.32,
     })
 
-    const trMat = new THREE.LineBasicMaterial({
-      color: '#ffffff',
+    const trMat = new THREE.MeshBasicMaterial({
+      color: '#e2f0ff',
       transparent: true,
-      opacity: 0.70,
-      linewidth: 2,
+      opacity: 0.65,
+      side: THREE.DoubleSide,
+      depthWrite: false,
     })
 
     return {
@@ -375,19 +376,40 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
           renderQuat.multiply(wobbleQ)
         }
 
-        // Create flight trail geometry if flying
+        // Create aerodynamic ribbon mesh trail if flying
         const hasTrail = !a.stuck && a.trail.length > 1
-        let trailLineGeo: THREE.BufferGeometry | null = null
+        let ribbonMesh: THREE.Mesh | null = null
         if (hasTrail) {
-          trailLineGeo = new THREE.BufferGeometry().setFromPoints(a.trail)
+          const pts = a.trail
+          const n = pts.length
+          const pos = new Float32Array(n * 2 * 3)
+          const indices: number[] = []
+          for (let pi = 0; pi < n; pi++) {
+            const p = pts[pi]
+            const t = pi / (n - 1)
+            const halfW = 0.045 * t
+            pos[pi * 6 + 0] = p.x
+            pos[pi * 6 + 1] = p.y + halfW
+            pos[pi * 6 + 2] = p.z
+            pos[pi * 6 + 3] = p.x
+            pos[pi * 6 + 4] = p.y - halfW
+            pos[pi * 6 + 5] = p.z
+            if (pi < n - 1) {
+              const b = pi * 2
+              indices.push(b, b + 1, b + 2)
+              indices.push(b + 1, b + 3, b + 2)
+            }
+          }
+          const geo = new THREE.BufferGeometry()
+          geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+          geo.setIndex(indices)
+          ribbonMesh = new THREE.Mesh(geo, trailMat)
         }
 
         return (
           <group key={a.id}>
             {/* Aerodynamic luminous slipstream trail */}
-            {hasTrail && trailLineGeo && (
-              <primitive object={new THREE.Line(trailLineGeo, trailMat)} />
-            )}
+            {ribbonMesh && <primitive object={ribbonMesh} />}
 
             {/* The Arrow Mesh: pivot at broadhead tip (0,0,0), +Z is flight forward */}
             <group

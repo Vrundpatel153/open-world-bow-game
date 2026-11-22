@@ -108,10 +108,16 @@ export default function ProductionFPSController({
     const dt = Math.min(delta, 0.1)
 
     // ── 1. Camera Look (360° Mouse Look via Pointer Lock) ─────────────────
+    const isAiming = useQuestStore.getState().isAiming
+    const drawProgress = useQuestStore.getState().drawProgress
+    const sensScale = (isAiming || drawProgress > 0.05) && (camera instanceof THREE.PerspectiveCamera)
+      ? Math.max(0.65, camera.fov / 68)
+      : 1.0
+
     const { dx, dy } = inputManager.consumeMouseDelta()
     if (dx !== 0 || dy !== 0) {
-      yaw.current -= dx * MOUSE_SENSITIVITY
-      pitch.current -= dy * MOUSE_SENSITIVITY
+      yaw.current -= dx * MOUSE_SENSITIVITY * sensScale
+      pitch.current -= dy * MOUSE_SENSITIVITY * sensScale
 
       // Clamp pitch to avoid gimbal flip (~-85 deg to +85 deg)
       pitch.current = Math.max(-1.48, Math.min(1.48, pitch.current))
@@ -251,8 +257,6 @@ export default function ProductionFPSController({
     }
 
     // Dynamic Aim-Down-Sights (ADS) Field of View Zoom (Smooth archer focus zoom)
-    const isAiming = useQuestStore.getState().isAiming
-    const drawProgress = useQuestStore.getState().drawProgress
     const isBowEquipped = useQuestStore.getState().isBowEquipped
     const zoomActive = isBowEquipped && (isAiming || drawProgress > 0.05)
     const targetFov = zoomActive ? 68 - Math.max(isAiming ? 14 : 0, drawProgress * 16) : 68

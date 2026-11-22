@@ -183,8 +183,9 @@ export function makeGroundMaterial(
       float _var   = _gmFbm( vGndXZ * uGndVarScale )   - 0.5;
       float _grain = _gmFbm( vGndXZ * uGndGrainScale ) - 0.5;
       vec3  _varCol = uGndVarColor * uBrightness;
-      _gndCol += ( _varCol - _gndCol ) * _var   * uGndVarStrength   * _dirt;
-      _gndCol += ( _varCol - _gndCol ) * _grain * uGndGrainStrength * _dirt;
+      // Organic macro tone variation and micro soil grain applied everywhere to prevent flat plastic ground
+      _gndCol += ( _varCol - _gndCol ) * _var   * uGndVarStrength   * max( 0.45, _dirt );
+      _gndCol += ( _varCol - _gndCol ) * _grain * uGndGrainStrength * max( 0.55, _dirt );
       _gndCol = max( _gndCol, vec3( 0.0 ) );
 
       vec4 diffuseColor = vec4( _gndCol, opacity );`,
