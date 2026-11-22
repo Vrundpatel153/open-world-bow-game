@@ -26,6 +26,7 @@ export default function GrassLighting({
   playerPosRef,
 }: GrassLightingProps) {
   const dirRef = useRef<THREE.DirectionalLight>(null!);
+  const fillLightRef = useRef<THREE.DirectionalLight>(null!);
   const hemiRef = useRef<THREE.HemisphereLight>(null!);
   const ambientRef = useRef<THREE.AmbientLight>(null!);
   const targetRef = useRef<THREE.Object3D>(new THREE.Object3D());
@@ -51,34 +52,42 @@ export default function GrassLighting({
       if (sunColor) dl.color.copy(sunColor);
       dl.intensity = sunIntensity;
 
+      // Fill light illuminates shadow sides from the opposite azimuth with soft skylight
+      const fl = fillLightRef.current;
+      if (fl) {
+        const fillDir = new THREE.Vector3(-sunDir.x, Math.max(0.3, sunDir.y * 0.5), -sunDir.z).normalize();
+        fl.position.copy(targetPos).addScaledVector(fillDir, 45);
+        fl.intensity = sunIntensity > 1.0 ? 0.85 : 0.25;
+      }
+
       // Dynamic 3-tier ambient lighting to eliminate black silhouettes
       if (hemi) {
         if (sunIntensity > 1.8) {
           // Broad Daylight: Radiant blue sky and lush mossy turf bounce
-          hemi.intensity = 1.6;
-          hemi.color.set("#a2d8ff");
-          hemi.groundColor.set("#3c5e26");
+          hemi.intensity = 1.8;
+          hemi.color.set("#b8e2ff");
+          hemi.groundColor.set("#46702c");
         } else if (sunIntensity > 0.8) {
           // Dawn / Dusk: Warm peach sky and amber earth bounce
-          hemi.intensity = 1.35;
-          hemi.color.set("#ffd2aa");
-          hemi.groundColor.set("#523a24");
+          hemi.intensity = 1.45;
+          hemi.color.set("#ffd8b4");
+          hemi.groundColor.set("#5a4028");
         } else {
           // Night / Twilight: Nocturnal indigo
-          hemi.intensity = 0.65;
-          hemi.color.set("#2c4568");
-          hemi.groundColor.set("#14221a");
+          hemi.intensity = 0.75;
+          hemi.color.set("#324c72");
+          hemi.groundColor.set("#16281e");
         }
       }
 
       if (amb) {
-        amb.intensity = sunIntensity > 1.0 ? 0.72 : 0.28;
+        amb.intensity = sunIntensity > 1.0 ? 0.82 : 0.35;
       }
     } else {
       const l = preset.light;
       dl.color.set(l.dirColor);
       dl.intensity = l.dirIntensity;
-      if (hemi) hemi.intensity = 1.2;
+      if (hemi) hemi.intensity = 1.4;
     }
   });
 
@@ -90,15 +99,23 @@ export default function GrassLighting({
       {/* 1. Atmospheric Hemisphere Skylight & Earth Bounce */}
       <hemisphereLight
         ref={hemiRef}
-        color="#a2d8ff"
-        groundColor="#3c5e26"
-        intensity={1.6}
+        color="#b8e2ff"
+        groundColor="#46702c"
+        intensity={1.8}
       />
 
       {/* 2. Ambient Fill (Eliminates pitch black silhouettes) */}
-      <ambientLight ref={ambientRef} color="#fff6eb" intensity={0.72} />
+      <ambientLight ref={ambientRef} color="#fff8ee" intensity={0.82} />
 
-      {/* 3. High-Precision Moving Cascaded Directional Sunlight & Shadows */}
+      {/* 3. Soft Counter-Azimuth Fill Directional Light (Zero shadow, illuminates backlit trees & foliage) */}
+      <directionalLight
+        ref={fillLightRef}
+        color="#e0f0ff"
+        intensity={0.85}
+        castShadow={false}
+      />
+
+      {/* 4. High-Precision Moving Cascaded Directional Sunlight & Shadows */}
       <directionalLight
         ref={dirRef}
         color="#fff8eb"

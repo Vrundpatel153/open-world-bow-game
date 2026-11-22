@@ -236,10 +236,11 @@ export function makeBladeMaterial(u: BladeUniforms): THREE.MeshLambertMaterial {
         float _sh   = mix( 1.0, _shadow, uTransShadow );
 
         // Clamp sun color intensity contribution to avoid blowing out into yellow
-        vec3 _clampedSun = min(uSunColor, vec3(1.35));
+        vec3 _clampedSun = min(uSunColor, vec3(1.1));
         vec3 _trans = uTransColor * _clampedSun * uTransStrength
                     * _back * _thin * _edge * _sh;
 
+        // Subsurface scatter illuminates the grass with lush emerald vibrancy
         gl_FragColor.rgb += _trans;
 
         ${DEBUG_VIEW_FRAGMENT}

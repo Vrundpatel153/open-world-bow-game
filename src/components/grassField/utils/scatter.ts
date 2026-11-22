@@ -184,10 +184,12 @@ export function scatterBlades(
         rng() * Math.PI * 2,
         (rng() - 0.5) * opts.tiltMax * 0.5,
       );
+      const bladeWidth = opts.minWidth + rng() * (opts.maxWidth - opts.minWidth);
+      const bladeHeight = opts.minLength + rng() * (opts.maxLength - opts.minLength);
       dummy.scale.set(
-        opts.minWidth + rng() * (opts.maxWidth - opts.minWidth),
-        opts.minLength + rng() * (opts.maxLength - opts.minLength),
-        1,
+        bladeWidth,
+        bladeHeight,
+        bladeWidth,
       );
     }
     dummy.updateMatrix();

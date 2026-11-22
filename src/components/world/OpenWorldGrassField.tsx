@@ -20,8 +20,8 @@ import {
 import { scatterBlades, scatterFlowers } from '../grassField/utils/scatter'
 import { worldCollisionSystem, type WorldCollider } from '@/game/physics/WorldCollisionSystem'
 
-export const WORLD_SIZE = 140
-export const WORLD_SEGMENTS = 64
+export const WORLD_SIZE = 220
+export const WORLD_SEGMENTS = 80
 
 // Sword swing wind pressure shockwave trigger
 export const grassWindImpulse = {
@@ -131,8 +131,8 @@ export default function OpenWorldGrassField({
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
   const { terrainMesh, bladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
-    // 1. Terrain Ground Mesh for high-density sampling across the ENTIRE 140m x 140m world
-    const samplePlaneGeo = new THREE.PlaneGeometry(140, 140, 120, 120)
+    // 1. Terrain Ground Mesh for high-density sampling across the ENTIRE 190m x 190m meadow
+    const samplePlaneGeo = new THREE.PlaneGeometry(190, 190, 140, 140)
     samplePlaneGeo.rotateX(-Math.PI / 2)
     const sPosAttr = samplePlaneGeo.attributes.position
     for (let i = 0; i < sPosAttr.count; i++) {
@@ -142,17 +142,17 @@ export default function OpenWorldGrassField({
     }
     samplePlaneGeo.computeVertexNormals()
 
-    // 2. Scatter 110,000 multi-blade clumps = 330,000 dense, organic grass blades across the entire world!
+    // 2. Scatter 125,000 multi-blade clumps = 375,000 dense, slender, organic grass blades across the entire world!
     // Zero bald cutoffs, zero plain gaps: continuous rolling meadow carpet all the way to horizon hills.
     const blades = scatterBlades(new THREE.Mesh(samplePlaneGeo), {
       uniforms: u.surface,
       density: 16,
-      maxCount: 110_000,
-      minWidth: 0.038,
-      maxWidth: 0.058,
-      minLength: 0.35,
-      maxLength: 0.58,
-      tiltMax: 0.40,
+      maxCount: 125_000,
+      minWidth: 0.024,
+      maxWidth: 0.038,
+      minLength: 0.28,
+      maxLength: 0.48,
+      tiltMax: 0.32,
       segments: 4,
     })
 
@@ -407,27 +407,27 @@ export default function OpenWorldGrassField({
 
     // Colors (Rich, natural Studio Ghibli / Tsushima emerald meadow — ZERO yellow cast!)
     const c = colorsRef.current
-    c.grassBottom.set('#1b380a')
-    c.grassTop.set('#3a7516')
+    c.grassBottom.set('#1a3c0d')
+    c.grassTop.set('#42861e')
     s.uGrassBottom.value.copy(c.grassBottom)
     s.uGrassTop.value.copy(c.grassTop)
-    s.uGradStart.value = 0.04
-    s.uGradEnd.value = 0.96
+    s.uGradStart.value = 0.05
+    s.uGradEnd.value = 0.95
     s.uGradPower.value = 1.15
-    s.uBrightness.value = 0.94
+    s.uBrightness.value = 0.96
 
     // Lush vs Dry environmental patches (Harmonious forest hues, NO yellow wheat)
-    s.uPatchLush.value.set('#1b380a')
-    s.uPatchDry.value.set('#326315')
-    s.uPatchStrength.value = 0.12
+    s.uPatchLush.value.set('#1a3c0d')
+    s.uPatchDry.value.set('#367018')
+    s.uPatchStrength.value = 0.08
     s.uPatchScale.value = 0.08
     s.uPatchBias.value = 1.3
 
     // Translucency (Subsurface sun scatter — pure vibrant emerald leaf transmission, NOT yellow!)
-    c.transColor.set('#346e14')
+    c.transColor.set('#3a8018')
     s.uTransColor.value.copy(c.transColor)
-    s.uTransStrength.value = 0.24
-    s.uTransPower.value = 3.8
+    s.uTransStrength.value = 0.12
+    s.uTransPower.value = 4.2
     s.uTransTip.value = 0.8
     s.uTransShadow.value = 1.0
 
@@ -443,17 +443,17 @@ export default function OpenWorldGrassField({
     s.uRockRadiusMul.value = 1.0
     s.uRockFalloff.value = 0.35
 
-    // Ground Dirt Mask - subtle accent only, NO bare mud craters
+    // Ground Dirt Mask - Zero coverage so no bare bald craters appear in the green field
     s.uTintFloor.value = 1
     s.uFlatFloorNormal.value = 1
-    c.dirtColor.set('#284411')
+    c.dirtColor.set('#243b12')
     s.uDirtColor.value.copy(c.dirtColor)
-    s.uDirtCoverage.value = 0.04
+    s.uDirtCoverage.value = 0.0
     s.uDirtScale.value = 0.25
     s.uDirtSoftness.value = 0.12
     s.uDirtWarp.value = 0.2
-    s.uDirtCut.value = 0.15
-    s.uDirtBlend.value = 0.45
+    s.uDirtCut.value = 0.0
+    s.uDirtBlend.value = 0.25
 
     // Bark Uniforms
     b.uBarkScale.value = 1.0
@@ -461,14 +461,14 @@ export default function OpenWorldGrassField({
     b.uBarkTint.value.copy(c.barkTint)
     b.uBarkTintStrength.value = 0.55
     b.uBarkSaturation.value = 1.0
-    b.uBarkBrightness.value = 1.0
-    b.uBarkAOStrength.value = 1.0
+    b.uBarkBrightness.value = 1.25
+    b.uBarkAOStrength.value = 0.85
 
-    // Pine Canopy Foliage
-    s.uLeafBottom.value.set('#153018')
-    s.uLeafTop.value.set('#4b7a28')
-    s.uLeafBrightness.value = 1.15
-    s.uLeafGradPower.value = 1.1
+    // Pine Canopy Foliage - Lush healthy forest pine needles
+    s.uLeafBottom.value.set('#1e4420')
+    s.uLeafTop.value.set('#568c2e')
+    s.uLeafBrightness.value = 1.35
+    s.uLeafGradPower.value = 1.05
   })
 
   return (

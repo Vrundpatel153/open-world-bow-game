@@ -21,12 +21,13 @@ interface FlyingArrow {
   id: number
   pos: THREE.Vector3 // Current world position of arrow broadhead TIP
   vel: THREE.Vector3
-  rot: THREE.Euler
+  quat: THREE.Quaternion // Quaternion rotation: local +Z aligned with velocity
   stuck: boolean
   wobbleAmp: number
   wobbleFreq: number
   wobbleTime: number
   life: number
+  trail: THREE.Vector3[]
 }
 
 interface SparkParticle {
@@ -39,7 +40,7 @@ interface SparkParticle {
   size: number
 }
 
-const GRAVITY = -12.5 // Natural ballistic drop (m/s^2)
+const GRAVITY = -11.5 // Natural ballistic drop (m/s^2)
 const MAX_ARROWS = 32
 
 export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
@@ -53,78 +54,100 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
   const recordShot = useQuestStore((s) => s.recordShot)
   const hitTarget = useQuestStore((s) => s.hitTarget)
 
-  // ── Realistic 3D Arrow Mesh Template (Length 0.74m, tip at (0, 0, 0)) ───────
-  const { shaftGeo, tipGeo, fletchGeo, nockGeo, shaftMat, tipMat, fletchMat, nockMat } = useMemo(() => {
-    // Carbon-weave cedar shaft
-    const shaft = new THREE.CylinderGeometry(0.0042, 0.0042, 0.74, 8)
-    shaft.rotateX(Math.PI / 2) // Orient along Z axis
-
-    // Damascus steel broadhead
+  // ── Realistic 3D Arrow Mesh Template (Length 0.76m, tip at (0,0,0) facing +Z) ──
+  const { shaftGeo, tipGeo, ferruleGeo, fletchGeo, nockGeo, shaftMat, tipMat, ferruleMat, fletchMat, nockMat, trailMat } = useMemo(() => {
+    // 1. Broadhead Razor Blade (Point at z = 0, barbs at z = -0.05, facing +Z)
     const tipShape = new THREE.Shape()
-    tipShape.moveTo(0, 0.038)
-    tipShape.lineTo(0.014, -0.016)
-    tipShape.lineTo(0.005, -0.010)
-    tipShape.lineTo(0, -0.015)
-    tipShape.lineTo(-0.005, -0.010)
-    tipShape.lineTo(-0.014, -0.016)
+    tipShape.moveTo(0, 0.0) // Point
+    tipShape.lineTo(0.016, -0.05) // Right barb
+    tipShape.lineTo(0.005, -0.04)
+    tipShape.lineTo(0.005, -0.055)
+    tipShape.lineTo(-0.005, -0.055)
+    tipShape.lineTo(-0.005, -0.04)
+    tipShape.lineTo(-0.016, -0.05) // Left barb
     tipShape.closePath()
 
     const tip = new THREE.ExtrudeGeometry(tipShape, {
-      depth: 0.0025,
+      depth: 0.0028,
       bevelEnabled: true,
       bevelSegments: 2,
-      bevelSize: 0.0015,
-      bevelThickness: 0.0015,
+      bevelSize: 0.0012,
+      bevelThickness: 0.0012,
     })
-    tip.center()
-    tip.rotateX(-Math.PI / 2) // Point along -Z
+    // Rotate so tip is at (0,0,0) pointing +Z, barbs extend backward along -Z
+    tip.rotateX(Math.PI / 2)
 
-    // Feathers
+    // 2. Metal Ferrule Collar connecting broadhead to shaft (z = -0.045 to -0.065)
+    const ferrule = new THREE.CylinderGeometry(0.0055, 0.0048, 0.024, 8)
+    ferrule.rotateX(Math.PI / 2)
+
+    // 3. Cedar Wood Shaft: diameter 10mm, length 0.68m, extends from z = -0.05 to z = -0.73
+    const shaft = new THREE.CylinderGeometry(0.005, 0.005, 0.68, 8)
+    shaft.rotateX(Math.PI / 2)
+
+    // 4. White Turkey Feathers (3 vanes at rear tail, z = -0.62 to -0.71)
     const fletchShape = new THREE.Shape()
     fletchShape.moveTo(0, 0)
-    fletchShape.lineTo(0.015, 0.016)
-    fletchShape.lineTo(0.012, 0.09)
-    fletchShape.lineTo(0, 0.08)
+    fletchShape.lineTo(0.015, -0.014)
+    fletchShape.lineTo(0.012, -0.088)
+    fletchShape.lineTo(0, -0.078)
     fletchShape.closePath()
     const fletch = new THREE.ShapeGeometry(fletchShape)
-    fletch.rotateX(Math.PI / 2)
+    fletch.rotateX(Math.PI / 2) // Extends backward along -Z
 
-    // Bone nock
-    const nock = new THREE.CylinderGeometry(0.0048, 0.0048, 0.02, 8)
+    // 5. Carved Bone Nock (at rear tail z = -0.73)
+    const nock = new THREE.CylinderGeometry(0.0055, 0.0055, 0.022, 8)
     nock.rotateX(Math.PI / 2)
 
+    // Materials
     const sMat = new THREE.MeshStandardMaterial({
-      color: '#5c381e',
-      roughness: 0.45,
+      color: '#764825',
+      roughness: 0.42,
       metalness: 0.05,
     })
 
     const tMat = new THREE.MeshStandardMaterial({
-      color: '#2a2f35',
-      roughness: 0.22,
-      metalness: 0.9,
+      color: '#edf2f7', // Clean razor silver broadhead blade
+      roughness: 0.18,
+      metalness: 0.96,
+    })
+
+    const feMat = new THREE.MeshStandardMaterial({
+      color: '#383d42',
+      roughness: 0.32,
+      metalness: 0.85,
     })
 
     const fMat = new THREE.MeshStandardMaterial({
-      color: '#2e7d32',
-      roughness: 0.5,
+      color: '#ffffff', // Crisp bright white feathers (matches reference image)
+      roughness: 0.50,
       side: THREE.DoubleSide,
     })
 
     const nMat = new THREE.MeshStandardMaterial({
-      color: '#e8e0d5',
-      roughness: 0.35,
+      color: '#f5efe4',
+      roughness: 0.32,
+    })
+
+    const trMat = new THREE.LineBasicMaterial({
+      color: '#ffffff',
+      transparent: true,
+      opacity: 0.70,
+      linewidth: 2,
     })
 
     return {
       shaftGeo: shaft,
       tipGeo: tip,
+      ferruleGeo: ferrule,
       fletchGeo: fletch,
       nockGeo: nock,
       shaftMat: sMat,
       tipMat: tMat,
+      ferruleMat: feMat,
       fletchMat: fMat,
       nockMat: nMat,
+      trailMat: trMat,
     }
   }, [])
 
@@ -133,42 +156,43 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
     spawnArrow: (origin: THREE.Vector3, direction: THREE.Vector3, power: number) => {
       recordShot()
 
-      // Hunting arrow ballistic speed: 45 m/s to 82 m/s
-      const speed = 45 + power * 37
+      // Gameplay ballistic speed: 46 m/s to 68 m/s (punchy, readable frame-by-frame)
+      const speed = 46 + power * 22
       const vel = direction.clone().multiplyScalar(speed)
-      // Aerodynamic slight lift
-      vel.y += 0.5 * power
+      vel.y += 0.35 * power // subtle aerodynamic lift
 
-      // Initial rotation facing fire vector
-      const rot = new THREE.Euler()
+      // Initial orientation: align local +Z with direction of flight
       const dummy = new THREE.Object3D()
       dummy.position.copy(origin)
       dummy.lookAt(origin.clone().add(direction))
-      rot.copy(dummy.rotation)
+      const quat = dummy.quaternion.clone()
 
       const newArrow: FlyingArrow = {
         id: Date.now() + Math.random(),
         pos: origin.clone(),
         vel,
-        rot,
+        quat,
         stuck: false,
         wobbleAmp: 0,
         wobbleFreq: 26,
         wobbleTime: 0,
         life: 0,
+        trail: [origin.clone()],
       }
 
-      setArrows((prev) => [...prev.slice(-MAX_ARROWS + 1), newArrow])
+      setArrows((prev) => {
+        const next = [...prev, newArrow]
+        return next.length > MAX_ARROWS ? next.slice(-MAX_ARROWS) : next
+      })
     },
   }))
 
-  // ── Physics & Target Raycasting Loop ───────────────────────────────────────
+  // ── Physics Integration Loop ───────────────────────────────────────────────
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.05)
-    const currentShrines = useQuestStore.getState().shrines
-
     let arrowsUpdated = false
     const activeArrows = [...arrowsRef.current]
+    const currentShrines = useQuestStore.getState().shrines
 
     for (let i = activeArrows.length - 1; i >= 0; i--) {
       const a = activeArrows[i]
@@ -197,17 +221,25 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       a.vel.y += GRAVITY * dt
       a.pos.addScaledVector(a.vel, dt)
 
-      // Aerodynamic rotation (tip faces into velocity vector)
+      // Aerodynamic rotation: tip (+Z) faces into velocity vector
       const lookTarget = a.pos.clone().add(a.vel)
       const dummy = new THREE.Object3D()
       dummy.position.copy(a.pos)
       dummy.lookAt(lookTarget)
-      a.rot.copy(dummy.rotation)
+      a.quat.copy(dummy.quaternion)
+
+      // Append trail point at the tail of the arrow (0.70m behind tip)
+      const fwd = a.vel.clone().normalize()
+      const tailPos = a.pos.clone().addScaledVector(fwd, -0.70)
+      a.trail.push(tailPos)
+      if (a.trail.length > 16) {
+        a.trail.shift()
+      }
 
       arrowsUpdated = true
 
       // ── Collision Check 0: Environment Colliders (Trees, Rocks, Shrines) ────
-      const envHit = worldCollisionSystem.checkRay(prevPos, a.pos, 0.05)
+      const envHit = worldCollisionSystem.checkRay(prevPos, a.pos, 0.06)
       if (envHit) {
         a.pos.copy(envHit.hitPoint)
         a.stuck = true
@@ -255,7 +287,6 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
         for (let tIdx = 0; tIdx < 3; tIdx++) {
           if (shrine.targetsHit[tIdx]) continue
 
-          // Target orbital position relative to shrine
           const angle = (tIdx * (Math.PI * 2)) / 3 + 0.4
           const targetRad = 5.2
           const targetWorldX = shrine.position[0] + Math.cos(angle) * targetRad
@@ -264,17 +295,16 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
 
           const targetPos = new THREE.Vector3(targetWorldX, targetWorldY, targetWorldZ)
 
-          // Distance from arrow segment to target center
           const closestPt = new THREE.Vector3()
           motionSegment.closestPointToPoint(targetPos, true, closestPt)
           const dist = closestPt.distanceTo(targetPos)
 
-          if (dist < 1.05) { // Bullseye hit radius
+          if (dist < 1.15) {
             hitTarget(shrine.id, tIdx)
 
             // Spawn radiant elemental sparks
             const newSparks: SparkParticle[] = []
-            for (let s = 0; s < 22; s++) {
+            for (let s = 0; s < 28; s++) {
               const theta = Math.random() * Math.PI * 2
               const phi = Math.random() * Math.PI
               const spd = 2.5 + Math.random() * 6.5
@@ -339,33 +369,56 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
     <>
       {/* 3D Flying & Stuck Arrows */}
       {arrows.map((a) => {
-        // Calculate kinetic wobble rotation when stuck
         const wobble =
           a.stuck && a.wobbleAmp > 0.001
             ? Math.sin(a.wobbleTime * a.wobbleFreq) * a.wobbleAmp * Math.exp(-a.wobbleTime * 6)
             : 0
 
+        // Compute rotation quaternion including physical wobble
+        const renderQuat = a.quat.clone()
+        if (wobble !== 0) {
+          const wobbleQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), wobble)
+          renderQuat.multiply(wobbleQ)
+        }
+
+        // Create flight trail geometry if flying
+        const hasTrail = !a.stuck && a.trail.length > 1
+        let trailLineGeo: THREE.BufferGeometry | null = null
+        if (hasTrail) {
+          trailLineGeo = new THREE.BufferGeometry().setFromPoints(a.trail)
+        }
+
         return (
-          <group
-            key={a.id}
-            position={[a.pos.x, a.pos.y, a.pos.z]}
-            rotation={[a.rot.x + wobble, a.rot.y, a.rot.z + wobble]}
-          >
-            {/* Damascus Steel Broadhead Tip (at pivot (0, 0, 0), facing forward -Z) */}
-            <mesh geometry={tipGeo} material={tipMat} position={[0, 0, 0]} />
+          <group key={a.id}>
+            {/* Aerodynamic luminous slipstream trail */}
+            {hasTrail && trailLineGeo && (
+              <primitive object={new THREE.Line(trailLineGeo, trailMat)} />
+            )}
 
-            {/* Cedar Shaft (0.74m length, extending backward along +Z) */}
-            <mesh geometry={shaftGeo} material={shaftMat} position={[0, 0, 0.37]} castShadow />
+            {/* The Arrow Mesh: pivot at broadhead tip (0,0,0), +Z is flight forward */}
+            <group
+              position={[a.pos.x, a.pos.y, a.pos.z]}
+              quaternion={renderQuat}
+            >
+              {/* 1. Silver Broadhead Razor Blade (at front z = 0, pointing +Z) */}
+              <mesh geometry={tipGeo} material={tipMat} position={[0, 0, 0]} />
 
-            {/* Carved Bone Nock (at rear tail z = 0.74) */}
-            <mesh geometry={nockGeo} material={nockMat} position={[0, 0, 0.74]} />
+              {/* 2. Metal Ferrule Collar (z = -0.05) */}
+              <mesh geometry={ferruleGeo} material={ferruleMat} position={[0, 0, -0.055]} />
 
-            {/* Fletching Feathers (3 vanes at rear tail) */}
-            {[0, (Math.PI * 2) / 3, (Math.PI * 4) / 3].map((angle, i) => (
-              <group key={i} position={[0, 0, 0.66]} rotation={[0, 0, angle]}>
-                <mesh geometry={fletchGeo} material={fletchMat} position={[0, 0.005, 0]} />
-              </group>
-            ))}
+              {/* 3. Cedar Wood Shaft (centered at z = -0.39, extends from -0.05 to -0.73) */}
+              <mesh geometry={shaftGeo} material={shaftMat} position={[0, 0, -0.39]} castShadow />
+
+              {/* 4. Carved Bone Nock (at rear tail z = -0.73) */}
+              <mesh geometry={nockGeo} material={nockMat} position={[0, 0, -0.73]} />
+
+              {/* 5. 3 White Turkey Feathers (at rear tail z = -0.63 to -0.72) */}
+              {[0, (Math.PI * 2) / 3, (Math.PI * 4) / 3].map((angle, i) => (
+                <group key={i} position={[0, 0, -0.63]} rotation={[0, 0, angle]}>
+                  <mesh geometry={fletchGeo} material={fletchMat} position={[0, 0.005, 0]} />
+                </group>
+              ))}
+            </group>
           </group>
         )
       })}
