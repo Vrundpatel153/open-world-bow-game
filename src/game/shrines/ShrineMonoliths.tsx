@@ -9,11 +9,12 @@
 // - Ascending celestial light pillar and collectable radiant Elemental Core
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useQuestStore, type ShrineDef } from '../stores/questStore'
 import { getOpenWorldHeight } from '@/components/world/OpenWorldGrassField'
+import { worldCollisionSystem, type WorldCollider } from '../physics/WorldCollisionSystem'
 
 interface ShrineMonolithsProps {
   playerPosRef?: React.MutableRefObject<THREE.Vector3>
@@ -25,6 +26,62 @@ export default function ShrineMonoliths({ playerPosRef }: ShrineMonolithsProps) 
 
   // Track time for animations
   const timeRef = useRef(0)
+
+  // Register physical colliders for shrine megalith pillars & menhir stones
+  useEffect(() => {
+    const shrineColliders: WorldCollider[] = []
+
+    shrines.forEach((s) => {
+      const sx = s.position[0]
+      const sz = s.position[2]
+      const sy = getOpenWorldHeight(sx, sz)
+
+      // Twin Megalith Pillars
+      shrineColliders.push({
+        id: `shrine_pillar_left_${s.id}`,
+        tag: 'pillar',
+        x: sx - 1.1,
+        z: sz,
+        y: sy,
+        radius: 0.72,
+        height: 5.0,
+        minY: sy,
+        maxY: sy + 5.0,
+      })
+      shrineColliders.push({
+        id: `shrine_pillar_right_${s.id}`,
+        tag: 'pillar',
+        x: sx + 1.1,
+        z: sz,
+        y: sy,
+        radius: 0.72,
+        height: 5.0,
+        minY: sy,
+        maxY: sy + 5.0,
+      })
+
+      // 4 Standing Menhir Stones around perimeter
+      const menhirAngles = [0, Math.PI * 0.5, Math.PI, Math.PI * 1.5]
+      menhirAngles.forEach((angle, mIdx) => {
+        const mx = sx + Math.cos(angle) * 4.2
+        const mz = sz + Math.sin(angle) * 4.2
+        const my = getOpenWorldHeight(mx, mz)
+        shrineColliders.push({
+          id: `shrine_menhir_${s.id}_${mIdx}`,
+          tag: 'shrine',
+          x: mx,
+          z: mz,
+          y: my,
+          radius: 0.55,
+          height: 3.5,
+          minY: my,
+          maxY: my + 3.5,
+        })
+      })
+    })
+
+    worldCollisionSystem.addColliders(shrineColliders)
+  }, [shrines])
 
   // ── Shared Geometries: Ancient Megalith Sanctuary ──────────────────────────
   const {

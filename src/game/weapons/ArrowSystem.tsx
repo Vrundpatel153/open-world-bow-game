@@ -11,6 +11,7 @@ import * as THREE from 'three'
 import { useQuestStore } from '../stores/questStore'
 import { sound } from '../audio/SoundSynthesizer'
 import { getOpenWorldHeight } from '@/components/world/OpenWorldGrassField'
+import { worldCollisionSystem } from '../physics/WorldCollisionSystem'
 
 export interface ArrowSystemHandle {
   spawnArrow: (origin: THREE.Vector3, direction: THREE.Vector3, power: number) => void
@@ -204,6 +205,44 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       a.rot.copy(dummy.rotation)
 
       arrowsUpdated = true
+
+      // ── Collision Check 0: Environment Colliders (Trees, Rocks, Shrines) ────
+      const envHit = worldCollisionSystem.checkRay(prevPos, a.pos, 0.05)
+      if (envHit) {
+        a.pos.copy(envHit.hitPoint)
+        a.stuck = true
+        a.wobbleAmp = 0.09
+        a.wobbleFreq = envHit.collider.tag === 'tree' ? 24 : 36
+        a.wobbleTime = 0
+        a.vel.set(0, 0, 0)
+
+        if (envHit.collider.tag === 'tree') {
+          sound.playArrowThud(true)
+        } else {
+          sound.playArrowThud(false)
+          // Sparks from stone strike
+          const stoneSparks: SparkParticle[] = []
+          for (let s = 0; s < 10; s++) {
+            stoneSparks.push({
+              id: Math.random(),
+              pos: envHit.hitPoint.clone(),
+              vel: new THREE.Vector3(
+                (Math.random() - 0.5) * 5,
+                Math.random() * 4 + 1,
+                (Math.random() - 0.5) * 5
+              ),
+              color: '#dcd8cf',
+              life: 0,
+              maxLife: 0.3 + Math.random() * 0.2,
+              size: 0.035,
+            })
+          }
+          sparksRef.current = [...sparksRef.current, ...stoneSparks]
+        }
+
+        arrowsUpdated = true
+        continue
+      }
 
       // ── Collision Check 1: Guardian Shield Targets on Ancient Shrines ──────
       let targetHit = false

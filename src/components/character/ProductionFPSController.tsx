@@ -12,6 +12,7 @@ import * as THREE from 'three'
 import { inputManager } from '@/systems/KeyboardInput'
 import { useQuestStore } from '@/game/stores/questStore'
 import { sound } from '@/game/audio/SoundSynthesizer'
+import { worldCollisionSystem } from '@/game/physics/WorldCollisionSystem'
 
 interface ProductionFPSControllerProps {
   onPositionUpdate?: (pos: THREE.Vector3) => void
@@ -161,6 +162,9 @@ export default function ProductionFPSController({
       // Apply horizontal movement
       pos.current.x += vel.current.x * FIXED_DT
       pos.current.z += vel.current.z * FIXED_DT
+
+      // World Collision Resolution against Rocks, Trees, Pillars & Shrines
+      worldCollisionSystem.resolvePlayerCollision(pos.current, vel.current, 0.44)
 
       // World boundary constraint
       const currentRadius = Math.hypot(pos.current.x, pos.current.z)

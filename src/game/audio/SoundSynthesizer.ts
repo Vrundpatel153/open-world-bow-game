@@ -226,6 +226,62 @@ class SoundSynthesizer {
     osc.stop(now + 0.12)
   }
 
+  // ── Arrow Impact on Environment (Tree Wood or Stone Rock) ───────────────────
+  public playArrowThud(isWood: boolean = true) {
+    if (this.isMuted) return
+    this.ensureContext()
+    if (!this.ctx || !this.masterGain) return
+
+    const now = this.ctx.currentTime
+
+    if (isWood) {
+      // Solid deep wooden "thock" chunk
+      const osc = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+      const filter = this.ctx.createBiquadFilter()
+
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(140, now)
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.12)
+
+      filter.type = 'lowpass'
+      filter.frequency.setValueAtTime(450, now)
+
+      gain.gain.setValueAtTime(0.35, now)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12)
+
+      osc.connect(filter)
+      filter.connect(gain)
+      gain.connect(this.masterGain)
+
+      osc.start(now)
+      osc.stop(now + 0.12)
+    } else {
+      // Crisp stone ricochet clank & fracture
+      const osc = this.ctx.createOscillator()
+      const gain = this.ctx.createGain()
+      const filter = this.ctx.createBiquadFilter()
+
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(1350, now)
+      osc.frequency.exponentialRampToValueAtTime(420, now + 0.08)
+
+      filter.type = 'bandpass'
+      filter.frequency.setValueAtTime(2200, now)
+      filter.Q.setValueAtTime(3.5, now)
+
+      gain.gain.setValueAtTime(0.28, now)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08)
+
+      osc.connect(filter)
+      filter.connect(gain)
+      gain.connect(this.masterGain)
+
+      osc.start(now)
+      osc.stop(now + 0.08)
+    }
+  }
+
   // ── Target Hit: crystalline bell chime with harmonic overtone ───────────────
   public playTargetHit(pitchOffset: number = 0) {
     if (this.isMuted) return

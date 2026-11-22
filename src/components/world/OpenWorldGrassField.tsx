@@ -18,6 +18,7 @@ import {
   makePineLeafDepthMaterial,
 } from '../grassField/materials/pineLeafMaterial'
 import { scatterBlades, scatterFlowers } from '../grassField/utils/scatter'
+import { worldCollisionSystem, type WorldCollider } from '@/game/physics/WorldCollisionSystem'
 
 export const WORLD_SIZE = 140
 export const WORLD_SEGMENTS = 64
@@ -111,7 +112,7 @@ export default function OpenWorldGrassField({
   })
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
-  const { terrainMesh, bladesMesh, flowerMeshes, foliageClusters, pathMarkers } = useMemo(() => {
+  const { terrainMesh, bladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
     // 1. Terrain Ground Mesh for high-density sampling (playable sanctuary radius ~36m)
     const samplePlaneGeo = new THREE.PlaneGeometry(74, 74, 60, 60)
     samplePlaneGeo.rotateX(-Math.PI / 2)
@@ -206,6 +207,7 @@ export default function OpenWorldGrassField({
     // 5. Rich Ancient Pine Forest & Conifer Copses (18+ Diverse Groves)
     const barkMat = makeBarkMaterial(u.bark)
     const clusters: THREE.Group[] = []
+    const colliders: WorldCollider[] = []
 
     const createAuthenticCluster = (posX: number, posZ: number, rotY: number, scaleVal: number) => {
       const cluster = scene.clone(true) as THREE.Group
@@ -217,13 +219,61 @@ export default function OpenWorldGrassField({
       const distCenter = Math.hypot(posX, posZ)
       const isCaster = distCenter <= 36
 
+      const posY = getOpenWorldHeight(posX, posZ)
+      cluster.position.set(posX, posY, posZ)
+      cluster.rotation.y = rotY
+      cluster.scale.setScalar(scaleVal)
+      cluster.updateMatrixWorld(true)
+
+      // Traverse once: apply PBR materials & extract physical rock/tree collider nodes
       cluster.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
           const m = child as THREE.Mesh
           m.castShadow = isCaster
           m.receiveShadow = true
           const srcMat = Array.isArray(m.material) ? m.material[0] : m.material
-          if (srcMat.name === TRUNK_MATERIAL) {
+
+          // 1. Rock Boulders
+          if (srcMat.name === 'RocksStylized_M') {
+            if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere()
+            const bs = m.geometry.boundingSphere!
+            const center = bs.center.clone().applyMatrix4(m.matrixWorld)
+            const scale = new THREE.Vector3().setFromMatrixScale(m.matrixWorld)
+            const maxS = Math.max(scale.x, scale.z)
+            const r = bs.radius * maxS * 0.88 // 88% radius for tight, natural collision boundary
+
+            if (r > 0.35) { // Skip tiny ground pebbles
+              colliders.push({
+                id: `rock_${posX.toFixed(1)}_${posZ.toFixed(1)}_${m.id}`,
+                tag: 'rock',
+                x: center.x,
+                z: center.z,
+                y: center.y,
+                radius: r,
+                height: bs.radius * scale.y * 2.2,
+                minY: center.y - bs.radius * scale.y,
+                maxY: center.y + bs.radius * scale.y + 1.2,
+              })
+            }
+          } else if (srcMat.name === TRUNK_MATERIAL) {
+            // 2. Tree Trunks
+            if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere()
+            const bs = m.geometry.boundingSphere!
+            const center = bs.center.clone().applyMatrix4(m.matrixWorld)
+            const scale = new THREE.Vector3().setFromMatrixScale(m.matrixWorld)
+            const trunkRadius = Math.max(0.36, bs.radius * Math.min(scale.x, scale.z) * 0.45)
+
+            colliders.push({
+              id: `tree_${posX.toFixed(1)}_${posZ.toFixed(1)}_${m.id}`,
+              tag: 'tree',
+              x: center.x,
+              z: center.z,
+              y: posY,
+              radius: trunkRadius,
+              height: 18.0 * scaleVal,
+              minY: posY - 1.0,
+              maxY: posY + 18.0 * scaleVal,
+            })
             m.material = barkMat
           } else if (srcMat.name === LEAF_MATERIAL) {
             const std = srcMat as THREE.MeshStandardMaterial
@@ -233,10 +283,6 @@ export default function OpenWorldGrassField({
         }
       })
 
-      const posY = getOpenWorldHeight(posX, posZ)
-      cluster.position.set(posX, posY, posZ)
-      cluster.rotation.y = rotY
-      cluster.scale.setScalar(scaleVal)
       return cluster
     }
 
@@ -305,12 +351,14 @@ export default function OpenWorldGrassField({
       flowerMeshes: flowerInstances,
       foliageClusters: clusters,
       pathMarkers: stoneMarkers,
+      colliders,
     }
   }, [scene, u])
 
   useEffect(() => {
+    worldCollisionSystem.addColliders(colliders)
     onLoaded?.()
-  }, [onLoaded])
+  }, [colliders, onLoaded])
 
   // ── Sync Uniforms with Zero GC allocations per frame ───────────────────────
   useFrame((state, delta) => {
