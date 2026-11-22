@@ -1,7 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // DayCycleSystem — Autonomous Real-Time Day-Night & Orbital Celestial Engine
-// Smoothly arcs the Sun and Moon across the sky with continuous azimuth & elevation,
+// Smoothly arcs the Sun and Moon across the sky with continuous 360° celestial orbit,
 // casting dynamic real-time moving shadows, lighting foliage & blending atmospheres.
+// Zero teleporting: opposite-phase Sun & Moon with smooth horizon transitions.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useRef, useEffect } from "react";
@@ -36,12 +37,13 @@ export default function DayCycleSystem({
   onFogColorChange,
   onSunMove,
 }: DayCycleSystemProps) {
-  const cycleTimeRef = useRef(35); // Start at pleasant mid-morning (~10:00 AM)
+  // Start at pleasant mid-morning (~10:00 AM)
+  const cycleTimeRef = useRef(35);
   const lastPhaseRef = useRef<SkyMode>("day");
 
   // Reusable Math objects for zero GC per frame
-  const sunDir = useRef(new THREE.Vector3());
-  const sunColor = useRef(new THREE.Color());
+  const celestialDir = useRef(new THREE.Vector3());
+  const lightColor = useRef(new THREE.Color());
   const fogColor = useRef(new THREE.Color());
   const fogColorA = useRef(new THREE.Color());
   const fogColorB = useRef(new THREE.Color());
@@ -55,70 +57,89 @@ export default function DayCycleSystem({
     cycleTimeRef.current = (cycleTimeRef.current + dt) % FULL_CYCLE_SECONDS;
     const progress = cycleTimeRef.current / FULL_CYCLE_SECONDS; // 0.0 to 1.0
 
+    // ── Continuous 360° Celestial Orbit ───────────────────────────────────────
+    // theta = orbital angle [0, 2π). 0 = Dawn in East, π/2 = Midday South,
+    // π = Sunset in West, 3π/2 = Midnight North.
+    const theta = progress * Math.PI * 2;
+
+    // Sun Trajectory:
+    // Azimuth: starts at 90° (East), rotates through 180° (South), 270° (West), 360°/0° (North)
+    const sunAzimuth = (progress * 360 + 90) % 360;
+    // Elevation: sinusoidal arc reaching +58° at midday, dipping to -58° at midnight
+    const sunElevation = Math.sin(theta) * 58;
+
+    // Moon Trajectory: Anti-solar celestial body (exact opposite phase theta + π)
+    const moonTheta = (theta + Math.PI) % (Math.PI * 2);
+    const moonAzimuth = (sunAzimuth + 180) % 360;
+    const moonElevation = Math.sin(moonTheta) * 58;
+
+    // Determine day vs night state based on sun elevation relative to twilight threshold
+    const isNight = sunElevation < -3.5;
+
+    // The active celestial body driving the sky disc and primary directional light:
+    // When sun is above -8°, sun is visible / setting; otherwise moon takes over
+    const activeElev = isNight ? moonElevation : sunElevation;
+    const activeAzim = isNight ? moonAzimuth : sunAzimuth;
+
     let currentMode: SkyMode = "day";
     let phaseName = "DAYLIGHT";
-    let elevation = 45;
-    let azimuth = 180;
-    let isNight = false;
-    let lightIntensity = 3.0;
+    let lightIntensity = 2.2;
 
-    if (progress < 0.5) {
-      // ── DAYTIME (progress 0.0 to 0.5) ────────────────────────────────────
-      const pDay = progress / 0.5; // 0.0 to 1.0
-      // Arc: rises in East (95°), peaks at zenith (180°), sets in West (265°)
-      azimuth = 95 + pDay * 170;
-      elevation = Math.sin(pDay * Math.PI) * 64 + 4; // 4° to 68° to 4°
-
-      if (pDay < 0.14) {
-        // Dawn / Sunrise
+    if (!isNight) {
+      // ── DAYTIME & TWILIGHT TRANSITIONS ────────────────────────────────────
+      if (sunElevation < 12 && progress < 0.5) {
+        // Dawn / Sunrise (Sun rising from East)
         currentMode = "sunrise";
         phaseName = "DAWN";
-        sunColor.current.set("#ff9638");
-        lightIntensity = 1.8 + (pDay / 0.14) * 1.0;
+        const tDawn = Math.max(0, (sunElevation + 3.5) / 15.5);
+        lightColor.current.set("#ff9638");
+        lightIntensity = 0.8 + tDawn * 1.3;
         fogColorA.current.set("#d99fa5"); // Morning rose-lavender
         fogColorB.current.set("#b8ddf8"); // Sky blue
-        fogColor.current.lerpColors(fogColorA.current, fogColorB.current, pDay / 0.14);
-      } else if (pDay < 0.82) {
-        // Daylight / Midday
+        fogColor.current.lerpColors(fogColorA.current, fogColorB.current, tDawn);
+      } else if (sunElevation >= 12) {
+        // Daylight / Midday (Warm clear sun, lush green environment)
         currentMode = "day";
         phaseName = "DAYLIGHT";
-        sunColor.current.set("#fff8eb");
-        lightIntensity = 3.1;
+        lightColor.current.set("#fffbf2"); // Crisp, balanced warm sunlight
+        lightIntensity = 2.3;
         fogColor.current.set("#b0ddff");
       } else {
-        // Dusk / Sunset
+        // Dusk / Sunset (Sun sinking into West)
         currentMode = "sunset";
         phaseName = "DUSK";
-        const tSunset = (pDay - 0.82) / 0.18;
-        sunColor.current.set("#ff5c20");
-        lightIntensity = 3.0 - tSunset * 1.6;
+        const tDusk = Math.max(0, Math.min(1, (12 - sunElevation) / 15.5));
+        lightColor.current.set("#ff6828");
+        lightIntensity = 2.2 - tDusk * 1.4;
         fogColorA.current.set("#b0ddff");
         fogColorB.current.set("#d87f54"); // Fiery sunset orange
-        fogColor.current.lerpColors(fogColorA.current, fogColorB.current, tSunset);
+        fogColor.current.lerpColors(fogColorA.current, fogColorB.current, tDusk);
       }
     } else {
-      // ── NIGHTTIME (progress 0.5 to 1.0) ──────────────────────────────────
-      isNight = true;
-      const pNight = (progress - 0.5) / 0.5; // 0.0 to 1.0
-      // Moon rises in East (90°), peaks at South (180°), sets in West (265°)
-      azimuth = 90 + pNight * 175;
-      elevation = Math.sin(pNight * Math.PI) * 54 + 5; // 5° to 59° to 5°
-
+      // ── NOCTURNAL HOURS ──────────────────────────────────────────────────
       currentMode = "night";
-      phaseName = pNight < 0.25 ? "TWILIGHT" : pNight < 0.85 ? "MIDNIGHT" : "PRE-DAWN";
-      sunColor.current.set("#789ccf"); // Soft nocturnal blue
-      lightIntensity = 0.42;
+      const moonProgress = Math.max(0, moonElevation / 58);
+      if (sunElevation > -14) {
+        phaseName = "TWILIGHT";
+      } else if (sunElevation < -42) {
+        phaseName = "MIDNIGHT";
+      } else {
+        phaseName = progress < 0.75 ? "NIGHT" : "PRE-DAWN";
+      }
 
-      fogColorA.current.set("#1a2b42");
-      fogColorB.current.set("#0d1b2d");
-      fogColor.current.lerpColors(fogColorA.current, fogColorB.current, Math.sin(pNight * Math.PI));
+      lightColor.current.set("#82aae0"); // Gentle ethereal moonlight
+      lightIntensity = 0.38 + moonProgress * 0.15;
+
+      fogColorA.current.set("#152438");
+      fogColorB.current.set("#0b1626");
+      fogColor.current.lerpColors(fogColorA.current, fogColorB.current, moonProgress);
     }
 
-    // Convert (elevation, azimuth) to 3D unit direction vector
+    // Convert active celestial position (elevation, azimuth) to 3D unit direction vector
     // Standard Coordinates: North = -Z (0°), East = +X (90°), South = +Z (180°), West = -X (270°)
-    const elRad = elevation * (Math.PI / 180);
-    const azRad = azimuth * (Math.PI / 180);
-    sunDir.current.set(
+    const elRad = activeElev * (Math.PI / 180);
+    const azRad = activeAzim * (Math.PI / 180);
+    celestialDir.current.set(
       Math.cos(elRad) * Math.sin(azRad),
       Math.sin(elRad),
       -Math.cos(elRad) * Math.cos(azRad)
@@ -126,18 +147,18 @@ export default function DayCycleSystem({
 
     // Notify scene of continuous sun/moon trajectory & lighting
     onSunMove?.(
-      sunDir.current,
-      sunColor.current,
+      celestialDir.current,
+      lightColor.current,
       lightIntensity,
-      elevation,
-      azimuth,
+      activeElev,
+      activeAzim,
       isNight
     );
 
     // Notify fog color
     onFogColorChange?.("#" + fogColor.current.getHexString());
 
-    // Phase transition notification if mode changed with smooth 3.5s atmospheric blend
+    // Phase transition notification if mode changed with smooth 4.0s atmospheric blend
     if (lastPhaseRef.current !== currentMode) {
       const prevMode = lastPhaseRef.current;
       lastPhaseRef.current = currentMode;
@@ -151,7 +172,7 @@ export default function DayCycleSystem({
     }
 
     if (blendStateRef.current.active) {
-      blendStateRef.current.t = Math.min(1.0, blendStateRef.current.t + dt / 3.5);
+      blendStateRef.current.t = Math.min(1.0, blendStateRef.current.t + dt / 4.0);
       if (blendStateRef.current.t >= 1.0) {
         blendStateRef.current.active = false;
       }

@@ -35,6 +35,8 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
   const arrowGroupRef = useRef<THREE.Group>(null!)
   const upperLimbRef = useRef<THREE.Group>(null!)
   const lowerLimbRef = useRef<THREE.Group>(null!)
+  const upperTipNodeRef = useRef<THREE.Group>(null!)
+  const lowerTipNodeRef = useRef<THREE.Group>(null!)
 
   // Animation & physical states
   const drawTension = useRef(0)
@@ -65,6 +67,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     gripWrapGeo,
     upperCollarGeo,
     lowerCollarGeo,
+    collarRimGeo,
     diamondCrestGeo,
     flowerEmblemGeo,
     upperLimbGeo,
@@ -75,37 +78,38 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     fletchingGeo,
     arrowNockGeo,
   } = useMemo(() => {
-    // 1. Central Carved Mahogany Riser (Height 0.24m)
-    // Modeled with an integrated arrow shelf on the inner left face
+    // 1. Central Carved Mahogany Riser (Height 0.22m)
+    // Sculpted organic grip with clean, integrated shelf recess on the inner-left
     const riserShape = new THREE.Shape()
-    riserShape.moveTo(-0.014, -0.12)
-    riserShape.lineTo(0.014, -0.12)
-    riserShape.lineTo(0.016, -0.03)
-    // Shelf floor on the inner left face
-    riserShape.lineTo(0.016, 0.05)
-    riserShape.lineTo(0.013, 0.12)
-    riserShape.lineTo(-0.013, 0.12)
-    riserShape.lineTo(-0.016, 0.05)
-    riserShape.lineTo(-0.022, 0.03)  // Cutout shelf recess
-    riserShape.lineTo(-0.022, -0.01)
-    riserShape.lineTo(-0.015, -0.02)
+    riserShape.moveTo(-0.015, -0.11)
+    riserShape.lineTo(0.015, -0.11)
+    riserShape.lineTo(0.017, -0.02)
+    riserShape.lineTo(0.017, 0.04)
+    riserShape.lineTo(0.015, 0.11)
+    riserShape.lineTo(-0.015, 0.11)
+    riserShape.lineTo(-0.017, 0.04)
+    // Smooth shelf ledge (clean transition, zero jagged triangle spikes)
+    riserShape.lineTo(-0.020, 0.02)
+    riserShape.lineTo(-0.020, -0.01)
+    riserShape.lineTo(-0.017, -0.03)
     riserShape.closePath()
 
     const riser = new THREE.ExtrudeGeometry(riserShape, {
-      depth: 0.034,
+      depth: 0.032,
       bevelEnabled: true,
-      bevelSegments: 2,
+      bevelSegments: 3,
       bevelSize: 0.0025,
       bevelThickness: 0.0025,
     })
     riser.center()
 
-    // 2. Leather Wrapped Grip Handle (Center grip from Y = -0.06 to 0.00)
-    const gripWrap = new THREE.CylinderGeometry(0.017, 0.018, 0.08, 14)
+    // 2. Leather Wrapped Grip Handle (Center grip from Y = -0.05 to 0.01)
+    const gripWrap = new THREE.CylinderGeometry(0.017, 0.018, 0.075, 14)
 
     // 3. Golden Brass Reinforcement Collars (Signature feature in Reference Image 9)
-    const upperCollar = new THREE.BoxGeometry(0.038, 0.028, 0.042)
-    const lowerCollar = new THREE.BoxGeometry(0.038, 0.030, 0.042)
+    const upperCollar = new THREE.BoxGeometry(0.038, 0.030, 0.040)
+    const lowerCollar = new THREE.BoxGeometry(0.038, 0.030, 0.040)
+    const collarRim = new THREE.BoxGeometry(0.042, 0.005, 0.044)
 
     // Embossed Diamond Crest (Heraldic diamond plaque on upper collar)
     const diamondShape = new THREE.Shape()
@@ -141,16 +145,16 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     })
     flowerEmblem.center()
 
-    // 4. Upper & Lower Recurve Limbs (Sweeping curves)
+    // 4. Upper & Lower Recurve Limbs (Wide, flat beveled wooden planks from Reference Image 9)
     const upperPoints: THREE.Vector3[] = []
     const lowerPoints: THREE.Vector3[] = []
 
-    for (let i = 0; i <= 14; i++) {
-      const t = i / 14
-      const y = t * 0.28
-      // Curve up and arch forward gracefully
-      const x = Math.sin(t * Math.PI * 0.5) * 0.04
-      const z = Math.sin(t * Math.PI * 0.6) * 0.05 + Math.pow(t, 2.0) * 0.04
+    for (let i = 0; i <= 16; i++) {
+      const t = i / 16
+      const y = t * 0.32
+      // Recurve arc: arches forward gracefully, then recurves back near tip
+      const x = Math.sin(t * Math.PI * 0.5) * 0.02
+      const z = Math.sin(t * Math.PI * 0.65) * 0.05 + Math.pow(t, 2.2) * 0.025
       upperPoints.push(new THREE.Vector3(x, y, z))
       lowerPoints.push(new THREE.Vector3(x, -y, z))
     }
@@ -158,8 +162,30 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const upperCurve = new THREE.CatmullRomCurve3(upperPoints)
     const lowerCurve = new THREE.CatmullRomCurve3(lowerPoints)
 
-    const upperLimb = new THREE.TubeGeometry(upperCurve, 20, 0.012, 8, false)
-    const lowerLimb = new THREE.TubeGeometry(lowerCurve, 20, 0.012, 8, false)
+    // Flat beveled plank cross-section (width 26mm, thickness 10mm)
+    const plankShape = new THREE.Shape()
+    plankShape.moveTo(-0.013, -0.005)
+    plankShape.lineTo(0.013, -0.005)
+    plankShape.lineTo(0.013, 0.005)
+    plankShape.lineTo(-0.013, 0.005)
+    plankShape.closePath()
+
+    const upperLimb = new THREE.ExtrudeGeometry(plankShape, {
+      extrudePath: upperCurve,
+      steps: 24,
+      bevelEnabled: true,
+      bevelSegments: 2,
+      bevelSize: 0.0015,
+      bevelThickness: 0.0015,
+    })
+    const lowerLimb = new THREE.ExtrudeGeometry(plankShape, {
+      extrudePath: lowerCurve,
+      steps: 24,
+      bevelEnabled: true,
+      bevelSegments: 2,
+      bevelSize: 0.0015,
+      bevelThickness: 0.0015,
+    })
 
     // 5. Nocked Hunting Arrow Components (Length 0.72m)
     // Cedar wood shaft (diameter 9mm, length 0.68m, centered along Z)
@@ -210,6 +236,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
       gripWrapGeo: gripWrap,
       upperCollarGeo: upperCollar,
       lowerCollarGeo: lowerCollar,
+      collarRimGeo: collarRim,
       diamondCrestGeo: diamondCrest,
       flowerEmblemGeo: flowerEmblem,
       upperLimbGeo: upperLimb,
@@ -537,7 +564,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const lowerTip = new THREE.Vector3(0.04, -0.26 + limbFlex * 0.015, 0.09 + limbFlex * 0.03)
 
     // Arrow Shelf on the inner-left face of the riser:
-    const shelfPos = new THREE.Vector3(-0.022, 0.015, 0.0)
+    const shelfPos = new THREE.Vector3(-0.020, 0.015, 0.0)
 
     // Aiming Direction in Rig Space (points forward into screen toward crosshair):
     // In camera space, center crosshair is at (0, 0, -100).
@@ -588,9 +615,28 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
 
     // Update 3-Point Continuous Bowstring: Upper Tip -> Arrow Nock -> Lower Tip
     const stringPosAttr = stringGeo.attributes.position as THREE.BufferAttribute
-    stringPosAttr.setXYZ(0, upperTip.x, upperTip.y, upperTip.z)
+    const tempTipPos = new THREE.Vector3()
+
+    // 1. Upper tip position in rig local space
+    if (upperTipNodeRef.current && rigGroupRef.current) {
+      upperTipNodeRef.current.getWorldPosition(tempTipPos)
+      rigGroupRef.current.worldToLocal(tempTipPos)
+      stringPosAttr.setXYZ(0, tempTipPos.x, tempTipPos.y, tempTipPos.z)
+    } else {
+      stringPosAttr.setXYZ(0, 0.02, 0.40, 0.075)
+    }
+
+    // 2. Clamped Arrow Nock
     stringPosAttr.setXYZ(1, nockPos.x, nockPos.y, nockPos.z)
-    stringPosAttr.setXYZ(2, lowerTip.x, lowerTip.y, lowerTip.z)
+
+    // 3. Lower tip position in rig local space
+    if (lowerTipNodeRef.current && rigGroupRef.current) {
+      lowerTipNodeRef.current.getWorldPosition(tempTipPos)
+      rigGroupRef.current.worldToLocal(tempTipPos)
+      stringPosAttr.setXYZ(2, tempTipPos.x, tempTipPos.y, tempTipPos.z)
+    } else {
+      stringPosAttr.setXYZ(2, 0.02, -0.40, 0.075)
+    }
     stringPosAttr.needsUpdate = true
   })
 
@@ -605,12 +651,14 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         <mesh geometry={riserGeo} material={woodMat} position={[0, 0, 0]} castShadow={false} />
 
         {/* Stitched Leather Hand Grip Wrap */}
-        <mesh geometry={gripWrapGeo} material={leatherMat} position={[0, -0.03, 0.004]} />
+        <mesh geometry={gripWrapGeo} material={leatherMat} position={[0, -0.02, 0.003]} />
 
         {/* ── Golden Brass Collars (Signature Aesthetic from Reference Image 9) ─ */}
         {/* Upper Collar Bracket with Embossed Diamond Crest */}
-        <group position={[0, 0.08, 0.004]}>
+        <group position={[0, 0.08, 0.002]}>
           <mesh geometry={upperCollarGeo} material={brassMat} />
+          <mesh geometry={collarRimGeo} material={brassAccentMat} position={[0, 0.015, 0]} />
+          <mesh geometry={collarRimGeo} material={brassAccentMat} position={[0, -0.015, 0]} />
           {/* Diamond Heraldic Plaque (❖ motif facing player/camera) */}
           <group position={[-0.006, 0, 0.022]} rotation={[0, 0.10, 0]}>
             <mesh geometry={diamondCrestGeo} material={brassAccentMat} />
@@ -619,8 +667,10 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         </group>
 
         {/* Lower Collar Bracket */}
-        <group position={[0, -0.08, 0.004]}>
+        <group position={[0, -0.08, 0.002]}>
           <mesh geometry={lowerCollarGeo} material={brassMat} />
+          <mesh geometry={collarRimGeo} material={brassAccentMat} position={[0, 0.015, 0]} />
+          <mesh geometry={collarRimGeo} material={brassAccentMat} position={[0, -0.015, 0]} />
           <group position={[-0.006, 0, 0.022]} rotation={[0, 0.10, 0]}>
             <mesh geometry={diamondCrestGeo} material={brassAccentMat} />
           </group>
@@ -629,11 +679,13 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         {/* ── 2. Upper Recurve Limb ───────────────────────────────────────── */}
         <group ref={upperLimbRef} position={[0, 0.08, 0]}>
           <mesh geometry={upperLimbGeo} material={woodMat} />
+          <group ref={upperTipNodeRef} position={[0.02, 0.32, 0.075]} />
         </group>
 
         {/* ── 3. Lower Recurve Limb ───────────────────────────────────────── */}
         <group ref={lowerLimbRef} position={[0, -0.08, 0]}>
           <mesh geometry={lowerLimbGeo} material={woodMat} />
+          <group ref={lowerTipNodeRef} position={[0.02, -0.32, 0.075]} />
         </group>
 
         {/* ── 4. Continuous Dynamic Bowstring ─────────────────────────────── */}

@@ -11,40 +11,43 @@ import {
 import { DEBUG_FRAGMENT_UNIFORMS, DEBUG_VIEW_FRAGMENT } from "../shaders/debug";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Blade Material & 3-Blade Fanned Tuft Geometry
+// Blade Material & 4-Blade Slender Curved Tuft Geometry
 //
 // Generates a multi-blade organic clump (tuft) for each instance:
-//   - Center Blade: stands upright, slight backward curve, height 1.0, width 0.045
-//   - Left Blade: splayed -30°, organic outward flare, height 0.88, width 0.040
-//   - Right Blade: splayed +32°, organic outward flare, height 0.84, width 0.038
+//   - Center Blade: stands upright, slender curved profile, height 1.0, width 0.022
+//   - Left Blade: splayed -42°, organic outward flare, height 0.92, width 0.020
+//   - Right Blade: splayed +45°, organic outward flare, height 0.88, width 0.019
+//   - Back Blade: splayed +165°, arching backward, height 0.84, width 0.018
 //
-// 110,000 instances = 330,000 dense, slender, curved grass blades in ONE draw call!
-// Covers entire 140m x 140m open world with ZERO bald patches or plain gaps.
+// 130,000 instances = 520,000 dense, slender, curved grass blades in ONE draw call!
+// Covers entire open world sanctuary with ZERO bald patches or spiky triangular wedges.
 // Shading normal is forced to +Y on both sides to prevent shimmer.
 // ─────────────────────────────────────────────────────────────────────────────
 
 function bladeHalfWidth(t: number): number {
-  return 0.5 * Math.pow(1 - t, 1.25);
+  // Slender, organic ribbon profile: gentle taper from root to sharp tip
+  return 0.24 * (1.0 - t * 0.82);
 }
 
 /**
- * Creates an organic 3-blade fanned grass clump geometry.
- * Each instance in InstancedMesh renders 3 distinct, curved, slender blades
+ * Creates an organic 4-blade fanned grass clump geometry.
+ * Each instance in InstancedMesh renders 4 distinct, curved, slender blades
  * that overlap to eliminate all bare ground gaps from any camera angle.
  */
 export function makeBladeGeometry(segments = 4): THREE.BufferGeometry {
   const seg = Math.max(2, Math.round(segments));
   const vertsPerBlade = seg * 2 + 1;
-  const totalVerts = vertsPerBlade * 3;
+  const totalVerts = vertsPerBlade * 4;
 
   const positions = new Float32Array(totalVerts * 3);
   const indices: number[] = [];
 
-  // Blade configurations (angle around Y, tilt angle, height scale, width scale, X offset)
+  // Blade configurations (angle around Y, tilt angle, height scale, width scale, X offset, Z offset)
   const bladeConfigs = [
-    { yaw: 0.0, tilt: 0.08, hScale: 1.00, wScale: 0.85, xOff: 0.000, zOff: 0.000 },
-    { yaw: -0.52, tilt: 0.22, hScale: 0.88, wScale: 0.78, xOff: -0.018, zOff: 0.005 },
-    { yaw: 0.56, tilt: 0.20, hScale: 0.84, wScale: 0.75, xOff: 0.016, zOff: -0.004 },
+    { yaw: 0.0, tilt: 0.12, hScale: 1.00, wScale: 0.85, xOff: 0.000, zOff: 0.000 },
+    { yaw: -0.75, tilt: 0.26, hScale: 0.92, wScale: 0.78, xOff: -0.014, zOff: 0.004 },
+    { yaw: 0.78, tilt: 0.24, hScale: 0.88, wScale: 0.76, xOff: 0.013, zOff: -0.003 },
+    { yaw: 2.85, tilt: 0.20, hScale: 0.82, wScale: 0.72, xOff: 0.002, zOff: -0.012 },
   ];
 
   bladeConfigs.forEach((cfg, bIdx) => {

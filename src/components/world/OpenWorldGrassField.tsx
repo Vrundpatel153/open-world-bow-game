@@ -20,8 +20,8 @@ import {
 import { scatterBlades, scatterFlowers } from '../grassField/utils/scatter'
 import { worldCollisionSystem, type WorldCollider } from '@/game/physics/WorldCollisionSystem'
 
-export const WORLD_SIZE = 160
-export const WORLD_SEGMENTS = 72
+export const WORLD_SIZE = 240
+export const WORLD_SEGMENTS = 96
 
 // Sword swing wind pressure shockwave trigger
 export const grassWindImpulse = {
@@ -41,13 +41,19 @@ export const grassWindImpulse = {
   },
 }
 
-// Smooth, natural rolling elevation across the open world sanctuary
+// Smooth rolling elevation across meadow, rising into natural perimeter hills
 export function getOpenWorldHeight(x: number, z: number): number {
-  return (
+  const base =
     Math.sin(x * 0.055) * 1.1 +
     Math.cos(z * 0.048) * 0.95 +
     Math.sin(x * 0.12 + z * 0.09) * 0.35
-  )
+  const dist = Math.hypot(x, z)
+  if (dist > 46) {
+    const t = Math.min(1.5, (dist - 46) / 36)
+    const hill = Math.pow(t, 2.2) * 18.0 + Math.sin(x * 0.06 + z * 0.05) * 3.2
+    return base + hill
+  }
+  return base
 }
 
 interface OpenWorldGrassFieldProps {
@@ -131,8 +137,8 @@ export default function OpenWorldGrassField({
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
   const { terrainMesh, bladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
-    // 1. Terrain Ground Mesh for high-density sampling across the active sanctuary (120m x 120m)
-    const samplePlaneGeo = new THREE.PlaneGeometry(120, 120, 100, 100)
+    // 1. Terrain Ground Mesh for high-density sampling across the expanded sanctuary (160m x 160m)
+    const samplePlaneGeo = new THREE.PlaneGeometry(160, 160, 120, 120)
     samplePlaneGeo.rotateX(-Math.PI / 2)
     const sPosAttr = samplePlaneGeo.attributes.position
     for (let i = 0; i < sPosAttr.count; i++) {
@@ -142,21 +148,21 @@ export default function OpenWorldGrassField({
     }
     samplePlaneGeo.computeVertexNormals()
 
-    // 2. Scatter 130,000 multi-blade clumps = 390,000 dense, organic grass blades across the entire world!
+    // 2. Scatter 140,000 multi-blade clumps = 560,000 dense, slender, curved grass blades across the entire world!
     // Zero bald cutoffs, zero plain gaps: continuous rolling meadow carpet all the way across the sanctuary.
     const blades = scatterBlades(new THREE.Mesh(samplePlaneGeo), {
       uniforms: u.surface,
-      density: 20,
-      maxCount: 130_000,
-      minWidth: 0.042,
-      maxWidth: 0.065,
-      minLength: 0.38,
-      maxLength: 0.58,
-      tiltMax: 0.34,
+      density: 22,
+      maxCount: 140_000,
+      minWidth: 0.024,
+      maxWidth: 0.038,
+      minLength: 0.35,
+      maxLength: 0.48,
+      tiltMax: 0.28,
       segments: 4,
     })
 
-    // 3. Horizon Open World Terrain Plane (160m x 160m)
+    // 3. Horizon Open World Terrain Plane (240m x 240m)
     const terrainGeo = new THREE.PlaneGeometry(
       WORLD_SIZE,
       WORLD_SIZE,
@@ -173,7 +179,7 @@ export default function OpenWorldGrassField({
     terrainGeo.computeVertexNormals()
 
     // Vibrant forest meadow moss ground material perfectly matching grass blade bases
-    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#254e14'))
+    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#1a3f0e'))
     const groundMesh = new THREE.Mesh(terrainGeo, groundMat)
     groundMesh.receiveShadow = true
     groundMesh.castShadow = false
@@ -407,27 +413,27 @@ export default function OpenWorldGrassField({
 
     // Colors (Rich, natural Studio Ghibli / Tsushima emerald meadow — ZERO yellow cast!)
     const c = colorsRef.current
-    c.grassBottom.set('#254e14')
-    c.grassTop.set('#468a20')
+    c.grassBottom.set('#1a3f0e')
+    c.grassTop.set('#367e1a')
     s.uGrassBottom.value.copy(c.grassBottom)
     s.uGrassTop.value.copy(c.grassTop)
-    s.uGradStart.value = 0.05
-    s.uGradEnd.value = 0.95
+    s.uGradStart.value = 0.04
+    s.uGradEnd.value = 0.96
     s.uGradPower.value = 1.15
-    s.uBrightness.value = 0.98
+    s.uBrightness.value = 0.92
 
     // Lush vs Dry environmental patches (Harmonious forest hues, NO yellow wheat)
-    s.uPatchLush.value.set('#254e14')
-    s.uPatchDry.value.set('#3a781c')
-    s.uPatchStrength.value = 0.08
+    s.uPatchLush.value.set('#183c0e')
+    s.uPatchDry.value.set('#2f7218')
+    s.uPatchStrength.value = 0.06
     s.uPatchScale.value = 0.08
     s.uPatchBias.value = 1.3
 
     // Translucency (Subsurface sun scatter — pure vibrant emerald leaf transmission, NOT yellow!)
-    c.transColor.set('#3e8a1c')
+    c.transColor.set('#286614')
     s.uTransColor.value.copy(c.transColor)
-    s.uTransStrength.value = 0.10
-    s.uTransPower.value = 4.2
+    s.uTransStrength.value = 0.06
+    s.uTransPower.value = 4.5
     s.uTransTip.value = 0.8
     s.uTransShadow.value = 1.0
 

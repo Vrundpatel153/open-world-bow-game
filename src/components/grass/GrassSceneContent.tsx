@@ -191,7 +191,7 @@ export default function GrassSceneContent({
 
       {/* ── Calibrated Stylized Bloom (Glowing Runes & Celestial Discs Only) ─ */}
       <PostProcessing
-        defaults={{ intensity: 0.85, radius: 0.28, threshold: 0.85 }}
+        defaults={{ intensity: 0.38, radius: 0.20, threshold: 0.94 }}
       />
     </>
   );

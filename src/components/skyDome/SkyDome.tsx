@@ -1659,17 +1659,20 @@ export default function SkyDome({
     if (moonDirRef) moonDirRef.current.copy(u.uMoonDir.value);
 
     // Dynamic Celestial Appearance: Radiant Golden Sun (Day) vs Ethereal Silver Moon (Night)
+    // Smooth horizon fade ensures the disc naturally dissolves into atmospheric haze
+    const horizonFade = THREE.MathUtils.clamp((effElev + 3.0) / 6.0, 0.0, 1.0);
+
     if (isNight) {
       u.uMoonColor.value.set("#eef6ff");
       u.uMoonGlowColor.value.set("#3d77d4");
-      u.uMoonSize.value = 0.038;
-      u.uMoonGlowFalloff.value = 55.0;
-      u.uMoonGlowIntensity.value = 0.85;
-      u.uMoonEdgeSoftness.value = 0.04;
+      u.uMoonSize.value = 0.022 * Math.max(0.001, horizonFade);
+      u.uMoonGlowFalloff.value = 160.0;
+      u.uMoonGlowIntensity.value = 0.45 * horizonFade;
+      u.uMoonEdgeSoftness.value = 0.03;
       u.uMoonPhasePos.value = 0.15; // Natural crescent terminator
       u.uMoonPhaseSoftness.value = 0.35;
       u.uMoonPhaseAngle.value = (150 * Math.PI) / 180;
-      u.uMoonEmission.value = 0.95;
+      u.uMoonEmission.value = 0.85 * horizonFade;
       u.uMoonCloudBleed.value = 0.55;
       u.uMoonSpotColor.value.set("#69c2f6");
       u.uMoonSpotStrength.value = 0.65;
@@ -1679,17 +1682,18 @@ export default function SkyDome({
       u.uMoonSpotOctaves.value = 4;
     } else {
       // Golden Sun Disc & Atmospheric Solar Corona
+      // Scaled to realistic stylized game proportions (zero bloom blowout)
       u.uMoonColor.value.set("#fffdf2");
       u.uMoonGlowColor.value.set("#ffaa33");
-      u.uMoonSize.value = 0.048; // Crisp, magnificent, clearly visible sun disc
-      u.uMoonGlowFalloff.value = 24.0;
-      u.uMoonGlowIntensity.value = 1.35;
-      u.uMoonEdgeSoftness.value = 0.03;
+      u.uMoonSize.value = 0.016 * Math.max(0.001, horizonFade);
+      u.uMoonGlowFalloff.value = 240.0; // Tight, clean corona (prevents 40% screen bloom blowout)
+      u.uMoonGlowIntensity.value = 0.35 * horizonFade;
+      u.uMoonEdgeSoftness.value = 0.02;
       u.uMoonPhasePos.value = -2.0; // 100% fully lit spherical sun (zero terminator)
       u.uMoonPhaseSoftness.value = 0.1;
       u.uMoonPhaseAngle.value = 0;
-      u.uMoonEmission.value = 2.2;
-      u.uMoonCloudBleed.value = 0.85;
+      u.uMoonEmission.value = 1.15 * horizonFade;
+      u.uMoonCloudBleed.value = 0.75;
       u.uMoonSpotColor.value.set("#ffffff");
       u.uMoonSpotStrength.value = 0.0; // Pure immaculate solar disk
       u.uMoonSpotScale.value = 1.0;

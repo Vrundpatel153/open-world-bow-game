@@ -161,11 +161,9 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       const vel = direction.clone().multiplyScalar(speed)
       vel.y += 0.35 * power // subtle aerodynamic lift
 
-      // Initial orientation: align local +Z with direction of flight
-      const dummy = new THREE.Object3D()
-      dummy.position.copy(origin)
-      dummy.lookAt(origin.clone().add(direction))
-      const quat = dummy.quaternion.clone()
+      // Initial orientation: align local +Z (broadhead razor blade) strictly with direction of flight
+      const fwd = direction.clone().normalize()
+      const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), fwd)
 
       const newArrow: FlyingArrow = {
         id: Date.now() + Math.random(),
@@ -221,15 +219,11 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       a.vel.y += GRAVITY * dt
       a.pos.addScaledVector(a.vel, dt)
 
-      // Aerodynamic rotation: tip (+Z) faces into velocity vector
-      const lookTarget = a.pos.clone().add(a.vel)
-      const dummy = new THREE.Object3D()
-      dummy.position.copy(a.pos)
-      dummy.lookAt(lookTarget)
-      a.quat.copy(dummy.quaternion)
+      // Aerodynamic rotation: local +Z (broadhead razor blade) strictly tracks velocity vector
+      const fwd = a.vel.clone().normalize()
+      a.quat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fwd)
 
       // Append trail point at the tail of the arrow (0.70m behind tip)
-      const fwd = a.vel.clone().normalize()
       const tailPos = a.pos.clone().addScaledVector(fwd, -0.70)
       a.trail.push(tailPos)
       if (a.trail.length > 16) {
