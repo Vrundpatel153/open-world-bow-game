@@ -65,6 +65,15 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
   const isBowEquipped = useQuestStore((s) => s.isBowEquipped)
   const toggleBowEquipped = useQuestStore((s) => s.toggleBowEquipped)
 
+  useEffect(() => {
+    ;(window as any).__bowDebug = {
+      isReloading,
+      reloadTimer,
+      arrowGroupRef,
+      drawTension,
+    }
+  }, [])
+
   // ── Procedural Geometries for Authentic Traditional Wooden Forest Bow ──────
   const {
     riserGeo,
@@ -340,11 +349,13 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         const launchPos = new THREE.Vector3()
         if (arrowGroupRef.current) {
           arrowGroupRef.current.localToWorld(launchPos.set(0, 0, -0.52))
+          arrowGroupRef.current.visible = false
         } else {
           launchPos.copy(camPos).addScaledVector(camDir, 0.40)
         }
 
         const fireDir = targetPoint.clone().sub(launchPos).normalize()
+        sound.playBowRelease(power)
         onFireArrow(launchPos, fireDir, power)
 
         recoilOffset.current = 0.035 * power
@@ -356,7 +367,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         setDrawProgress(0)
 
         isReloading.current = true
-        reloadTimer.current = 0.22
+        reloadTimer.current = 0.85
       }
 
       if (e.button === 2) {
@@ -398,7 +409,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
       setDrawProgress(0)
     }
 
-    // Reload Animation
+    // Reload Animation (Total cycle 0.85s: 0.00s-0.48s empty flight tracking; 0.48s-0.85s quiver re-nock)
     let reloadProgress = 1.0
     if (isReloading.current) {
       reloadTimer.current -= dt
@@ -407,7 +418,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         sound.playArrowNock()
         reloadProgress = 1.0
       } else {
-        reloadProgress = 1.0 - reloadTimer.current / 0.22
+        reloadProgress = 1.0 - reloadTimer.current / 0.85
       }
     }
 
@@ -547,7 +558,8 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const arrowDir = targetTipLocal.clone().sub(currentNock).normalize()
 
     if (arrowGroupRef.current) {
-      if (isReloading.current && reloadProgress < 0.20) {
+      // 0.00s to 0.48s (reloadProgress < 0.56): Bow is completely empty so player tracks shot arrow
+      if (isReloading.current && reloadProgress < 0.56) {
         arrowGroupRef.current.visible = false
       } else {
         arrowGroupRef.current.visible = true
@@ -560,10 +572,12 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
 
         const currentNockPos = currentNock.clone()
         if (isReloading.current) {
-          const tSlide = (reloadProgress - 0.20) / 0.80
+          // Smooth slide from archer's quiver onto arrow shelf rest
+          const tSlide = (reloadProgress - 0.56) / 0.44
           const easeSlide = THREE.MathUtils.smoothstep(tSlide, 0, 1)
-          currentNockPos.y -= (1 - easeSlide) * 0.05
-          currentNockPos.x += (1 - easeSlide) * 0.015
+          currentNockPos.y -= (1 - easeSlide) * 0.070
+          currentNockPos.x += (1 - easeSlide) * 0.035
+          currentNockPos.z += (1 - easeSlide) * 0.120
         }
 
         arrowGroupRef.current.position.copy(currentNockPos)
