@@ -1716,14 +1716,14 @@ export default function SkyDome({
       // Scaled to realistic stylized game proportions (zero bloom blowout)
       u.uMoonColor.value.set("#fffdf2");
       u.uMoonGlowColor.value.set("#ffaa33");
-      u.uMoonSize.value = 0.013 * Math.max(0.001, horizonFade);
-      u.uMoonGlowFalloff.value = 450.0; // Tight, clean corona (prevents screen bloom blowout)
-      u.uMoonGlowIntensity.value = 0.20 * horizonFade;
+      u.uMoonSize.value = 0.011 * Math.max(0.001, horizonFade);
+      u.uMoonGlowFalloff.value = 520.0; // Tight, clean corona (prevents screen bloom blowout)
+      u.uMoonGlowIntensity.value = 0.14 * horizonFade;
       u.uMoonEdgeSoftness.value = 0.02;
       u.uMoonPhasePos.value = 2.0; // 100% fully lit spherical sun (zero terminator)
       u.uMoonPhaseSoftness.value = 0.1;
       u.uMoonPhaseAngle.value = 0;
-      u.uMoonEmission.value = 0.90 * horizonFade;
+      u.uMoonEmission.value = 0.50 * horizonFade;
       u.uMoonCloudBleed.value = 0.75;
       u.uMoonSpotColor.value.set("#ffffff");
       u.uMoonSpotStrength.value = 0.0; // Pure immaculate solar disk
@@ -1843,11 +1843,11 @@ export default function SkyDome({
       cB.set(to.moonGlowColor ?? "#0a7ace");
       u.uMoonGlowColor.value.lerpColors(cA, cB, t);
       // Calibrated celestial disk size & falloff (never balloon during blend transitions)
-      const baseCelestialSize = nightBool ? 0.020 : 0.013;
+      const baseCelestialSize = nightBool ? 0.020 : 0.011;
       u.uMoonSize.value = baseCelestialSize * Math.max(0.001, horizonFade);
-      u.uMoonEmission.value = (nightBool ? 0.85 : 0.90) * horizonFade;
-      u.uMoonGlowFalloff.value = nightBool ? 160.0 : 450.0;
-      u.uMoonGlowIntensity.value = (nightBool ? 0.38 : 0.20) * horizonFade;
+      u.uMoonEmission.value = (nightBool ? 0.85 : 0.50) * horizonFade;
+      u.uMoonGlowFalloff.value = nightBool ? 160.0 : 520.0;
+      u.uMoonGlowIntensity.value = (nightBool ? 0.38 : 0.14) * horizonFade;
       u.uMoonCloudBleed.value = nightBool ? 0.55 : 0.75;
       u.uMoonPhasePos.value = nightBool ? 0.25 : 2.0; // Day: 100% spherical sun; Night: crescent
 

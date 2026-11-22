@@ -192,26 +192,26 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const tipCap = new THREE.CylinderGeometry(0.0055, 0.010, 0.020, 12)
     tipCap.scale(1.05, 1.0, 0.75)
 
-    // 5. Nocked Hunting Arrow Components (Total Length 0.68m)
-    // Cedar wood shaft: extends from z = 0 (nock) forward along -Z to z = -0.63
-    const shaft = new THREE.CylinderGeometry(0.0036, 0.0036, 0.63, 8)
+    // 5. Nocked Hunting Arrow Components (Total Length 0.82m)
+    // Cedar wood shaft: extends from z = 0 (nock) forward along -Z to z = -0.75
+    const shaft = new THREE.CylinderGeometry(0.0038, 0.0038, 0.75, 12)
     shaft.rotateX(Math.PI / 2) // Orient along Z
-    shaft.translate(0, 0, -0.315) // Centered at -0.315, spans [0, -0.63]
+    shaft.translate(0, 0, -0.375) // Centered at -0.375, spans [0, -0.75]
 
-    // Metal ferrule collar at base of broadhead (z = -0.62 to -0.645)
-    const ferrule = new THREE.CylinderGeometry(0.0048, 0.0038, 0.025, 8)
+    // Metal ferrule collar at base of broadhead (z = -0.74 to -0.765)
+    const ferrule = new THREE.CylinderGeometry(0.0048, 0.0040, 0.025, 12)
     ferrule.rotateX(Math.PI / 2)
-    ferrule.translate(0, 0, -0.635)
+    ferrule.translate(0, 0, -0.75)
 
-    // Polished Silver Razor Broadhead Blade (sharp point at z = -0.68, pointing forward -Z)
+    // Polished Silver Razor Broadhead Blade (sharp point at z = -0.82, pointing forward -Z)
     const tipShape = new THREE.Shape()
-    tipShape.moveTo(0, 0) // Point at (0, 0)
-    tipShape.lineTo(0.014, 0.045) // Right barb extending backward
-    tipShape.lineTo(0.004, 0.035)
-    tipShape.lineTo(0.004, 0.048)
-    tipShape.lineTo(-0.004, 0.048)
-    tipShape.lineTo(-0.004, 0.035)
-    tipShape.lineTo(-0.014, 0.045) // Left barb extending backward
+    tipShape.moveTo(0, 0.065) // Sharp point at front +Y
+    tipShape.lineTo(0.016, 0.0) // Right barb extending backward
+    tipShape.lineTo(0.005, 0.01)
+    tipShape.lineTo(0.005, -0.01)
+    tipShape.lineTo(-0.005, -0.01)
+    tipShape.lineTo(-0.005, 0.01)
+    tipShape.lineTo(-0.016, 0.0) // Left barb extending backward
     tipShape.closePath()
 
     const tipExtrude = new THREE.ExtrudeGeometry(tipShape, {
@@ -221,23 +221,23 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
       bevelSize: 0.0008,
       bevelThickness: 0.0008,
     })
-    tipExtrude.rotateX(Math.PI / 2) // Point at Z = 0, barbs at +Z = 0.045
-    tipExtrude.rotateZ(Math.PI / 4) // 45 deg blade tilt (matching reference image)
-    tipExtrude.translate(0, 0, -0.68) // Point is at Z = -0.68!
+    tipExtrude.rotateX(-Math.PI / 2) // Sharp point points forward along -Z!
+    tipExtrude.rotateZ(Math.PI / 4) // 45 deg blade tilt matching reference image
+    tipExtrude.translate(0, 0, -0.755) // Point is at Z = -0.82!
 
-    // 3 Aerodynamic White Turkey Feathers (Length 0.065m, positioned at z = -0.035 to -0.10)
+    // 3 Aerodynamic White Turkey Feathers (Length 0.09m, positioned at rear shaft z = -0.06 to -0.15)
     const fletchShape = new THREE.Shape()
-    fletchShape.moveTo(0, 0)
-    fletchShape.lineTo(0.011, -0.012)
-    fletchShape.lineTo(0.009, -0.065)
-    fletchShape.lineTo(0, -0.058)
+    fletchShape.moveTo(0, 0.09) // Front tip of feather
+    fletchShape.lineTo(0.012, 0.075)
+    fletchShape.lineTo(0.011, 0.0)
+    fletchShape.lineTo(0, -0.005)
     fletchShape.closePath()
     const fletching = new THREE.ShapeGeometry(fletchShape)
-    fletching.rotateX(Math.PI / 2)
-    fletching.translate(0, 0, -0.035)
+    fletching.rotateX(-Math.PI / 2) // Feather extends forward along -Z from nock
+    fletching.translate(0, 0, -0.06) // Spans [ -0.06, -0.15 ]
 
     // Carved Bone Nock clamped to string (at z = 0)
-    const arrowNock = new THREE.CylinderGeometry(0.0045, 0.0045, 0.018, 8)
+    const arrowNock = new THREE.CylinderGeometry(0.0044, 0.0044, 0.016, 12)
     arrowNock.rotateX(Math.PI / 2)
 
     return {
@@ -390,9 +390,9 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         // Launch origin from current arrow broadhead tip in world coordinates
         const arrowTipPos = new THREE.Vector3()
         if (arrowGroupRef.current) {
-          arrowGroupRef.current.localToWorld(arrowTipPos.set(0, 0, -0.68))
+          arrowGroupRef.current.localToWorld(arrowTipPos.set(0, 0, -0.82))
         } else {
-          arrowTipPos.copy(camPos).addScaledVector(camDir, 0.65)
+          arrowTipPos.copy(camPos).addScaledVector(camDir, 0.70)
         }
 
         const fireDir = targetPoint.clone().sub(arrowTipPos).normalize()
@@ -530,10 +530,10 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const isAiming = (isDrawing.current || useQuestStore.getState().isAiming) && isBowEquipped
 
     // Base camera-space coordinates:
-    // Placed vertically on the right side (~30% of screen)
-    const baseLocalX = isAiming ? 0.16 : 0.19
-    const baseLocalY = isAiming ? -0.06 : -0.09
-    const baseLocalZ = isAiming ? -0.30 : -0.33
+    // Placed vertically on the right side (~26% of screen width)
+    const baseLocalX = isAiming ? 0.13 : 0.18
+    const baseLocalY = isAiming ? -0.09 : -0.13
+    const baseLocalZ = isAiming ? -0.28 : -0.34
 
     const localX = baseLocalX + swayX.current + bobX + shakeX
     const localY = baseLocalY + swayY.current + bobY + shakeY + (1.0 - equipProgress.current) * -0.5
@@ -542,8 +542,8 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     rigGroupRef.current.position.set(localX, localY, localZ)
 
     // Orientation: upright recurve with slight natural inward cant
-    const pitchX = -0.02 + recoilRotation.current + swayY.current * 0.20
-    const yawY = -0.05 + swayX.current * 0.30
+    const pitchX = -0.015 + recoilRotation.current + swayY.current * 0.20
+    const yawY = -0.035 + swayX.current * 0.30
     const rollZ = 0.035 // ~2.0 deg natural inward cant
 
     rigGroupRef.current.rotation.set(pitchX, yawY, rollZ, 'YXZ')
@@ -551,14 +551,14 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
 
     // ── 6. Dynamic Bow Limb Flexing & Bowstring Clamping ─────────────────────
     const tension = drawTension.current
-    const pullDistance = 0.22 * tension
+    const pullDistance = 0.24 * tension
 
     // String vibration on loose
     stringVibration.current = THREE.MathUtils.damp(stringVibration.current, 0, 14, dt)
     const vibZ = Math.sin(state.clock.elapsedTime * 115) * 0.007 * stringVibration.current
 
     // Limbs flex slightly under tension
-    const limbFlex = tension * 0.06
+    const limbFlex = tension * 0.05
     if (upperLimbRef.current && lowerLimbRef.current) {
       upperLimbRef.current.rotation.x = limbFlex
       lowerLimbRef.current.rotation.x = -limbFlex
@@ -568,14 +568,17 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const upperTipLocal = new THREE.Vector3(-0.008, 0.405 - limbFlex * 0.2, 0.045 + limbFlex * 0.4)
     const lowerTipLocal = new THREE.Vector3(-0.008, -0.405 + limbFlex * 0.2, 0.045 + limbFlex * 0.4)
 
-    // Resting string center: at Y = 0.0, Z = 0.045, X = -0.008
-    // Arrow resting position on the riser shelf: at X = -0.013, Y = 0.0, Z = 0.005
-    // Arrow direction vector: passes from nock through shelf toward crosshair
-    const shelfPos = new THREE.Vector3(-0.013, 0.0, 0.005)
-    const restingNock = new THREE.Vector3(0.002, 0.0, 0.045)
-    const arrowDir = shelfPos.clone().sub(restingNock).normalize()
+    // Aim Target in Camera Space is at (0, 0, -60.0) -> through center crosshair!
+    const camPos = cam.getWorldPosition(new THREE.Vector3())
+    const camDir = cam.getWorldDirection(new THREE.Vector3())
+    const aimTargetWorld = camPos.clone().addScaledVector(camDir, 60.0)
+    const aimTargetRigLocal = rigGroupRef.current.worldToLocal(aimTargetWorld.clone())
 
-    // When drawing, nock pulls backward along -arrowDir (+Z):
+    const restingNock = new THREE.Vector3(-0.008, 0.0, 0.045)
+    // The arrow direction vector points from restingNock straight to the center crosshair aim target!
+    const arrowDir = aimTargetRigLocal.clone().sub(restingNock).normalize()
+
+    // When drawing, nock pulls smoothly backward along -arrowDir (+Z):
     const currentNock = restingNock.clone().addScaledVector(arrowDir, -pullDistance)
     currentNock.z += vibZ
 
@@ -632,7 +635,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
           <mesh geometry={collarGeo} material={brassMat} />
           <mesh geometry={collarRimGeo} material={brassAccentMat} position={[0, 0.014, 0]} />
           <mesh geometry={collarRimGeo} material={brassAccentMat} position={[0, -0.014, 0]} />
-          {/* Diamond Heraldic Plaque (❖ motif facing player/camera flush) */}
+          {/* Diamond Heraldic Plaque (diamond motif facing player/camera flush) */}
           <group position={[-0.007, 0, 0.015]} rotation={[0, -0.08, 0]}>
             <mesh geometry={diamondCrestGeo} material={brassAccentMat} />
             <mesh geometry={flowerEmblemGeo} material={brassMat} position={[0, 0, 0.0018]} />

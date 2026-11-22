@@ -167,10 +167,10 @@ export default function OpenWorldGrassField({
       uniforms: u.surface,
       density: 24,
       maxCount: 120_000,
-      minWidth: 0.042,
-      maxWidth: 0.065,
-      minLength: 0.50,
-      maxLength: 0.72,
+      minWidth: 0.18,
+      maxWidth: 0.28,
+      minLength: 0.60,
+      maxLength: 0.90,
       tiltMax: 0.28,
       segments: 4,
     })
@@ -192,10 +192,10 @@ export default function OpenWorldGrassField({
       uniforms: u.surface,
       density: 20,
       maxCount: 120_000,
-      minWidth: 0.052,
-      maxWidth: 0.075,
-      minLength: 0.56,
-      maxLength: 0.80,
+      minWidth: 0.25,
+      maxWidth: 0.38,
+      minLength: 0.68,
+      maxLength: 1.02,
       tiltMax: 0.28,
       segments: 4,
     })
@@ -217,7 +217,7 @@ export default function OpenWorldGrassField({
     terrainGeo.computeVertexNormals()
 
     // Vibrant forest meadow moss ground material perfectly matching grass blade bases
-    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#143209'))
+    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#1a3f0e'))
     const groundMesh = new THREE.Mesh(terrainGeo, groundMat)
     groundMesh.receiveShadow = true
     groundMesh.castShadow = false
@@ -256,80 +256,95 @@ export default function OpenWorldGrassField({
       cluster.scale.setScalar(scaleVal)
       cluster.updateMatrixWorld(true)
 
-      // Traverse once: apply PBR materials & extract physical rock/tree collider nodes
+      // 1. Gather all rock meshes and tree meshes for robust grounding
+      const rockMeshes: THREE.Mesh[] = []
+      const treeMeshes: THREE.Mesh[] = []
+
       cluster.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
           const m = child as THREE.Mesh
           m.castShadow = isCaster
           m.receiveShadow = true
           const srcMat = Array.isArray(m.material) ? m.material[0] : m.material
-
-          // 1. Rock Boulders — Ground each individual rock so its base is solidly embedded in the terrain
-          if (srcMat.name === 'RocksStylized_M') {
-            const rockBox = new THREE.Box3().setFromObject(m)
-            const rcX = (rockBox.min.x + rockBox.max.x) * 0.5
-            const rcZ = (rockBox.min.z + rockBox.max.z) * 0.5
-            const groundY = getOpenWorldHeight(rcX, rcZ)
-            // Sunk 0.28m into the soil so rock boulders sit solidly without floating in air
-            const desiredBottom = groundY - 0.28 * scaleVal
-            const deltaWorldY = desiredBottom - rockBox.min.y
-            applyWorldYShift(m, deltaWorldY)
-
-            if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere()
-            const bs = m.geometry.boundingSphere!
-            const center = bs.center.clone().applyMatrix4(m.matrixWorld)
-            const scale = new THREE.Vector3().setFromMatrixScale(m.matrixWorld)
-            const maxS = Math.max(scale.x, scale.z)
-            const r = bs.radius * maxS * 1.25 // Generous physical collision radius
-
-            if (r > 0.28) {
-              colliders.push({
-                id: `rock_${posX.toFixed(1)}_${posZ.toFixed(1)}_${m.id}`,
-                tag: 'rock',
-                x: center.x,
-                z: center.z,
-                y: center.y,
-                radius: r,
-                height: Math.max(2.5, bs.radius * scale.y * 3.0),
-              })
-            }
-          } else if (srcMat.name === TRUNK_MATERIAL) {
-            // 2. Tree Trunks — Ground tree so root is firmly planted in the earth
-            const trunkBox = new THREE.Box3().setFromObject(m)
-            const tcX = (trunkBox.min.x + trunkBox.max.x) * 0.5
-            const tcZ = (trunkBox.min.z + trunkBox.max.z) * 0.5
-            const groundY = getOpenWorldHeight(tcX, tcZ)
-            const desiredBottom = groundY - 0.26 * scaleVal
-            const deltaWorldY = desiredBottom - trunkBox.min.y
-            if (m.parent) {
-              applyWorldYShift(m.parent, deltaWorldY)
-            } else {
-              applyWorldYShift(m, deltaWorldY)
-            }
-
-            if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere()
-            const bs = m.geometry.boundingSphere!
-            const center = bs.center.clone().applyMatrix4(m.matrixWorld)
-            const scale = new THREE.Vector3().setFromMatrixScale(m.matrixWorld)
-            const trunkRadius = Math.max(0.55, bs.radius * Math.min(scale.x, scale.z) * 0.65)
-
-            colliders.push({
-              id: `tree_${posX.toFixed(1)}_${posZ.toFixed(1)}_${m.id}`,
-              tag: 'tree',
-              x: center.x,
-              z: center.z,
-              y: groundY,
-              radius: trunkRadius,
-              height: 24.0 * scaleVal,
-            })
+          if (srcMat?.name === 'RocksStylized_M') {
+            rockMeshes.push(m)
+          } else if (srcMat?.name === TRUNK_MATERIAL) {
+            treeMeshes.push(m)
             m.material = barkMat
-          } else if (srcMat.name === LEAF_MATERIAL) {
+          } else if (srcMat?.name === LEAF_MATERIAL) {
             const std = srcMat as THREE.MeshStandardMaterial
             m.customDepthMaterial = makePineLeafDepthMaterial(std)
             m.material = makePineLeafMaterial(std, m, u.surface)
           }
         }
       })
+
+      // Attach rocks directly to cluster root so nested scaling never causes floating
+      for (const rock of rockMeshes) {
+        cluster.attach(rock)
+        if (!rock.geometry.boundingBox) rock.geometry.computeBoundingBox()
+        if (!rock.geometry.boundingSphere) rock.geometry.computeBoundingSphere()
+        const box = new THREE.Box3().setFromObject(rock)
+        const rcX = (box.min.x + box.max.x) * 0.5
+        const rcZ = (box.min.z + box.max.z) * 0.5
+        const groundY = getOpenWorldHeight(rcX, rcZ)
+        // Deep grounding: base sunk 0.35m into the soil, completely preventing any floating
+        const desiredBottom = groundY - 0.35 * scaleVal
+        const deltaY = desiredBottom - box.min.y
+        rock.position.y += deltaY
+        rock.updateMatrixWorld(true)
+
+        const bs = rock.geometry.boundingSphere!
+        const center = bs.center.clone().applyMatrix4(rock.matrixWorld)
+        const scale = new THREE.Vector3().setFromMatrixScale(rock.matrixWorld)
+        const maxS = Math.max(scale.x, scale.z)
+        const r = bs.radius * maxS * 1.25
+
+        if (r > 0.28) {
+          colliders.push({
+            id: `rock_${posX.toFixed(1)}_${posZ.toFixed(1)}_${rock.id}`,
+            tag: 'rock',
+            x: center.x,
+            z: center.z,
+            y: center.y,
+            radius: r,
+            height: Math.max(2.5, bs.radius * scale.y * 3.0),
+          })
+        }
+      }
+
+      // Ground tree trunks firmly into the terrain
+      for (const tree of treeMeshes) {
+        if (!tree.geometry.boundingBox) tree.geometry.computeBoundingBox()
+        if (!tree.geometry.boundingSphere) tree.geometry.computeBoundingSphere()
+        const trunkBox = new THREE.Box3().setFromObject(tree)
+        const tcX = (trunkBox.min.x + trunkBox.max.x) * 0.5
+        const tcZ = (trunkBox.min.z + trunkBox.max.z) * 0.5
+        const groundY = getOpenWorldHeight(tcX, tcZ)
+        const desiredBottom = groundY - 0.28 * scaleVal
+        const deltaY = desiredBottom - trunkBox.min.y
+        if (tree.parent && tree.parent !== cluster) {
+          applyWorldYShift(tree.parent, deltaY)
+        } else {
+          tree.position.y += deltaY
+        }
+        tree.updateMatrixWorld(true)
+
+        const bs = tree.geometry.boundingSphere!
+        const center = bs.center.clone().applyMatrix4(tree.matrixWorld)
+        const scale = new THREE.Vector3().setFromMatrixScale(tree.matrixWorld)
+        const trunkRadius = Math.max(0.55, bs.radius * Math.min(scale.x, scale.z) * 0.65)
+
+        colliders.push({
+          id: `tree_${posX.toFixed(1)}_${posZ.toFixed(1)}_${tree.id}`,
+          tag: 'tree',
+          x: center.x,
+          z: center.z,
+          y: groundY,
+          radius: trunkRadius,
+          height: 24.0 * scaleVal,
+        })
+      }
 
       return cluster
     }
@@ -464,37 +479,37 @@ export default function OpenWorldGrassField({
     // Wind parameters (Dynamic waving meadow ripples + sword swing air pulse)
     const rad = 45 * (Math.PI / 180)
     s.uWindDir.value.set(Math.cos(rad), Math.sin(rad))
-    s.uWindStrength.value = 0.16 + extraWindStrength
-    s.uWindSpeed.value = 1.35 + extraWindSpeed
-    s.uWindFreq.value = 0.45
-    s.uWindTurb.value = 0.35
-    s.uWindLean.value = 0.5
+    s.uWindStrength.value = 0.22 + extraWindStrength
+    s.uWindSpeed.value = 1.30 + extraWindSpeed
+    s.uWindFreq.value = 0.36
+    s.uWindTurb.value = 0.25
+    s.uWindLean.value = 0.45
     s.uWindFixLocal.value = 1
 
     // Colors (Rich, natural Studio Ghibli / Tsushima emerald meadow — ZERO yellow cast!)
     const c = colorsRef.current
     c.grassBottom.set('#1a3f0e')
-    c.grassTop.set('#367e1a')
+    c.grassTop.set('#4da01e')
     s.uGrassBottom.value.copy(c.grassBottom)
     s.uGrassTop.value.copy(c.grassTop)
     s.uGradStart.value = 0.04
     s.uGradEnd.value = 0.96
     s.uGradPower.value = 1.15
-    s.uBrightness.value = 0.92
+    s.uBrightness.value = 0.94
 
     // Lush vs Dry environmental patches (Harmonious forest hues, NO yellow wheat)
     s.uPatchLush.value.set('#183c0e')
-    s.uPatchDry.value.set('#2f7218')
+    s.uPatchDry.value.set('#367e1a')
     s.uPatchStrength.value = 0.06
     s.uPatchScale.value = 0.08
     s.uPatchBias.value = 1.3
 
     // Translucency (Subsurface sun scatter — pure vibrant emerald leaf transmission, NOT yellow!)
-    c.transColor.set('#286614')
+    c.transColor.set('#6ea822')
     s.uTransColor.value.copy(c.transColor)
-    s.uTransStrength.value = 0.06
-    s.uTransPower.value = 4.5
-    s.uTransTip.value = 0.8
+    s.uTransStrength.value = 0.07
+    s.uTransPower.value = 4.2
+    s.uTransTip.value = 0.85
     s.uTransShadow.value = 1.0
 
     // Shadows

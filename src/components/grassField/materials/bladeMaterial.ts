@@ -11,28 +11,28 @@ import {
 import { DEBUG_FRAGMENT_UNIFORMS, DEBUG_VIEW_FRAGMENT } from "../shaders/debug";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Blade Material & 4-Blade Slender Curved Tuft Geometry
+// Blade Material & 4-Blade Lush Overlapping Recurve Tuft Geometry
 //
 // Generates a multi-blade organic clump (tuft) for each instance:
-//   - Center Blade: stands upright, slender curved profile, height 1.0, width 0.022
-//   - Left Blade: splayed -42°, organic outward flare, height 0.92, width 0.020
-//   - Right Blade: splayed +45°, organic outward flare, height 0.88, width 0.019
-//   - Back Blade: splayed +165°, arching backward, height 0.84, width 0.018
+//   - Center Blade: stands upright, broad curved ribbon profile, height 1.0, width 0.048
+//   - Left Blade: splayed -36°, organic outward flare, height 0.94, width 0.044
+//   - Right Blade: splayed +38°, organic outward flare, height 0.90, width 0.042
+//   - Back Blade: splayed +170°, arching backward, height 0.86, width 0.040
 //
-// 130,000 instances = 520,000 dense, slender, curved grass blades in ONE draw call!
-// Covers entire open world sanctuary with ZERO bald patches or spiky triangular wedges.
-// Shading normal is forced to +Y on both sides to prevent shimmer.
+// 120,000 instances = 480,000 broad, lush, overlapping grass blades in ONE draw call!
+// Fully carpets the open world sanctuary with ZERO bare ground gaps from any angle.
+// Shading normal is forced to +Y on both sides to eliminate specular shimmer.
 // ─────────────────────────────────────────────────────────────────────────────
 
 function bladeHalfWidth(t: number): number {
-  // Slender, organic ribbon profile: gentle taper from root to sharp tip
-  return 0.24 * (1.0 - t * 0.82);
+  // Broad, lush blade profile with authentic organic parabolic taper to sharp tip
+  return 0.50 * Math.pow(Math.max(0.0, 1.0 - t), 1.20);
 }
 
 /**
  * Creates an organic 4-blade fanned grass clump geometry.
- * Each instance in InstancedMesh renders 4 distinct, curved, slender blades
- * that overlap to eliminate all bare ground gaps from any camera angle.
+ * Each instance in InstancedMesh renders 4 distinct, curved, broad blades
+ * that overlap to completely eliminate all bare ground gaps from any camera angle.
  */
 export function makeBladeGeometry(segments = 4): THREE.BufferGeometry {
   const seg = Math.max(2, Math.round(segments));
@@ -44,10 +44,10 @@ export function makeBladeGeometry(segments = 4): THREE.BufferGeometry {
 
   // Blade configurations (angle around Y, tilt angle, height scale, width scale, X offset, Z offset)
   const bladeConfigs = [
-    { yaw: 0.0, tilt: 0.12, hScale: 1.00, wScale: 0.85, xOff: 0.000, zOff: 0.000 },
-    { yaw: -0.75, tilt: 0.26, hScale: 0.92, wScale: 0.78, xOff: -0.014, zOff: 0.004 },
-    { yaw: 0.78, tilt: 0.24, hScale: 0.88, wScale: 0.76, xOff: 0.013, zOff: -0.003 },
-    { yaw: 2.85, tilt: 0.20, hScale: 0.82, wScale: 0.72, xOff: 0.002, zOff: -0.012 },
+    { yaw: 0.0, tilt: 0.10, hScale: 1.00, wScale: 0.95, xOff: 0.000, zOff: 0.000 },
+    { yaw: -0.63, tilt: 0.22, hScale: 0.94, wScale: 0.90, xOff: -0.016, zOff: 0.005 },
+    { yaw: 0.66, tilt: 0.20, hScale: 0.90, wScale: 0.88, xOff: 0.015, zOff: -0.004 },
+    { yaw: 2.97, tilt: 0.18, hScale: 0.86, wScale: 0.85, xOff: 0.002, zOff: -0.015 },
   ];
 
   bladeConfigs.forEach((cfg, bIdx) => {
