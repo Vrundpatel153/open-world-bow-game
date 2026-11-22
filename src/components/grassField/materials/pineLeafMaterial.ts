@@ -46,7 +46,7 @@ export function makePineLeafMaterial(
 
   const mat = new THREE.MeshLambertMaterial({
     map: src.map,
-    alphaTest: 0.22,
+    alphaTest: 0.12,
     transparent: false,
     side: THREE.DoubleSide,
   });
@@ -135,7 +135,7 @@ export function makePineLeafDepthMaterial(
   return new THREE.MeshDepthMaterial({
     depthPacking: THREE.RGBADepthPacking,
     map: src.map,
-    alphaTest: 0.22,
+    alphaTest: 0.12,
     side: THREE.DoubleSide,
   });
 }

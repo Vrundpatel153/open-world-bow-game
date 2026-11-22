@@ -659,26 +659,6 @@ export default function GameHUD({
           />
         ) : (
           <>
-            {/* Dynamic Contracting Tension Ring (fades in as tension builds) */}
-            {drawProgress > 0.04 && (
-              <div
-                style={{
-                  position: 'absolute',
-                  width: Math.max(8, 26 - drawProgress * 18),
-                  height: Math.max(8, 26 - drawProgress * 18),
-                  borderRadius: '50%',
-                  border: `1.5px solid ${
-                    drawProgress > 0.88 ? '#ffd700' : 'rgba(240, 235, 220, 0.75)'
-                  }`,
-                  boxShadow:
-                    drawProgress > 0.88
-                      ? '0 0 10px rgba(255, 215, 0, 0.8)'
-                      : '0 0 4px rgba(0, 0, 0, 0.6)',
-                  transition: 'border-color 0.08s ease',
-                }}
-              />
-            )}
-
             {/* Center Aim Pip */}
             <div
               style={{
@@ -691,25 +671,27 @@ export default function GameHUD({
                   drawProgress > 0.88
                     ? '0 0 8px #ffd700, 0 1px 2px rgba(0,0,0,0.8)'
                     : '0 1px 2px rgba(0,0,0,0.9)',
-                transition: 'all 0.1s ease',
+                transition: 'all 0.08s ease',
               }}
             />
 
-            {/* 4 Precision Crosshair Notches (Dynamic Inward Contraction) */}
+            {/* 4 Precision Crosshair Notches (Crisp, Small, Dynamic Inward Contraction) */}
             {(() => {
-              const notchOffset = Math.max(5, 12 - drawProgress * 7)
+              const notchOffset = Math.max(3.5, 7 - drawProgress * 3.5)
+              const notchLength = 4
+              const notchThickness = 1.5
               const notchColor =
-                drawProgress > 0.88 ? 'rgba(255, 220, 100, 0.9)' : 'rgba(255, 255, 255, 0.75)'
-              const notchShadow = '0 1px 2px rgba(0,0,0,0.8)'
+                drawProgress > 0.88 ? 'rgba(255, 220, 100, 0.95)' : 'rgba(255, 255, 255, 0.85)'
+              const notchShadow = '0 1px 2px rgba(0,0,0,0.9)'
               return (
                 <>
                   {/* Left */}
                   <div
                     style={{
                       position: 'absolute',
-                      left: -notchOffset - 5,
-                      width: 5,
-                      height: 1.5,
+                      left: -notchOffset - notchLength,
+                      width: notchLength,
+                      height: notchThickness,
                       background: notchColor,
                       boxShadow: notchShadow,
                     }}
@@ -718,9 +700,9 @@ export default function GameHUD({
                   <div
                     style={{
                       position: 'absolute',
-                      right: -notchOffset - 5,
-                      width: 5,
-                      height: 1.5,
+                      right: -notchOffset - notchLength,
+                      width: notchLength,
+                      height: notchThickness,
                       background: notchColor,
                       boxShadow: notchShadow,
                     }}
@@ -729,9 +711,9 @@ export default function GameHUD({
                   <div
                     style={{
                       position: 'absolute',
-                      top: -notchOffset - 5,
-                      width: 1.5,
-                      height: 5,
+                      top: -notchOffset - notchLength,
+                      width: notchThickness,
+                      height: notchLength,
                       background: notchColor,
                       boxShadow: notchShadow,
                     }}
@@ -740,9 +722,9 @@ export default function GameHUD({
                   <div
                     style={{
                       position: 'absolute',
-                      bottom: -notchOffset - 5,
-                      width: 1.5,
-                      height: 5,
+                      bottom: -notchOffset - notchLength,
+                      width: notchThickness,
+                      height: notchLength,
                       background: notchColor,
                       boxShadow: notchShadow,
                     }}

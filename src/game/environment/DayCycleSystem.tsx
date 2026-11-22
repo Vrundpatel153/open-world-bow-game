@@ -137,10 +137,24 @@ export default function DayCycleSystem({
     // Notify fog color
     onFogColorChange?.("#" + fogColor.current.getHexString());
 
-    // Phase transition notification if mode changed
+    // Phase transition notification if mode changed with smooth 3.5s atmospheric blend
     if (lastPhaseRef.current !== currentMode) {
+      const prevMode = lastPhaseRef.current;
       lastPhaseRef.current = currentMode;
+      blendStateRef.current = {
+        active: true,
+        t: 0,
+        from: SKY_PRESETS[prevMode] || SKY_PRESETS.day,
+        to: SKY_PRESETS[currentMode] || SKY_PRESETS.day,
+      };
       onPhaseChange?.(currentMode, SKY_PRESETS[currentMode], phaseName);
+    }
+
+    if (blendStateRef.current.active) {
+      blendStateRef.current.t = Math.min(1.0, blendStateRef.current.t + dt / 3.5);
+      if (blendStateRef.current.t >= 1.0) {
+        blendStateRef.current.active = false;
+      }
     }
   });
 

@@ -459,19 +459,19 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     aimProgress.current = THREE.MathUtils.damp(aimProgress.current, isAimTarget ? 1.0 : 0.0, 14, dt)
     const aimT = aimProgress.current
 
-    // Hip stance: natural lower-right position, screen center 100% clear
-    // ADS stance: arrow (0, 0) aligned right on the eye sightline, bow canted ~18 deg outward
-    const hipX = 0.25
-    const hipY = -0.23
-    const hipZ = -0.36
-    const hipCantZ = 0.38  // ~22 deg outward wrist cant tilts upper limb away from screen center & compass
+    // Hip stance: natural, compact lower-right position, 85% of screen 100% clear
+    // ADS stance: arrow aligns straight into crosshair, sight picture 100% visible
+    const hipX = 0.22
+    const hipY = -0.18
+    const hipZ = -0.32
+    const hipCantZ = 0.44  // ~25 deg outward wrist cant tilts upper limb away from screen center & compass
     const hipTiltX = -0.04 // slight forward pitch
     const hipYawY = -0.01  // arrow faces straight forward into camera direction
 
-    const adsX = 0.0       // arrow shaft is exactly at eye sightline center (X = 0)
-    const adsY = -0.055    // arrow shaft sits 5.5cm below eye level
-    const adsZ = -0.26
-    const adsCantZ = 0.32  // ~18 deg outward cant tilts upper limb away from center & compass
+    const adsX = 0.04      // arrow shelf sits cleanly alongside crosshair
+    const adsY = -0.048    // sits ergonomically below eye level
+    const adsZ = -0.24
+    const adsCantZ = 0.16  // subtle upright cant in ADS
     const adsTiltX = 0.0   // dead flat ballistic trajectory into reticle
     const adsYawY = 0.0    // 100% parallel with camera sightline into crosshair
 
@@ -510,7 +510,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
   })
 
   return (
-    <group ref={bowRootRef} scale={0.54} renderOrder={100}>
+    <group ref={bowRootRef} scale={0.36} renderOrder={100}>
       {/* ── 1. Sculpted Wood Riser Handle (offset so arrow shelf is at (0,0)) ─ */}
       <mesh
         geometry={riserGeo}

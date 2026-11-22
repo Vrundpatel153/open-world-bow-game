@@ -131,8 +131,8 @@ export default function OpenWorldGrassField({
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
   const { terrainMesh, bladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
-    // 1. Terrain Ground Mesh for high-density sampling (playable sanctuary radius ~36m)
-    const samplePlaneGeo = new THREE.PlaneGeometry(74, 74, 64, 64)
+    // 1. Terrain Ground Mesh for high-density sampling across entire playable sanctuary (~112m x 112m)
+    const samplePlaneGeo = new THREE.PlaneGeometry(112, 112, 96, 96)
     samplePlaneGeo.rotateX(-Math.PI / 2)
     const sPosAttr = samplePlaneGeo.attributes.position
     for (let i = 0; i < sPosAttr.count; i++) {
@@ -142,20 +142,20 @@ export default function OpenWorldGrassField({
     }
     samplePlaneGeo.computeVertexNormals()
 
-    // 2. Scatter 88,000 Slender, Realistic Grass Blades (Fluid, Organic Curvature, No Giant Cones)
+    // 2. Scatter 96,000 Slender, Realistic Grass Blades (Fluid, Organic Curvature, Continuous Open World)
     const blades = scatterBlades(new THREE.Mesh(samplePlaneGeo), {
       uniforms: u.surface,
-      density: 38,
-      maxCount: 88_000,
-      minWidth: 0.034,
-      maxWidth: 0.054,
-      minLength: 0.28,
-      maxLength: 0.44,
+      density: 22,
+      maxCount: 96_000,
+      minWidth: 0.038,
+      maxWidth: 0.062,
+      minLength: 0.32,
+      maxLength: 0.52,
       tiltMax: 0.44,
       segments: 5,
     })
 
-    // Clamp boundary at active sanctuary perimeter (r > 36m) - ZERO HOLE IN CENTER!
+    // Natural feathered outer perimeter fade towards mountain horizon (ZERO harsh circular pop!)
     const dummy = new THREE.Matrix4()
     const p = new THREE.Vector3()
     const rot = new THREE.Quaternion()
@@ -164,12 +164,15 @@ export default function OpenWorldGrassField({
     for (let i = 0; i < blades.count; i++) {
       blades.getMatrixAt(i, dummy)
       dummy.decompose(p, rot, s)
-      const d2 = p.x * p.x + p.z * p.z
-      if (d2 > 36.0 * 36.0) {
+      const dist = Math.hypot(p.x, p.z)
+      if (dist > 54.0) {
         s.set(0, 0, 0)
-        dummy.compose(p, rot, s)
-        blades.setMatrixAt(i, dummy)
+      } else if (dist > 46.0) {
+        const fade = (54.0 - dist) / 8.0
+        s.multiplyScalar(fade)
       }
+      dummy.compose(p, rot, s)
+      blades.setMatrixAt(i, dummy)
     }
     blades.instanceMatrix.needsUpdate = true
 
@@ -190,7 +193,7 @@ export default function OpenWorldGrassField({
     terrainGeo.computeVertexNormals()
 
     // Deep forest moss green ground material perfectly matching grass blade bases
-    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#1e3d0c'))
+    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#1b380a'))
     const groundMesh = new THREE.Mesh(terrainGeo, groundMat)
     groundMesh.receiveShadow = true
     groundMesh.castShadow = false
@@ -202,8 +205,8 @@ export default function OpenWorldGrassField({
       texA: u.flowerTexA,
       texB: u.flowerTexB,
       dirt: u.surface,
-      density: 0.28,
-      maxCount: 1400,
+      density: 0.18,
+      maxCount: 1600,
       size: 0.38,
       mixA: 0.5,
     })
@@ -212,12 +215,15 @@ export default function OpenWorldGrassField({
       for (let i = 0; i < fim.count; i++) {
         fim.getMatrixAt(i, dummy)
         dummy.decompose(p, rot, s)
-        const d2 = p.x * p.x + p.z * p.z
-        if (d2 > 35.0 * 35.0) {
+        const dist = Math.hypot(p.x, p.z)
+        if (dist > 52.0) {
           s.set(0, 0, 0)
-          dummy.compose(p, rot, s)
-          fim.setMatrixAt(i, dummy)
+        } else if (dist > 44.0) {
+          const fade = (52.0 - dist) / 8.0
+          s.multiplyScalar(fade)
         }
+        dummy.compose(p, rot, s)
+        fim.setMatrixAt(i, dummy)
       }
       fim.instanceMatrix.needsUpdate = true
     }
@@ -258,9 +264,9 @@ export default function OpenWorldGrassField({
             const center = bs.center.clone().applyMatrix4(m.matrixWorld)
             const scale = new THREE.Vector3().setFromMatrixScale(m.matrixWorld)
             const maxS = Math.max(scale.x, scale.z)
-            const r = bs.radius * maxS * 0.88 // 88% radius for tight, natural collision boundary
+            const r = bs.radius * maxS * 1.12 // 112% radius for solid non-clipping boundary
 
-            if (r > 0.35) { // Skip tiny ground pebbles
+            if (r > 0.30) { // Skip tiny ground pebbles
               colliders.push({
                 id: `rock_${posX.toFixed(1)}_${posZ.toFixed(1)}_${m.id}`,
                 tag: 'rock',
@@ -268,9 +274,9 @@ export default function OpenWorldGrassField({
                 z: center.z,
                 y: center.y,
                 radius: r,
-                height: bs.radius * scale.y * 2.2,
-                minY: center.y - bs.radius * scale.y,
-                maxY: center.y + bs.radius * scale.y + 1.2,
+                height: bs.radius * scale.y * 2.8,
+                minY: center.y - bs.radius * scale.y - 1.5,
+                maxY: center.y + bs.radius * scale.y + 2.5,
               })
             }
           } else if (srcMat.name === TRUNK_MATERIAL) {
@@ -279,7 +285,7 @@ export default function OpenWorldGrassField({
             const bs = m.geometry.boundingSphere!
             const center = bs.center.clone().applyMatrix4(m.matrixWorld)
             const scale = new THREE.Vector3().setFromMatrixScale(m.matrixWorld)
-            const trunkRadius = Math.max(0.36, bs.radius * Math.min(scale.x, scale.z) * 0.45)
+            const trunkRadius = Math.max(0.48, bs.radius * Math.min(scale.x, scale.z) * 0.55)
 
             colliders.push({
               id: `tree_${posX.toFixed(1)}_${posZ.toFixed(1)}_${m.id}`,
@@ -288,9 +294,9 @@ export default function OpenWorldGrassField({
               z: center.z,
               y: posY,
               radius: trunkRadius,
-              height: 18.0 * scaleVal,
-              minY: posY - 1.0,
-              maxY: posY + 18.0 * scaleVal,
+              height: 22.0 * scaleVal,
+              minY: posY - 2.0,
+              maxY: posY + 22.0 * scaleVal,
             })
             m.material = barkMat
           } else if (srcMat.name === LEAF_MATERIAL) {
@@ -442,26 +448,26 @@ export default function OpenWorldGrassField({
 
     // Colors (Rich, natural Studio Ghibli / Tsushima emerald meadow — ZERO yellow cast!)
     const c = colorsRef.current
-    c.grassBottom.set('#1e3d0c')
-    c.grassTop.set('#3b6e16')
+    c.grassBottom.set('#1b380a')
+    c.grassTop.set('#3a7516')
     s.uGrassBottom.value.copy(c.grassBottom)
     s.uGrassTop.value.copy(c.grassTop)
-    s.uGradStart.value = 0.06
-    s.uGradEnd.value = 0.94
+    s.uGradStart.value = 0.04
+    s.uGradEnd.value = 0.96
     s.uGradPower.value = 1.15
-    s.uBrightness.value = 0.92
+    s.uBrightness.value = 0.94
 
     // Lush vs Dry environmental patches (Harmonious forest hues, NO yellow wheat)
-    s.uPatchLush.value.set('#1e3d0c')
-    s.uPatchDry.value.set('#487d1c')
-    s.uPatchStrength.value = 0.16
+    s.uPatchLush.value.set('#1b380a')
+    s.uPatchDry.value.set('#326315')
+    s.uPatchStrength.value = 0.12
     s.uPatchScale.value = 0.08
     s.uPatchBias.value = 1.3
 
     // Translucency (Subsurface sun scatter — pure vibrant emerald leaf transmission, NOT yellow!)
-    c.transColor.set('#3d7a14')
+    c.transColor.set('#346e14')
     s.uTransColor.value.copy(c.transColor)
-    s.uTransStrength.value = 0.35
+    s.uTransStrength.value = 0.24
     s.uTransPower.value = 3.8
     s.uTransTip.value = 0.8
     s.uTransShadow.value = 1.0

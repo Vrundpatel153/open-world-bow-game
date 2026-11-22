@@ -1640,13 +1640,11 @@ export default function SkyDome({
       ? { ...basePreset, ...modeOverrides }
       : basePreset;
 
-    // All values come from Leva — preset syncs them via set() on skyMode change.
-    // Only feature flags (starsEnabled, moonEnabled, cloudsEnabled) still come
-    // directly from the preset so toggling the mode always gates those features.
-    u.uSkyLow.value.set(skyLow);
-    u.uSkyHigh.value.set(skyHigh);
-    u.uHorizonLine.value = horizonLine;
-    u.uHorizonSpread.value = horizonSpread;
+    // Sky gradient & atmospheric horizon colors (Driven by active preset or Leva fallback)
+    u.uSkyLow.value.set(preset.skyLow ?? skyLow);
+    u.uSkyHigh.value.set(preset.skyHigh ?? skyHigh);
+    u.uHorizonLine.value = preset.horizonLine ?? horizonLine;
+    u.uHorizonSpread.value = preset.horizonSpread ?? horizonSpread;
 
     const effElev = moonElevOverride !== undefined ? moonElevOverride : moonElev;
     const effAzim = moonAzimOverride !== undefined ? moonAzimOverride : moonAzim;
@@ -1700,10 +1698,12 @@ export default function SkyDome({
       u.uMoonSpotOctaves.value = 1;
     }
 
-    // Stars — brightness forced to 0 by feature flag (e.g. daytime)
-    u.uStarDensity.value = starDensity;
-    u.uStarSize.value = starSize;
-    u.uStarBrightness.value = preset.starsEnabled ? starBrightness : 0;
+    // Stars — brightness forced to 0 during day, radiant during night / twilight
+    u.uStarDensity.value = preset.starDensity ?? starDensity;
+    u.uStarSize.value = preset.starSize ?? starSize;
+    u.uStarBrightness.value = (isNight || preset.starsEnabled)
+      ? (preset.starBrightness ?? Math.max(starBrightness, 0.95))
+      : 0;
     u.uStarFloor.value = starFloor;
     u.uStarDriftY.value = starDriftY;
     u.uStarDriftZ.value = starDriftZ;
@@ -1733,12 +1733,12 @@ export default function SkyDome({
     u.uCloudScale.value = cloudScale;
     u.uCloudDensity.value = cloudDensity;
     u.uCloudSharpness.value = cloudSharpness;
-    u.uCloudCore.value.set(cloudCore);
-    u.uCloudEdge.value.set(cloudEdge);
-    u.uCloudRim.value.set(cloudRim);
-    u.uCloudEdgeWidth.value = cloudEdgeWidth;
-    u.uCloudRimStrength.value = cloudRimStrength;
-    u.uCloudLit.value.set(cloudLit);
+    u.uCloudCore.value.set(preset.cloudCore ?? cloudCore);
+    u.uCloudEdge.value.set(preset.cloudEdge ?? cloudEdge);
+    u.uCloudRim.value.set(preset.cloudRim ?? cloudRim);
+    u.uCloudEdgeWidth.value = preset.cloudEdgeWidth ?? cloudEdgeWidth;
+    u.uCloudRimStrength.value = preset.cloudRimStrength ?? cloudRimStrength;
+    u.uCloudLit.value.set(preset.cloudLit ?? cloudLit);
     u.uCloudLitStrength.value = cloudLitStrength;
     u.uCloudLightSteps.value = cloudLightSteps;
     u.uCloudLightDist.value = cloudLightDist;
@@ -1788,17 +1788,11 @@ export default function SkyDome({
         t,
       );
 
-      // Moon direction
-      const elA = (from.moonElev ?? 8) * (Math.PI / 180);
-      const elB = (to.moonElev ?? 8) * (Math.PI / 180);
-      const azA = (from.moonAzim ?? 183) * (Math.PI / 180);
-      const azB = (to.moonAzim ?? 183) * (Math.PI / 180);
-      const el = lerp(elA, elB, t);
-      const az = lerp(azA, azB, t);
+      // Celestial direction follows real-time orbit during blend
       u.uMoonDir.value.set(
-        Math.cos(el) * Math.sin(az),
-        Math.sin(el),
-        Math.cos(el) * Math.cos(az),
+        Math.cos(elRad) * Math.sin(azRad),
+        Math.sin(elRad),
+        -Math.cos(elRad) * Math.cos(azRad),
       );
       if (moonDirRef) moonDirRef.current.copy(u.uMoonDir.value);
 
