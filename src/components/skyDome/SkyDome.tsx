@@ -303,7 +303,7 @@ const SKY_FRAG = /* glsl */ `
         vec2 n          = cell + vec2(float(dx), float(dy));
         vec2 nw         = vec2(mod(n.x, uStarDensity), n.y); // seam-safe wrap
         float brightness = hash21(nw + 0.5);
-        float hasstar    = step(0.6, brightness); // ~40% of cells
+        float hasstar    = step(0.88, brightness); // top 12% of cells: clean minimal pinprick stars
 
         vec2  offset = hash22(nw);
         float dist   = length(f - (vec2(float(dx), float(dy)) + offset));
@@ -1643,18 +1643,25 @@ export default function SkyDome({
     meshRef.current.scale.setScalar(domeRadius);
 
     const u = material.uniforms;
+
+    const nightBool =
+      typeof isNight === "object" && isNight !== null
+        ? Boolean(isNight.current)
+        : Boolean(isNight);
+
+    const activeMode = (nightBool ? "night" : (targetMode || skyMode || defaultMode || "day")) as SkyMode;
     const basePreset =
-      extraPresets?.[skyMode] ??
-      SKY_PRESETS[skyMode as SkyMode] ??
-      SKY_PRESETS.night;
-    const modeOverrides = presetOverrides?.[skyMode as SkyMode];
+      extraPresets?.[activeMode] ??
+      SKY_PRESETS[activeMode] ??
+      (nightBool ? SKY_PRESETS.night : SKY_PRESETS.day);
+    const modeOverrides = presetOverrides?.[activeMode];
     const preset: SkyPreset = modeOverrides
       ? { ...basePreset, ...modeOverrides }
       : basePreset;
 
     // Sky gradient & atmospheric horizon colors (Driven by active preset or Leva fallback)
-    u.uSkyLow.value.set(preset.skyLow ?? skyLow);
-    u.uSkyHigh.value.set(preset.skyHigh ?? skyHigh);
+    u.uSkyLow.value.set(preset.skyLow ?? (nightBool ? "#041026" : skyLow));
+    u.uSkyHigh.value.set(preset.skyHigh ?? (nightBool ? "#01030e" : skyHigh));
     u.uHorizonLine.value = preset.horizonLine ?? horizonLine;
     u.uHorizonSpread.value = preset.horizonSpread ?? horizonSpread;
 
@@ -1670,10 +1677,6 @@ export default function SkyDome({
         : moonAzimOverride !== undefined
           ? moonAzimOverride
           : moonAzim;
-    const nightBool =
-      typeof isNight === "object" && isNight !== null
-        ? Boolean(isNight.current)
-        : Boolean(isNight);
 
     const elRad = effElev * (Math.PI / 180);
     const azRad = effAzim * (Math.PI / 180);
@@ -1693,62 +1696,57 @@ export default function SkyDome({
     const starFade = nightBool ? 1.0 : 0.0;
 
     if (nightBool) {
-      u.uMoonColor.value.set("#eef6ff");
-      u.uMoonGlowColor.value.set("#3d77d4");
-      u.uMoonSize.value = 0.020 * Math.max(0.001, horizonFade);
-      u.uMoonGlowFalloff.value = 160.0;
-      u.uMoonGlowIntensity.value = 0.38 * horizonFade;
-      u.uMoonEdgeSoftness.value = 0.03;
-      u.uMoonPhasePos.value = 0.25; // Ethereal crescent moon
-      u.uMoonPhaseSoftness.value = 0.35;
-      u.uMoonPhaseAngle.value = (150 * Math.PI) / 180;
-      u.uMoonEmission.value = 0.85 * horizonFade;
-      u.uMoonCloudBleed.value = 0.55;
-      u.uMoonSpotColor.value.set("#69c2f6");
-      u.uMoonSpotStrength.value = 0.65;
-      u.uMoonSpotScale.value = 2.2;
-      u.uMoonSpotThreshold.value = 0.58;
-      u.uMoonSpotSharpness.value = 0.15;
+      // Ethereal Silver Lunar Disc with authentic muted slate maria & crisp crescent
+      u.uMoonColor.value.set("#edf4ff");
+      u.uMoonGlowColor.value.set("#7aa6d6");
+      u.uMoonSize.value = 0.024 * Math.max(0.001, horizonFade);
+      u.uMoonGlowFalloff.value = 80.0;
+      u.uMoonGlowIntensity.value = 0.26 * horizonFade;
+      u.uMoonEdgeSoftness.value = 0.025;
+      u.uMoonPhasePos.value = 0.18; // Crisp realistic crescent moon
+      u.uMoonPhaseSoftness.value = 0.08;
+      u.uMoonPhaseAngle.value = (145 * Math.PI) / 180;
+      u.uMoonEmission.value = 0.70 * horizonFade;
+      u.uMoonCloudBleed.value = 0.65;
+      u.uMoonSpotColor.value.set("#788ca3"); // Authentic slate lunar rocks (zero neon cyan)
+      u.uMoonSpotStrength.value = 0.45;
+      u.uMoonSpotScale.value = 2.0;
+      u.uMoonSpotThreshold.value = 0.55;
+      u.uMoonSpotSharpness.value = 0.12;
       u.uMoonSpotOctaves.value = 4;
     } else {
-      // Golden Sun Disc & Atmospheric Solar Corona
-      // Scaled to realistic stylized game proportions (zero bloom blowout)
-      u.uMoonColor.value.set("#fffdf2");
-      u.uMoonGlowColor.value.set("#ffaa33");
-      u.uMoonSize.value = 0.010 * Math.max(0.001, horizonFade);
-      u.uMoonGlowFalloff.value = 650.0; // Tight, clean corona (prevents screen bloom blowout)
-      u.uMoonGlowIntensity.value = 0.08 * horizonFade;
+      // Luminous Golden Sun Disc with warm atmospheric solar corona
+      u.uMoonColor.value.set("#fffdf0");
+      u.uMoonGlowColor.value.set("#ffa834");
+      u.uMoonSize.value = 0.026 * Math.max(0.001, horizonFade);
+      u.uMoonGlowFalloff.value = 30.0; // Wide glorious golden atmospheric corona
+      u.uMoonGlowIntensity.value = 0.52 * horizonFade;
       u.uMoonEdgeSoftness.value = 0.02;
-      u.uMoonPhasePos.value = 2.0; // 100% fully lit spherical sun (zero terminator)
+      u.uMoonPhasePos.value = 2.0; // Fully lit spherical solar disc
       u.uMoonPhaseSoftness.value = 0.1;
       u.uMoonPhaseAngle.value = 0;
-      u.uMoonEmission.value = 0.38 * horizonFade;
-      u.uMoonCloudBleed.value = 0.75;
+      u.uMoonEmission.value = 0.75 * horizonFade;
+      u.uMoonCloudBleed.value = 0.85;
       u.uMoonSpotColor.value.set("#ffffff");
-      u.uMoonSpotStrength.value = 0.0; // Pure immaculate solar disk
+      u.uMoonSpotStrength.value = 0.0;
       u.uMoonSpotScale.value = 1.0;
       u.uMoonSpotThreshold.value = 0.5;
       u.uMoonSpotSharpness.value = 0.1;
       u.uMoonSpotOctaves.value = 1;
     }
 
-    // Stars — strictly 0 during daylight, smoothly radiant during deep night
-    u.uStarDensity.value = preset.starDensity ?? starDensity;
-    u.uStarSize.value = preset.starSize ?? starSize;
+    // Stars — minimal needle points (~150-200 stars), sparse and peaceful
+    u.uStarDensity.value = 75.0;
+    u.uStarSize.value = 0.0022;
     u.uStarBrightness.value =
       (nightBool && starFade > 0 && preset.starsEnabled !== false)
-        ? (preset.starBrightness ?? 1.2) * starFade
+        ? (preset.starBrightness ?? 1.1) * starFade
         : 0.0;
-    u.uStarFloor.value = starFloor;
-    u.uStarDriftY.value = starDriftY;
-    u.uStarDriftZ.value = starDriftZ;
-    u.uStarTwinkleSpeed.value = starTwinkleSpeed;
-    u.uStarTwinkleAmount.value = starTwinkleAmount;
-    u.uStarFloor.value = starFloor;
-    u.uStarDriftY.value = starDriftY;
-    u.uStarDriftZ.value = starDriftZ;
-    u.uStarTwinkleSpeed.value = starTwinkleSpeed;
-    u.uStarTwinkleAmount.value = starTwinkleAmount;
+    u.uStarFloor.value = 0.08;
+    u.uStarDriftY.value = 0.0012;
+    u.uStarDriftZ.value = 0.0006;
+    u.uStarTwinkleSpeed.value = 0.45;
+    u.uStarTwinkleAmount.value = 0.20;
 
     // Side distortion — forced to 0 unless the preset enables it (boss fight)
     u.uSideWarp.value = preset.sideDistortionEnabled ? sideWarp : 0;
@@ -1837,20 +1835,21 @@ export default function SkyDome({
       if (moonDirRef) moonDirRef.current.copy(u.uMoonDir.value);
 
       // Moon appearance
-      cA.set(from.moonColor ?? "#f0f1f2");
-      cB.set(to.moonColor ?? "#f0f1f2");
+      cA.set(from.moonColor ?? (nightBool ? "#f0f4f8" : "#fffdf0"));
+      cB.set(to.moonColor ?? (nightBool ? "#f0f4f8" : "#fffdf0"));
       u.uMoonColor.value.lerpColors(cA, cB, t);
-      cA.set(from.moonGlowColor ?? "#0a7ace");
-      cB.set(to.moonGlowColor ?? "#0a7ace");
+      cA.set(from.moonGlowColor ?? (nightBool ? "#b0cce8" : "#ffa834"));
+      cB.set(to.moonGlowColor ?? (nightBool ? "#b0cce8" : "#ffa834"));
       u.uMoonGlowColor.value.lerpColors(cA, cB, t);
       // Calibrated celestial disk size & falloff (never balloon during blend transitions)
-      const baseCelestialSize = nightBool ? 0.020 : 0.010;
+      const baseCelestialSize = nightBool ? 0.024 : 0.026;
       u.uMoonSize.value = baseCelestialSize * Math.max(0.001, horizonFade);
-      u.uMoonEmission.value = (nightBool ? 0.85 : 0.38) * horizonFade;
-      u.uMoonGlowFalloff.value = nightBool ? 160.0 : 650.0;
-      u.uMoonGlowIntensity.value = (nightBool ? 0.38 : 0.08) * horizonFade;
-      u.uMoonCloudBleed.value = nightBool ? 0.55 : 0.75;
-      u.uMoonPhasePos.value = nightBool ? 0.25 : 2.0; // Day: 100% spherical sun; Night: crescent
+      u.uMoonEmission.value = (nightBool ? 0.70 : 0.75) * horizonFade;
+      u.uMoonGlowFalloff.value = nightBool ? 80.0 : 30.0;
+      u.uMoonGlowIntensity.value = (nightBool ? 0.26 : 0.52) * horizonFade;
+      u.uMoonCloudBleed.value = nightBool ? 0.65 : 0.85;
+      u.uMoonPhasePos.value = nightBool ? 0.18 : 2.0; // Day: 100% spherical sun; Night: crescent
+      u.uMoonPhaseSoftness.value = nightBool ? 0.08 : 0.10;
 
       // Stars — strictly 0 during daylight, only fade in when nocturnal darkness is true
       u.uStarBrightness.value =

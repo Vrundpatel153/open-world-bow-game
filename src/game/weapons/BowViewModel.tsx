@@ -88,47 +88,26 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     threadWrapGeo,
     arrowNockGeo,
   } = useMemo(() => {
-    // 1. Traditional Carved Yew/Walnut Riser (Length 0.14m, Width 22mm, Depth 26mm)
-    // Left side has sculpted arrow shelf cutout at Y = 0.006, X = -0.007
-    const riserShape = new THREE.Shape()
-    riserShape.moveTo(-0.011, -0.070)
-    riserShape.lineTo(0.011, -0.070)
-    riserShape.lineTo(0.011, -0.015)
-    riserShape.lineTo(0.011, 0.015)
-    riserShape.lineTo(0.011, 0.070)
-    riserShape.lineTo(-0.011, 0.070)
-    riserShape.lineTo(-0.011, 0.038)
-    // Smooth arrow shelf rest window cutout
-    riserShape.lineTo(-0.003, 0.038)
-    riserShape.lineTo(-0.003, 0.006)
-    riserShape.lineTo(-0.011, 0.006)
-    riserShape.lineTo(-0.011, -0.015)
-    riserShape.lineTo(-0.011, -0.070)
-    riserShape.closePath()
-
-    const riser = new THREE.ExtrudeGeometry(riserShape, {
-      depth: 0.024,
-      bevelEnabled: true,
-      bevelSegments: 3,
-      bevelSize: 0.002,
-      bevelThickness: 0.002,
-    })
-    riser.center()
+    // 1. Traditional Carved Yew/Walnut Riser (Length 0.15m, slender contoured handle)
+    // Smooth oval cross-section tapering gently into upper and lower limb fadeouts
+    const riser = new THREE.CylinderGeometry(0.010, 0.013, 0.15, 16)
+    riser.scale(0.85, 1.0, 1.25) // Oval cross-section: 17mm wide, 25mm deep
 
     // 2. Weathered Dark Leather Handle Wrap
-    const gripWrap = new THREE.CylinderGeometry(0.0135, 0.0140, 0.055, 16)
+    const gripWrap = new THREE.CylinderGeometry(0.0125, 0.0128, 0.058, 16)
+    gripWrap.scale(0.90, 1.0, 1.28)
 
     // 3. Graceful One-Piece Recurve Wooden Limbs
-    // Mounted at Y = +/-0.050m. Total bow span ~0.38m
+    // Mounted at Y = +/-0.060m. Total bow span ~0.36m (perfect window framing)
     const upperPoints: THREE.Vector3[] = []
     const lowerPoints: THREE.Vector3[] = []
 
     for (let i = 0; i <= 18; i++) {
       const t = i / 18
-      const y = t * 0.145
-      // Recurve: sweeps forward into -Z, then curls back into +Z at the horn tip nock
-      const x = -Math.sin(t * Math.PI * 0.5) * 0.006
-      const z = -Math.sin(t * Math.PI * 0.55) * 0.022 + Math.pow(t, 2.2) * 0.050
+      const y = t * 0.135
+      // Recurve: sweeps gently forward into -Z, then curls back into +Z at the horn tip nock
+      const x = -Math.sin(t * Math.PI * 0.5) * 0.004
+      const z = -Math.sin(t * Math.PI * 0.55) * 0.018 + Math.pow(t, 2.2) * 0.042
       upperPoints.push(new THREE.Vector3(x, y, z))
       lowerPoints.push(new THREE.Vector3(x, -y, z))
     }
@@ -136,35 +115,35 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const upperCurve = new THREE.CatmullRomCurve3(upperPoints)
     const lowerCurve = new THREE.CatmullRomCurve3(lowerPoints)
 
-    // Tapered plank cross-section (width 16mm, thickness 6mm)
+    // Slender tapered flatbow cross-section (width 14mm tapering, thickness 5mm)
     const plankShape = new THREE.Shape()
-    plankShape.moveTo(-0.008, -0.003)
-    plankShape.lineTo(0.008, -0.003)
-    plankShape.lineTo(0.008, 0.003)
-    plankShape.lineTo(-0.008, 0.003)
+    plankShape.moveTo(-0.007, -0.0025)
+    plankShape.lineTo(0.007, -0.0025)
+    plankShape.lineTo(0.007, 0.0025)
+    plankShape.lineTo(-0.007, 0.0025)
     plankShape.closePath()
 
     const upperLimb = new THREE.ExtrudeGeometry(plankShape, {
       extrudePath: upperCurve,
-      steps: 24,
+      steps: 22,
       bevelEnabled: true,
       bevelSegments: 2,
-      bevelSize: 0.001,
-      bevelThickness: 0.001,
+      bevelSize: 0.0008,
+      bevelThickness: 0.0008,
     })
 
     const lowerLimb = new THREE.ExtrudeGeometry(plankShape, {
       extrudePath: lowerCurve,
-      steps: 24,
+      steps: 22,
       bevelEnabled: true,
       bevelSegments: 2,
-      bevelSize: 0.001,
-      bevelThickness: 0.001,
+      bevelSize: 0.0008,
+      bevelThickness: 0.0008,
     })
 
     // 4. Carved Dark Horn Tip Nocks with String Grooves
-    const hornTip = new THREE.CylinderGeometry(0.0038, 0.0065, 0.014, 12)
-    hornTip.scale(1.05, 1.0, 0.75)
+    const hornTip = new THREE.CylinderGeometry(0.0032, 0.0055, 0.012, 12)
+    hornTip.scale(1.0, 1.0, 0.75)
 
     // 5. Traditional Hunting Arrow (Total Length 0.52m)
     // Bone/Horn Nock (throat at z = 0.0)
@@ -201,19 +180,20 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     blade.rotateX(-Math.PI / 2)
     blade.translate(0, 0, -0.470) // Reaches needle point at z = -0.520
 
-    // Natural Shield-Cut Feathers (Sleek, authentic hunting profile: height 5.5mm, length 5.5cm)
+    // Natural Shield-Cut Feathers (Sleek, authentic hunting profile: height 4.5mm radially, length 5.5cm along shaft)
     const fletchShape = new THREE.Shape()
     fletchShape.moveTo(0, 0)
-    fletchShape.lineTo(0.0055, -0.010)
-    fletchShape.lineTo(0.0055, -0.050)
-    fletchShape.lineTo(0, -0.058)
+    fletchShape.lineTo(0.0045, -0.010)
+    fletchShape.lineTo(0.0045, -0.048)
+    fletchShape.lineTo(0, -0.056)
     fletchShape.closePath()
 
     const fletch = new THREE.ExtrudeGeometry(fletchShape, {
-      depth: 0.0005,
+      depth: 0.0004,
       bevelEnabled: false,
     })
-    fletch.translate(0, 0, -0.008)
+    fletch.rotateX(Math.PI / 2) // Orient length along -Z along arrow shaft
+    fletch.translate(0, 0.0026, -0.008) // Mount on shaft surface at rear nock
 
     // Linen Whipping Thread Rings
     const thread = new THREE.CylinderGeometry(0.0029, 0.0029, 0.004, 12)
@@ -339,7 +319,6 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const handleMouseUp = (e: MouseEvent) => {
       if (e.button === 0 && isDrawing.current && useQuestStore.getState().isBowEquipped) {
         const power = Math.max(0.35, drawTension.current)
-        sound.playBowRelease(power)
 
         // Launch arrow precisely through center crosshair
         const camPos = camera.getWorldPosition(new THREE.Vector3())
@@ -355,11 +334,11 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         }
 
         const fireDir = targetPoint.clone().sub(launchPos).normalize()
-        sound.playBowRelease(power)
         onFireArrow(launchPos, fireDir, power)
+        sound.playBowRelease(power)
 
-        recoilOffset.current = 0.035 * power
-        recoilRotation.current = -0.045 * power
+        recoilOffset.current = 0.040 * power
+        recoilRotation.current = -0.050 * power
         stringVibration.current = 1.0
 
         isDrawing.current = false
@@ -367,7 +346,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         setDrawProgress(0)
 
         isReloading.current = true
-        reloadTimer.current = 0.85
+        reloadTimer.current = 1.10
       }
 
       if (e.button === 2) {
@@ -409,7 +388,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
       setDrawProgress(0)
     }
 
-    // Reload Animation (Total cycle 0.85s: 0.00s-0.48s empty flight tracking; 0.48s-0.85s quiver re-nock)
+    // Reload Animation (Total cycle 1.10s: 0.00s-0.62s empty flight tracking; 0.62s-1.10s quiver re-nock)
     let reloadProgress = 1.0
     if (isReloading.current) {
       reloadTimer.current -= dt
@@ -418,7 +397,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         sound.playArrowNock()
         reloadProgress = 1.0
       } else {
-        reloadProgress = 1.0 - reloadTimer.current / 0.85
+        reloadProgress = 1.0 - reloadTimer.current / 1.10
       }
     }
 
@@ -486,27 +465,27 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     aimProgress.current = THREE.MathUtils.damp(aimProgress.current, targetAim, 12, dt)
     const aFactor = aimProgress.current
 
-    // Idle stance: Bow held naturally in the lower-right quadrant (X=0.28m, Y=-0.155m, Z=-0.36m)
-    // Scale 0.82x fits completely inside the window: upper tip stays well below compass, lower tip above hotbar
-    // Aim stance: raises into right-canted sight window (X=0.052m, Y=-0.038m, Z=-0.26m)
+    // Idle stance: Bow held naturally in the lower-right quadrant (X=0.235m, Y=-0.165m, Z=-0.33m)
+    // Scale 0.76x fits completely inside the window: upper tip stays well below compass, lower tip above hotbar
+    // Aim stance: raises into right-canted sight window (X=0.038m, Y=-0.020m, Z=-0.23m)
     const unequipDrop = (1.0 - equipProgress.current) * -0.5
-    const baseLocalX = THREE.MathUtils.lerp(0.280, 0.052, aFactor)
-    const baseLocalY = THREE.MathUtils.lerp(-0.155, -0.038, aFactor)
-    const baseLocalZ = THREE.MathUtils.lerp(-0.360, -0.260, aFactor)
+    const baseLocalX = THREE.MathUtils.lerp(0.235, 0.038, aFactor)
+    const baseLocalY = THREE.MathUtils.lerp(-0.165, -0.020, aFactor)
+    const baseLocalZ = THREE.MathUtils.lerp(-0.330, -0.230, aFactor)
 
     const localX = baseLocalX + swayOffset.current.x + bobX + shakeX
     const localY = baseLocalY + swayOffset.current.y + bobY + shakeY + unequipDrop
     const localZ = baseLocalZ + recoilOffset.current
 
     rigGroupRef.current.position.set(localX, localY, localZ)
-    rigGroupRef.current.scale.setScalar(0.82)
+    rigGroupRef.current.scale.setScalar(0.76)
 
     // Dynamic rotation:
-    // In idle: pitchX = 0.12 (natural forward-down carry angle), yawY = -0.12 (inward cant), rollZ = -0.22 (right cant)
-    // In aim: pitchX = 0.015, yawY = -0.015, rollZ = -0.22 (held canted to right of sightline, keeping eye-to-target path clear)
-    const pitchX = THREE.MathUtils.lerp(0.120, 0.015, aFactor) + recoilRotation.current + swayOffset.current.y * 0.15
-    const yawY = THREE.MathUtils.lerp(-0.120, -0.015, aFactor) + swayOffset.current.x * 0.15
-    const rollZ = THREE.MathUtils.lerp(-0.220, -0.220, aFactor) + swayRot.current.z
+    // In idle: pitchX = 0.06 (natural forward-down carry angle), yawY = -0.05 (slight cant), rollZ = -0.12 (right cant)
+    // In aim: pitchX = 0.005, yawY = -0.005, rollZ = -0.14 (held canted to right of sightline, keeping eye-to-target path clear)
+    const pitchX = THREE.MathUtils.lerp(0.060, 0.005, aFactor) + recoilRotation.current + swayOffset.current.y * 0.15
+    const yawY = THREE.MathUtils.lerp(-0.050, -0.005, aFactor) + swayOffset.current.x * 0.15
+    const rollZ = THREE.MathUtils.lerp(-0.120, -0.140, aFactor) + swayRot.current.z
 
     rigGroupRef.current.rotation.set(pitchX, yawY, rollZ, 'YXZ')
     rigGroupRef.current.updateMatrixWorld(true)
@@ -542,24 +521,17 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const currentNock = restingNock.clone()
     currentNock.z += pullDistance + vibZ
 
-    // Compute arrow alignment in camera space:
-    // In camera space:
-    // When aiming (aFactor = 1.0): broadhead needle point is aimed directly at center crosshair (0, -0.010, -0.56)
-    // When in idle (aFactor = 0.0): arrow points forward-downward along the right-hand path with authentic foreshortening
-    const nockWorld = currentNock.clone().applyMatrix4(rigGroupRef.current.matrixWorld)
-    const nockCam = bowRootRef.current.worldToLocal(nockWorld.clone())
-
-    const tipAimCam = new THREE.Vector3(0.000, -0.010, -0.560)
-    const tipIdleCam = new THREE.Vector3(nockCam.x + 0.360, nockCam.y - 0.140, nockCam.z - 0.480)
-    const targetTipCam = new THREE.Vector3().lerpVectors(tipIdleCam, tipAimCam, aFactor)
-
-    const targetTipWorld = bowRootRef.current.localToWorld(targetTipCam.clone())
-    const targetTipLocal = rigGroupRef.current.worldToLocal(targetTipWorld)
-    const arrowDir = targetTipLocal.clone().sub(currentNock).normalize()
+    // When aiming (aFactor = 1.0): arrow points straight through center crosshair (0, 0, -80m)
+    // When in idle (aFactor = 0.0): arrow rests along local forward axis (-Z), staying neatly in right quadrant
+    const aimCamPoint = bowRootRef.current.localToWorld(new THREE.Vector3(0, 0, -80.0))
+    const aimLocalPoint = rigGroupRef.current.worldToLocal(aimCamPoint)
+    const aimArrowDir = aimLocalPoint.sub(currentNock).normalize()
+    const idleArrowDir = new THREE.Vector3(0.0, 0.0, -1.0)
+    const arrowDir = new THREE.Vector3().lerpVectors(idleArrowDir, aimArrowDir, aFactor).normalize()
 
     if (arrowGroupRef.current) {
-      // 0.00s to 0.48s (reloadProgress < 0.56): Bow is completely empty so player tracks shot arrow
-      if (isReloading.current && reloadProgress < 0.56) {
+      // 0.00s to 0.62s (reloadProgress < 0.58): Bow is completely empty so player tracks shot arrow
+      if (isReloading.current && reloadProgress < 0.58) {
         arrowGroupRef.current.visible = false
       } else {
         arrowGroupRef.current.visible = true
@@ -573,7 +545,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         const currentNockPos = currentNock.clone()
         if (isReloading.current) {
           // Smooth slide from archer's quiver onto arrow shelf rest
-          const tSlide = (reloadProgress - 0.56) / 0.44
+          const tSlide = (reloadProgress - 0.58) / 0.42
           const easeSlide = THREE.MathUtils.smoothstep(tSlide, 0, 1)
           currentNockPos.y -= (1 - easeSlide) * 0.070
           currentNockPos.x += (1 - easeSlide) * 0.035
@@ -668,10 +640,10 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
           {/* Forged Two-Blade Carbon Steel Broadhead Blade */}
           <mesh geometry={arrowTipGeo} material={broadheadMat} position={[0, 0, 0]} />
 
-          {/* 3 Natural Matte White-Grey Turkey Shield-Cut Feathers */}
-          {[0, (Math.PI * 2) / 3, (Math.PI * 4) / 3].map((angle, i) => (
+          {/* 3 Natural Matte White-Grey Turkey Shield-Cut Feathers (Left cock-feather, up/down hen feathers) */}
+          {[Math.PI, Math.PI / 3, -Math.PI / 3].map((angle, i) => (
             <group key={i} position={[0, 0, 0]} rotation={[0, 0, angle]}>
-              <mesh geometry={fletchingGeo} material={fletchMat} position={[0, 0.0028, 0]} />
+              <mesh geometry={fletchingGeo} material={fletchMat} position={[0, 0, 0]} />
             </group>
           ))}
 

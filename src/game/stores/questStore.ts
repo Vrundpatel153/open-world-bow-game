@@ -79,6 +79,7 @@ interface QuestState {
   drawProgress: number
   hitMarkerId: number
   notification: string | null
+  dayPhaseName: string
 
   // Actions
   hitTarget: (shrineId: string, targetIdx: number) => void
@@ -87,6 +88,7 @@ interface QuestState {
   setAiming: (aiming: boolean) => void
   setDrawProgress: (p: number) => void
   setBowEquipped: (equipped: boolean) => void
+  setDayPhaseName: (phase: string) => void
   toggleBowEquipped: () => void
   setActiveItem: (item: ActiveItem) => void
   toggleItem: (item: ActiveItem) => void
@@ -106,6 +108,8 @@ export const useQuestStore = create<QuestState>((set, get) => ({
   drawProgress: 0,
   hitMarkerId: 0,
   notification: 'Dispel the guardian embers around the four ancient monoliths.',
+  dayPhaseName: 'DAYLIGHT',
+  setDayPhaseName: (dayPhaseName) => set({ dayPhaseName }),
 
   hitTarget: (shrineId: string, targetIdx: number) => {
     const { shrines } = get()

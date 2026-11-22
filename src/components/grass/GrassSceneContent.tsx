@@ -144,12 +144,12 @@ export default function GrassSceneContent({
       {/* ── Autonomous Celestial Day-Night Cycle & Orbital Sun Engine ───── */}
       <DayCycleSystem
         blendStateRef={blendStateRef}
-        onSunMove={(dir, color, intensity, elev, azim, night) => {
+        onSunMove={(dir, color, intensity, sunElev, sunAzim, moonElev, moonAzim, night) => {
           sunDirRef.current.copy(dir);
           sunColorRef.current.copy(color);
           sunIntensityRef.current = intensity;
-          sunElevRef.current = elev;
-          sunAzimRef.current = azim;
+          sunElevRef.current = night ? moonElev : sunElev;
+          sunAzimRef.current = night ? moonAzim : sunAzim;
           isNightRef.current = night;
         }}
         onPhaseChange={(nextMode, nextPreset, phaseName) => {

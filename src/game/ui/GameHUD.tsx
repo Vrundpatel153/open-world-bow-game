@@ -58,6 +58,7 @@ export default function GameHUD({
   const gameWon = useQuestStore((s) => s.gameWon)
   const arrowsShot = useQuestStore((s) => s.arrowsShot)
   const arrowsHit = useQuestStore((s) => s.arrowsHit)
+  const dayPhaseName = useQuestStore((s) => s.dayPhaseName)
   const resetGame = useQuestStore((s) => s.resetGame)
 
   const [showHitMarker, setShowHitMarker] = useState(false)
@@ -173,7 +174,7 @@ export default function GameHUD({
           }}
         >
           <span style={{ opacity: 0.6 }}>◆</span>
-          <span>{currentPhaseName}</span>
+          <span>{dayPhaseName || currentPhaseName}</span>
           <span style={{ opacity: 0.35 }}>|</span>
           <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9 }}>
             {String(Math.round(playerHeading)).padStart(3, '0')}°

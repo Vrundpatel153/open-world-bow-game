@@ -163,23 +163,23 @@ export default function OpenWorldGrassField({
     }
     coreMeadowGeo.computeVertexNormals()
 
-    // 16,000 6-blade broad radial interlocking sods (96,000 broad blades, 40cm circular footprint) across sanctuary:
-    // With broad blade width (0.145 - 0.195) and overlapping radial coverage, this creates a completely gapless,
-    // lush velvet green field without bare dirt spots while keeping geometry light for locked 60 FPS performance.
+    // 15,000 5-blade natural interlocking sods (75,000 slender blades, 36cm circular footprint) across sanctuary:
+    // With realistic blade width and overlapping radial coverage, this creates a completely gapless,
+    // lush velvet green field with zero bare dirt gaps while keeping performance at locked 60 FPS.
     const coreBlades = scatterBlades(new THREE.Mesh(coreMeadowGeo), {
       uniforms: u.surface,
-      density: 4.5,
-      maxCount: 16_000,
-      minWidth: 0.145,
-      maxWidth: 0.195,
-      minLength: 0.38,
-      maxLength: 0.54,
-      tiltMax: 0.20,
+      density: 4.0,
+      maxCount: 15_000,
+      minWidth: 0.94,
+      maxWidth: 1.12,
+      minLength: 0.92,
+      maxLength: 1.15,
+      tiltMax: 0.18,
       segments: 2,
     })
 
     // 2. Perimeter Foothills Meadow Ring (Radius 26m to 82m)
-    // 7,000 6-blade interlocking sods providing continuous, lush, gapless coverage across all hills & boundary ridges
+    // 5,000 5-blade interlocking sods providing continuous, lush, gapless coverage across all hills & boundary ridges
     const outerMeadowGeo = new THREE.RingGeometry(26, 82, 48, 12)
     outerMeadowGeo.rotateX(-Math.PI / 2)
     const oPosAttr = outerMeadowGeo.attributes.position
@@ -192,13 +192,13 @@ export default function OpenWorldGrassField({
 
     const outerBlades = scatterBlades(new THREE.Mesh(outerMeadowGeo), {
       uniforms: u.surface,
-      density: 0.5,
-      maxCount: 7_000,
-      minWidth: 0.160,
-      maxWidth: 0.210,
-      minLength: 0.40,
-      maxLength: 0.56,
-      tiltMax: 0.22,
+      density: 0.6,
+      maxCount: 5_000,
+      minWidth: 0.94,
+      maxWidth: 1.15,
+      minLength: 0.90,
+      maxLength: 1.15,
+      tiltMax: 0.20,
       segments: 1, // outer blades use 1 segment (1 triangle per blade) for massive distance LOD optimization
     })
 
