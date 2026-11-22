@@ -64,6 +64,8 @@ export const INITIAL_SHRINES: ShrineDef[] = [
   },
 ]
 
+export type ActiveItem = 'none' | 'bow' | 'torch' | 'sword'
+
 interface QuestState {
   shrines: ShrineDef[]
   totalAwakened: number
@@ -73,6 +75,7 @@ interface QuestState {
   gameWon: boolean
   isAiming: boolean
   isBowEquipped: boolean
+  activeItem: ActiveItem
   drawProgress: number
   hitMarkerId: number
   notification: string | null
@@ -85,6 +88,8 @@ interface QuestState {
   setDrawProgress: (p: number) => void
   setBowEquipped: (equipped: boolean) => void
   toggleBowEquipped: () => void
+  setActiveItem: (item: ActiveItem) => void
+  toggleItem: (item: ActiveItem) => void
   resetGame: () => void
 }
 
@@ -97,6 +102,7 @@ export const useQuestStore = create<QuestState>((set, get) => ({
   gameWon: false,
   isAiming: false,
   isBowEquipped: true,
+  activeItem: 'bow',
   drawProgress: 0,
   hitMarkerId: 0,
   notification: 'Dispel the guardian embers around the four ancient monoliths.',
@@ -168,21 +174,59 @@ export const useQuestStore = create<QuestState>((set, get) => ({
 
   setDrawProgress: (drawProgress) => set({ drawProgress }),
 
-  setBowEquipped: (isBowEquipped) => set({ isBowEquipped }),
-
-  toggleBowEquipped: () => {
-    const nextState = !get().isBowEquipped
-    if (nextState) {
-      sound.playBowEquip()
-    } else {
-      sound.playBowUnequip()
-    }
+  setBowEquipped: (isBowEquipped) =>
     set({
-      isBowEquipped: nextState,
+      isBowEquipped,
+      activeItem: isBowEquipped ? 'bow' : 'none',
+    }),
+
+  setActiveItem: (item: ActiveItem) => {
+    const isBow = item === 'bow'
+    set({
+      activeItem: item,
+      isBowEquipped: isBow,
       isAiming: false,
       drawProgress: 0,
-      notification: nextState ? 'Recurve Bow readied [1 to stow]' : 'Recurve Bow stowed [1 to draw]',
     })
+  },
+
+  toggleItem: (item: ActiveItem) => {
+    const current = get().activeItem
+    if (current === item) {
+      // Stow current item
+      if (item === 'bow') sound.playBowUnequip()
+      set({
+        activeItem: 'none',
+        isBowEquipped: false,
+        isAiming: false,
+        drawProgress: 0,
+        notification:
+          item === 'bow'
+            ? 'Recurve Bow stowed'
+            : item === 'torch'
+            ? 'Wood Torch extinguished'
+            : 'Wooden Sword sheathed',
+      })
+    } else {
+      // Equip target item
+      if (item === 'bow') sound.playBowEquip()
+      set({
+        activeItem: item,
+        isBowEquipped: item === 'bow',
+        isAiming: false,
+        drawProgress: 0,
+        notification:
+          item === 'bow'
+            ? 'Recurve Bow readied [1]'
+            : item === 'torch'
+            ? 'Forest Wood Torch ignited [2]'
+            : 'Wooden Training Blade drawn [3]',
+      })
+    }
+  },
+
+  toggleBowEquipped: () => {
+    get().toggleItem('bow')
   },
 
   resetGame: () => {

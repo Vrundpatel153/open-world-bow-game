@@ -58,9 +58,13 @@ class InputManager {
     this.keys.add(code)
     this.keys.add(key)
 
-    // Equip / Stow Weapon Toggle via [1] key
+    // Hotbar Item Toggles: [1] Bow, [2] Torch, [3] Wooden Sword
     if (code === 'Digit1' || key === '1') {
-      useQuestStore.getState().toggleBowEquipped()
+      useQuestStore.getState().toggleItem('bow')
+    } else if (code === 'Digit2' || key === '2') {
+      useQuestStore.getState().toggleItem('torch')
+    } else if (code === 'Digit3' || key === '3') {
+      useQuestStore.getState().toggleItem('sword')
     }
   }
 

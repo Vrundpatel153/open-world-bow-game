@@ -49,7 +49,13 @@ export default function ProductionFPSController({
       yaw.current = newYaw
       pitch.current = newPitch
     }
-  }, [])
+    ;(window as any).__setPlayerPos = (newX: number, newZ: number) => {
+      pos.current.x = newX
+      pos.current.z = newZ
+      pos.current.y = getTerrainHeight(newX, newZ)
+      cameraElevation.current = pos.current.y
+    }
+  }, [getTerrainHeight])
 
   // Head Bobbing & Landing Dip
   const bobPhase = useRef(0)

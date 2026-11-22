@@ -28,6 +28,17 @@ const COMPASS_POINTS = [
   { label: 'NW', deg: 315, isCardinal: false },
 ]
 
+const kbdStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.12)',
+  border: '1px solid rgba(214, 184, 120, 0.45)',
+  borderRadius: 2,
+  padding: '1px 5px',
+  fontFamily: "'IBM Plex Mono', monospace",
+  fontSize: 9,
+  fontWeight: 700,
+  color: '#d4af37',
+}
+
 export default function GameHUD({
   playerPosRef,
   cameraYawRef,
@@ -40,6 +51,7 @@ export default function GameHUD({
   const drawProgress = useQuestStore((s) => s.drawProgress)
   const isAiming = useQuestStore((s) => s.isAiming)
   const isBowEquipped = useQuestStore((s) => s.isBowEquipped)
+  const activeItem = useQuestStore((s) => s.activeItem)
   const hitMarkerId = useQuestStore((s) => s.hitMarkerId)
   const notification = useQuestStore((s) => s.notification)
   const gameWon = useQuestStore((s) => s.gameWon)
@@ -778,7 +790,7 @@ export default function GameHUD({
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────────
-          5. MINIMALIST DIEGETIC KEYBIND GUIDES (BOTTOM-CENTER)
+          5. AUTHENTIC RPG EQUIPMENT HOTBAR & COMBAT GUIDES (BOTTOM-CENTER)
       ───────────────────────────────────────────────────────────────────── */}
       <div
         style={{
@@ -787,109 +799,248 @@ export default function GameHUD({
           left: '50%',
           transform: 'translateX(-50%)',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          gap: 16,
-          background: 'rgba(8, 14, 10, 0.88)',
-          borderTop: '1px solid rgba(214, 184, 120, 0.35)',
-          borderBottom: '1px solid rgba(214, 184, 120, 0.18)',
-          padding: '6px 22px',
-          borderRadius: 2,
-          backdropFilter: 'blur(10px)',
-          boxShadow: '0 6px 20px rgba(0,0,0,0.65)',
-          fontSize: 10,
-          letterSpacing: '0.04em',
-          color: 'rgba(230, 225, 215, 0.88)',
+          gap: 6,
+          pointerEvents: 'none',
         }}
       >
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <kbd
+        {/* 3-Slot Equipment Matrix Bar */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            background: 'rgba(8, 14, 10, 0.92)',
+            borderTop: '1px solid rgba(214, 184, 120, 0.45)',
+            borderBottom: '1px solid rgba(214, 184, 120, 0.22)',
+            padding: '5px 12px',
+            borderRadius: 3,
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.7)',
+          }}
+        >
+          {/* Slot 1: Bow */}
+          <div
             style={{
-              background: 'rgba(255,255,255,0.12)',
-              border: '1px solid rgba(214, 184, 120, 0.4)',
-              borderRadius: 3,
-              padding: '1px 5px',
-              fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: 9,
-              fontWeight: 700,
-              color: '#d4af37',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '3px 8px',
+              borderRadius: 2,
+              background: activeItem === 'bow' ? 'rgba(214, 184, 120, 0.18)' : 'transparent',
+              border: `1px solid ${activeItem === 'bow' ? '#d4af37' : 'rgba(255,255,255,0.08)'}`,
+              boxShadow: activeItem === 'bow' ? '0 0 10px rgba(212, 175, 55, 0.35)' : 'none',
             }}
           >
-            1
-          </kbd>
-          {isBowEquipped ? 'Stow Bow' : 'Equip Bow'}
-        </span>
-        <span style={{ opacity: 0.3 }}>|</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <kbd
+            <kbd
+              style={{
+                background: activeItem === 'bow' ? '#d4af37' : 'rgba(255,255,255,0.12)',
+                color: activeItem === 'bow' ? '#121612' : '#d4af37',
+                border: '1px solid rgba(214, 184, 120, 0.5)',
+                borderRadius: 2,
+                padding: '1px 5px',
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 9,
+                fontWeight: 700,
+              }}
+            >
+              1
+            </kbd>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: activeItem === 'bow' ? 700 : 500,
+                color: activeItem === 'bow' ? '#fff6dd' : 'rgba(220, 215, 205, 0.65)',
+                letterSpacing: '0.04em',
+              }}
+            >
+              BOW
+            </span>
+          </div>
+
+          {/* Slot 2: Wood Torch */}
+          <div
             style={{
-              background: 'rgba(255,255,255,0.12)',
-              border: '1px solid rgba(214, 184, 120, 0.4)',
-              borderRadius: 3,
-              padding: '1px 5px',
-              fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: 9,
-              fontWeight: 700,
-              color: '#d4af37',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '3px 8px',
+              borderRadius: 2,
+              background: activeItem === 'torch' ? 'rgba(255, 140, 40, 0.2)' : 'transparent',
+              border: `1px solid ${activeItem === 'torch' ? '#ff9426' : 'rgba(255,255,255,0.08)'}`,
+              boxShadow: activeItem === 'torch' ? '0 0 10px rgba(255, 148, 38, 0.4)' : 'none',
             }}
           >
-            LMB (HOLD)
-          </kbd>
-          Draw Bow
-        </span>
-        <span style={{ opacity: 0.3 }}>|</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <kbd
+            <kbd
+              style={{
+                background: activeItem === 'torch' ? '#ff9426' : 'rgba(255,255,255,0.12)',
+                color: activeItem === 'torch' ? '#140c06' : '#d4af37',
+                border: '1px solid rgba(255, 148, 38, 0.5)',
+                borderRadius: 2,
+                padding: '1px 5px',
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 9,
+                fontWeight: 700,
+              }}
+            >
+              2
+            </kbd>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: activeItem === 'torch' ? 700 : 500,
+                color: activeItem === 'torch' ? '#fff0d8' : 'rgba(220, 215, 205, 0.65)',
+                letterSpacing: '0.04em',
+              }}
+            >
+              TORCH
+            </span>
+          </div>
+
+          {/* Slot 3: Wooden Sword */}
+          <div
             style={{
-              background: 'rgba(255,255,255,0.12)',
-              border: '1px solid rgba(214, 184, 120, 0.4)',
-              borderRadius: 3,
-              padding: '1px 5px',
-              fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: 9,
-              fontWeight: 700,
-              color: '#d4af37',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '3px 8px',
+              borderRadius: 2,
+              background: activeItem === 'sword' ? 'rgba(214, 184, 120, 0.18)' : 'transparent',
+              border: `1px solid ${activeItem === 'sword' ? '#d4af37' : 'rgba(255,255,255,0.08)'}`,
+              boxShadow: activeItem === 'sword' ? '0 0 10px rgba(212, 175, 55, 0.35)' : 'none',
             }}
           >
-            RELEASE
-          </kbd>
-          Loose Arrow
-        </span>
-        <span style={{ opacity: 0.3 }}>|</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <kbd
-            style={{
-              background: 'rgba(255,255,255,0.12)',
-              border: '1px solid rgba(214, 184, 120, 0.4)',
-              borderRadius: 3,
-              padding: '1px 5px',
-              fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: 9,
-              fontWeight: 700,
-              color: '#d4af37',
-            }}
-          >
-            RMB
-          </kbd>
-          Focus Aim
-        </span>
-        <span style={{ opacity: 0.3 }}>|</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <kbd
-            style={{
-              background: 'rgba(255,255,255,0.12)',
-              border: '1px solid rgba(214, 184, 120, 0.4)',
-              borderRadius: 3,
-              padding: '1px 5px',
-              fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: 9,
-              fontWeight: 700,
-              color: '#d4af37',
-            }}
-          >
-            E
-          </kbd>
-          Claim Core
-        </span>
+            <kbd
+              style={{
+                background: activeItem === 'sword' ? '#d4af37' : 'rgba(255,255,255,0.12)',
+                color: activeItem === 'sword' ? '#121612' : '#d4af37',
+                border: '1px solid rgba(214, 184, 120, 0.5)',
+                borderRadius: 2,
+                padding: '1px 5px',
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 9,
+                fontWeight: 700,
+              }}
+            >
+              3
+            </kbd>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: activeItem === 'sword' ? 700 : 500,
+                color: activeItem === 'sword' ? '#fff6dd' : 'rgba(220, 215, 205, 0.65)',
+                letterSpacing: '0.04em',
+              }}
+            >
+              SWORD
+            </span>
+          </div>
+        </div>
+
+        {/* Dynamic Contextual Action Keybind Ribbon */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            background: 'rgba(8, 14, 10, 0.82)',
+            border: '1px solid rgba(214, 184, 120, 0.22)',
+            padding: '4px 16px',
+            borderRadius: 2,
+            backdropFilter: 'blur(8px)',
+            fontSize: 9.5,
+            letterSpacing: '0.04em',
+            color: 'rgba(230, 225, 215, 0.85)',
+          }}
+        >
+          {activeItem === 'bow' && (
+            <>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <kbd style={kbdStyle}>LMB (HOLD)</kbd>
+                Draw
+              </span>
+              <span style={{ opacity: 0.3 }}>|</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <kbd style={kbdStyle}>RELEASE</kbd>
+                Shoot
+              </span>
+              <span style={{ opacity: 0.3 }}>|</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <kbd style={kbdStyle}>RMB</kbd>
+                Focus Aim
+              </span>
+              <span style={{ opacity: 0.3 }}>|</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <kbd style={kbdStyle}>1</kbd>
+                Stow
+              </span>
+            </>
+          )}
+
+          {activeItem === 'torch' && (
+            <>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <kbd style={kbdStyle}>LMB</kbd>
+                Wave Flare
+              </span>
+              <span style={{ opacity: 0.3 }}>|</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <kbd style={kbdStyle}>2</kbd>
+                Extinguish
+              </span>
+            </>
+          )}
+
+          {activeItem === 'sword' && (
+            <>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <kbd style={kbdStyle}>LMB</kbd>
+                3-Slash Combo
+              </span>
+              <span style={{ opacity: 0.3 }}>|</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <kbd style={kbdStyle}>LMB (HOLD)</kbd>
+                Charge Strike
+              </span>
+              <span style={{ opacity: 0.3 }}>|</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <kbd style={kbdStyle}>RMB</kbd>
+                Guard
+              </span>
+              <span style={{ opacity: 0.3 }}>|</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <kbd style={kbdStyle}>3</kbd>
+                Sheathe
+              </span>
+            </>
+          )}
+
+          {activeItem === 'none' && (
+            <>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <kbd style={kbdStyle}>1</kbd>
+                Bow
+              </span>
+              <span style={{ opacity: 0.3 }}>|</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <kbd style={kbdStyle}>2</kbd>
+                Torch
+              </span>
+              <span style={{ opacity: 0.3 }}>|</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <kbd style={kbdStyle}>3</kbd>
+                Sword
+              </span>
+            </>
+          )}
+
+          <span style={{ opacity: 0.3 }}>|</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <kbd style={kbdStyle}>E</kbd>
+            Claim Core
+          </span>
+        </div>
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────────

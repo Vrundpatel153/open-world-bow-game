@@ -405,6 +405,332 @@ class SoundSynthesizer {
 
     noise.start(now)
   }
+
+  // ── Torch Audio: Fire Ignition Burst ──────────────────────────────────────
+  public playTorchIgnite() {
+    if (this.isMuted) return
+    this.ensureContext()
+    if (!this.ctx || !this.masterGain) return
+
+    const now = this.ctx.currentTime
+
+    // Warm resonant flame flare whoosh
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    const filter = this.ctx.createBiquadFilter()
+
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(60, now)
+    osc.frequency.exponentialRampToValueAtTime(160, now + 0.12)
+    osc.frequency.exponentialRampToValueAtTime(50, now + 0.35)
+
+    filter.type = 'lowpass'
+    filter.frequency.setValueAtTime(450, now)
+    filter.frequency.exponentialRampToValueAtTime(200, now + 0.35)
+
+    gain.gain.setValueAtTime(0.01, now)
+    gain.gain.linearRampToValueAtTime(0.28, now + 0.08)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35)
+
+    osc.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.masterGain)
+
+    osc.start(now)
+    osc.stop(now + 0.35)
+
+    // Sizzling kindling ember crackles
+    const crackleCount = 4
+    for (let i = 0; i < crackleCount; i++) {
+      const delay = 0.05 + Math.random() * 0.2
+      const popOsc = this.ctx.createOscillator()
+      const popGain = this.ctx.createGain()
+      popOsc.type = 'square'
+      popOsc.frequency.setValueAtTime(800 + Math.random() * 1200, now + delay)
+      popGain.gain.setValueAtTime(0.06, now + delay)
+      popGain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.02)
+      popOsc.connect(popGain)
+      popGain.connect(this.masterGain)
+      popOsc.start(now + delay)
+      popOsc.stop(now + delay + 0.02)
+    }
+  }
+
+  // ── Torch Audio: Extinguish Sizzle ─────────────────────────────────────────
+  public playTorchExtinguish() {
+    if (this.isMuted) return
+    this.ensureContext()
+    if (!this.ctx || !this.masterGain) return
+
+    const now = this.ctx.currentTime
+    const bufferSize = Math.floor(this.ctx.sampleRate * 0.18)
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3))
+    }
+    const noise = this.ctx.createBufferSource()
+    noise.buffer = buffer
+
+    const filter = this.ctx.createBiquadFilter()
+    filter.type = 'bandpass'
+    filter.frequency.setValueAtTime(1400, now)
+    filter.frequency.exponentialRampToValueAtTime(400, now + 0.18)
+
+    const gain = this.ctx.createGain()
+    gain.gain.setValueAtTime(0.18, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18)
+
+    noise.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.masterGain)
+    noise.start(now)
+  }
+
+  // ── Torch Audio: Thrust / Wave Flare Whoosh ────────────────────────────────
+  public playTorchWave() {
+    if (this.isMuted) return
+    this.ensureContext()
+    if (!this.ctx || !this.masterGain) return
+
+    const now = this.ctx.currentTime
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    const filter = this.ctx.createBiquadFilter()
+
+    osc.type = 'triangle'
+    osc.frequency.setValueAtTime(90, now)
+    osc.frequency.exponentialRampToValueAtTime(220, now + 0.09)
+    osc.frequency.exponentialRampToValueAtTime(70, now + 0.28)
+
+    filter.type = 'lowpass'
+    filter.frequency.setValueAtTime(550, now)
+
+    gain.gain.setValueAtTime(0.01, now)
+    gain.gain.linearRampToValueAtTime(0.32, now + 0.08)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28)
+
+    osc.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.masterGain)
+
+    osc.start(now)
+    osc.stop(now + 0.28)
+  }
+
+  // ── Wooden Sword: Unsheathe / Ready ─────────────────────────────────────────
+  public playSwordEquip() {
+    if (this.isMuted) return
+    this.ensureContext()
+    if (!this.ctx || !this.masterGain) return
+
+    const now = this.ctx.currentTime
+
+    // Friction whisper from scabbard
+    const bufferSize = Math.floor(this.ctx.sampleRate * 0.14)
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.sin((i / bufferSize) * Math.PI)
+    }
+    const noise = this.ctx.createBufferSource()
+    noise.buffer = buffer
+
+    const filter = this.ctx.createBiquadFilter()
+    filter.type = 'bandpass'
+    filter.frequency.setValueAtTime(750, now)
+    filter.frequency.exponentialRampToValueAtTime(1400, now + 0.14)
+
+    const gain = this.ctx.createGain()
+    gain.gain.setValueAtTime(0.18, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14)
+
+    noise.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.masterGain)
+    noise.start(now)
+  }
+
+  // ── Wooden Sword: 3-Click Combo Swings (Left, Right, Big Slash) ────────────
+  public playSwordSwing(comboStep: number = 1) {
+    if (this.isMuted) return
+    this.ensureContext()
+    if (!this.ctx || !this.masterGain) return
+
+    const now = this.ctx.currentTime
+
+    // Air cutting whoosh noise buffer
+    const duration = comboStep === 3 ? 0.26 : 0.18
+    const bufferSize = Math.floor(this.ctx.sampleRate * duration)
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      const env = Math.sin((i / bufferSize) * Math.PI)
+      data[i] = (Math.random() * 2 - 1) * env
+    }
+    const noise = this.ctx.createBufferSource()
+    noise.buffer = buffer
+
+    const filter = this.ctx.createBiquadFilter()
+    filter.type = 'bandpass'
+    filter.Q.setValueAtTime(2.5, now)
+
+    if (comboStep === 1) {
+      // Quick diagonal left-to-right whoosh
+      filter.frequency.setValueAtTime(380, now)
+      filter.frequency.exponentialRampToValueAtTime(850, now + 0.08)
+      filter.frequency.exponentialRampToValueAtTime(320, now + 0.18)
+    } else if (comboStep === 2) {
+      // Agile returning right-to-left whoosh
+      filter.frequency.setValueAtTime(480, now)
+      filter.frequency.exponentialRampToValueAtTime(1100, now + 0.08)
+      filter.frequency.exponentialRampToValueAtTime(400, now + 0.18)
+    } else {
+      // Heavy downward cleave / finisher
+      filter.frequency.setValueAtTime(280, now)
+      filter.frequency.exponentialRampToValueAtTime(950, now + 0.11)
+      filter.frequency.exponentialRampToValueAtTime(240, now + 0.26)
+
+      // Resonant sub-frequency punch for big slash
+      const subOsc = this.ctx.createOscillator()
+      const subGain = this.ctx.createGain()
+      subOsc.type = 'sine'
+      subOsc.frequency.setValueAtTime(95, now)
+      subOsc.frequency.exponentialRampToValueAtTime(38, now + 0.22)
+      subGain.gain.setValueAtTime(0.25, now)
+      subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22)
+      subOsc.connect(subGain)
+      subGain.connect(this.masterGain)
+      subOsc.start(now)
+      subOsc.stop(now + 0.22)
+    }
+
+    const gain = this.ctx.createGain()
+    const vol = comboStep === 3 ? 0.34 : 0.25
+    gain.gain.setValueAtTime(vol, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration)
+
+    noise.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.masterGain)
+    noise.start(now)
+  }
+
+  // ── Wooden Sword: Charged Heavy Attack Release ─────────────────────────────
+  public playSwordChargeRelease() {
+    if (this.isMuted) return
+    this.ensureContext()
+    if (!this.ctx || !this.masterGain) return
+
+    const now = this.ctx.currentTime
+
+    // Heavy sonic whirlwind power whoosh
+    const duration = 0.35
+    const bufferSize = Math.floor(this.ctx.sampleRate * duration)
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      const env = Math.sin((i / bufferSize) * Math.PI)
+      data[i] = (Math.random() * 2 - 1) * env
+    }
+    const noise = this.ctx.createBufferSource()
+    noise.buffer = buffer
+
+    const filter = this.ctx.createBiquadFilter()
+    filter.type = 'bandpass'
+    filter.Q.setValueAtTime(3.2, now)
+    filter.frequency.setValueAtTime(260, now)
+    filter.frequency.exponentialRampToValueAtTime(1400, now + 0.14)
+    filter.frequency.exponentialRampToValueAtTime(280, now + duration)
+
+    const gain = this.ctx.createGain()
+    gain.gain.setValueAtTime(0.42, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration)
+
+    noise.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.masterGain)
+    noise.start(now)
+
+    // Deep chest-thump bass punch
+    const subOsc = this.ctx.createOscillator()
+    const subGain = this.ctx.createGain()
+    subOsc.type = 'sine'
+    subOsc.frequency.setValueAtTime(120, now)
+    subOsc.frequency.exponentialRampToValueAtTime(30, now + 0.28)
+    subGain.gain.setValueAtTime(0.38, now)
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28)
+    subOsc.connect(subGain)
+    subGain.connect(this.masterGain)
+    subOsc.start(now)
+    subOsc.stop(now + 0.28)
+  }
+
+  // ── Rock Strike: Hard Wood on Granite Clack & Impact Crack ──────────────────
+  public playRockStrike(power: number = 1.0) {
+    if (this.isMuted) return
+    this.ensureContext()
+    if (!this.ctx || !this.masterGain) return
+
+    const now = this.ctx.currentTime
+
+    // 1. Hard wooden clack (high impact transient)
+    const woodOsc = this.ctx.createOscillator()
+    const woodGain = this.ctx.createGain()
+    woodOsc.type = 'square'
+    woodOsc.frequency.setValueAtTime(420 * power, now)
+    woodOsc.frequency.exponentialRampToValueAtTime(110, now + 0.05)
+    woodGain.gain.setValueAtTime(0.45 * Math.min(1.2, power), now)
+    woodGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05)
+    woodOsc.connect(woodGain)
+    woodGain.connect(this.masterGain)
+    woodOsc.start(now)
+    woodOsc.stop(now + 0.05)
+
+    // 2. Granite stone clang / friction scrape
+    const bufferSize = Math.floor(this.ctx.sampleRate * 0.12)
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.2))
+    }
+    const noise = this.ctx.createBufferSource()
+    noise.buffer = buffer
+
+    const filter = this.ctx.createBiquadFilter()
+    filter.type = 'bandpass'
+    filter.frequency.setValueAtTime(1800, now)
+    filter.Q.setValueAtTime(5, now)
+
+    const noiseGain = this.ctx.createGain()
+    noiseGain.gain.setValueAtTime(0.35 * power, now)
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12)
+
+    noise.connect(filter)
+    filter.connect(noiseGain)
+    noiseGain.connect(this.masterGain)
+    noise.start(now)
+  }
+
+  // ── Sword Parry / Guard Clang ──────────────────────────────────────────────
+  public playSwordParry() {
+    if (this.isMuted) return
+    this.ensureContext()
+    if (!this.ctx || !this.masterGain) return
+
+    const now = this.ctx.currentTime
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    osc.type = 'triangle'
+    osc.frequency.setValueAtTime(580, now)
+    osc.frequency.exponentialRampToValueAtTime(290, now + 0.15)
+    gain.gain.setValueAtTime(0.28, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15)
+    osc.connect(gain)
+    gain.connect(this.masterGain)
+    osc.start(now)
+    osc.stop(now + 0.15)
+  }
 }
 
 export const sound = new SoundSynthesizer()

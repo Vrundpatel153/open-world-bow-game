@@ -20,8 +20,11 @@ import GrassField from "@/components/grassField";
 import GrassLighting from "./GrassLighting";
 import ShadowController from "./ShadowController";
 import ProductionFPSController from "@/components/character/ProductionFPSController";
-import OpenWorldGrassField, { getOpenWorldHeight } from "@/components/world/OpenWorldGrassField";
+import OpenWorldGrassField, { getOpenWorldHeight, grassWindImpulse } from "@/components/world/OpenWorldGrassField";
 import BowViewModel from "@/game/weapons/BowViewModel";
+import TorchViewModel from "@/game/weapons/TorchViewModel";
+import SwordViewModel from "@/game/weapons/SwordViewModel";
+import RockSparkSystem, { type RockSparkRef } from "@/game/effects/RockSparkSystem";
 import { ArrowSystem, type ArrowSystemHandle } from "@/game/weapons/ArrowSystem";
 import ShrineMonoliths from "@/game/shrines/ShrineMonoliths";
 import DayCycleSystem from "@/game/environment/DayCycleSystem";
@@ -56,6 +59,8 @@ export default function GrassSceneContent({
 }: GrassSceneContentProps) {
   // Arrow System Ref for weapon firing
   const arrowSystemRef = useRef<ArrowSystemHandle>(null);
+  // Rock Scratch Spark System Ref
+  const rockSparkRef = useRef<RockSparkRef>(null);
 
   // Celestial Orbit Trajectory States (Continuous Sun & Moon Movement)
   const sunDirRef = useRef(new THREE.Vector3(0, 1, 0));
@@ -98,11 +103,23 @@ export default function GrassSceneContent({
               arrowSystemRef.current?.spawnArrow(origin, dir, power)
             }
           />
+          <TorchViewModel />
+          <SwordViewModel
+            onHitRock={(hitPoint, normal, power) =>
+              rockSparkRef.current?.spawnSparks(hitPoint, normal, power)
+            }
+            onSwordSwingWind={(origin, dir, power) =>
+              grassWindImpulse.trigger(origin, dir, power)
+            }
+          />
         </>
       )}
 
       {/* ── Archery Projectiles & Collision Particle System ─────────────── */}
       <ArrowSystem ref={arrowSystemRef} />
+
+      {/* ── Rock Scratch Spark & Stone Chip Particles ───────────────────── */}
+      <RockSparkSystem ref={rockSparkRef} />
 
       {/* ── 4 Ancient Rune Shrines & Floating Guardian Bell Targets ──────── */}
       <ShrineMonoliths playerPosRef={playerPosRef} />

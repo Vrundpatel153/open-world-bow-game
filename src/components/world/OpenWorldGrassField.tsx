@@ -23,6 +23,24 @@ import { worldCollisionSystem, type WorldCollider } from '@/game/physics/WorldCo
 export const WORLD_SIZE = 140
 export const WORLD_SEGMENTS = 64
 
+// Sword swing wind pressure shockwave trigger
+export const grassWindImpulse = {
+  active: false,
+  origin: new THREE.Vector3(),
+  dir: new THREE.Vector3(),
+  radius: 0,
+  strength: 0,
+  timer: 0,
+  trigger(origin: THREE.Vector3, dir: THREE.Vector3, power: number = 1.0) {
+    this.active = true
+    this.origin.copy(origin).addScaledVector(dir, 1.2)
+    this.dir.copy(dir)
+    this.strength = power
+    this.timer = 0.28
+    this.radius = 0.6
+  },
+}
+
 // Smooth, natural rolling elevation across the open world sanctuary
 export function getOpenWorldHeight(x: number, z: number): number {
   return (
@@ -391,11 +409,32 @@ export default function OpenWorldGrassField({
       s.uRockCount.value = MAX_ROCKS
     }
 
-    // Wind parameters (Dynamic waving meadow ripples)
+    // Sword Swing Air Pressure Wave (Parts and ripples grass dynamically)
+    let extraWindStrength = 0
+    let extraWindSpeed = 0
+    const swordSlot = MAX_ROCKS - 2
+
+    if (grassWindImpulse.active && grassWindImpulse.timer > 0) {
+      grassWindImpulse.timer -= delta
+      grassWindImpulse.radius += delta * 4.2
+      s.uRocks.value[swordSlot].set(
+        grassWindImpulse.origin.x,
+        grassWindImpulse.origin.y,
+        grassWindImpulse.origin.z,
+        Math.min(2.2, grassWindImpulse.radius)
+      )
+      extraWindStrength = grassWindImpulse.timer * 0.45 * grassWindImpulse.strength
+      extraWindSpeed = grassWindImpulse.timer * 3.2
+    } else {
+      s.uRocks.value[swordSlot].set(0, -9999, 0, 0)
+      grassWindImpulse.active = false
+    }
+
+    // Wind parameters (Dynamic waving meadow ripples + sword swing air pulse)
     const rad = 45 * (Math.PI / 180)
     s.uWindDir.value.set(Math.cos(rad), Math.sin(rad))
-    s.uWindStrength.value = 0.16
-    s.uWindSpeed.value = 1.35
+    s.uWindStrength.value = 0.16 + extraWindStrength
+    s.uWindSpeed.value = 1.35 + extraWindSpeed
     s.uWindFreq.value = 0.45
     s.uWindTurb.value = 0.35
     s.uWindLean.value = 0.5

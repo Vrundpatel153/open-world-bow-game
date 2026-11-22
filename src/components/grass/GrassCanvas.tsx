@@ -112,12 +112,17 @@ export default function GrassCanvas() {
       {/* ── First-Person Pointer Lock Prompt (Clean RPG Style) ────────────── */}
       {!isPointerLocked && !isLoadingModel && (
         <div
+          onClick={() => {
+            const canvas = document.querySelector('canvas')
+            canvas?.requestPointerLock()
+          }}
           style={{
             position: "absolute",
             top: "54%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            pointerEvents: "none",
+            cursor: "pointer",
+            pointerEvents: "auto",
             background: "linear-gradient(180deg, rgba(16, 22, 16, 0.94) 0%, rgba(8, 12, 9, 0.96) 100%)",
             border: "1px solid rgba(214, 184, 120, 0.45)",
             borderRadius: 2,
@@ -137,7 +142,7 @@ export default function GrassCanvas() {
           }}
         >
           <span style={{ color: "#d4af37" }}>◆</span>
-          <span>CLICK SCREEN TO ENGAGE ARCHERY COMBAT (ESC TO RELEASE)</span>
+          <span>CLICK TO ENGAGE COMBAT & EXPLORATION (ESC TO RELEASE)</span>
           <span style={{ color: "#d4af37" }}>◆</span>
         </div>
       )}
