@@ -115,12 +115,13 @@ export default function DayCycleSystem({
     }
 
     // Convert (elevation, azimuth) to 3D unit direction vector
+    // Standard Coordinates: North = -Z (0°), East = +X (90°), South = +Z (180°), West = -X (270°)
     const elRad = elevation * (Math.PI / 180);
     const azRad = azimuth * (Math.PI / 180);
     sunDir.current.set(
       Math.cos(elRad) * Math.sin(azRad),
       Math.sin(elRad),
-      Math.cos(elRad) * Math.cos(azRad)
+      -Math.cos(elRad) * Math.cos(azRad)
     ).normalize();
 
     // Notify scene of continuous sun/moon trajectory & lighting

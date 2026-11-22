@@ -63,6 +63,7 @@ export default function GrassSceneContent({
   const [sunIntensity, setSunIntensity] = useState(3.1);
   const [sunElev, setSunElev] = useState(55);
   const [sunAzim, setSunAzim] = useState(180);
+  const [isNight, setIsNight] = useState(false);
 
   // Blend State for Autonomous Day-Night Cycle
   const blendStateRef = useRef<BlendState>({
@@ -112,25 +113,26 @@ export default function GrassSceneContent({
         sunDir={sunDirRef.current}
         sunColor={sunColorRef.current}
         sunIntensity={sunIntensity}
+        playerPosRef={playerPosRef}
       />
-      <ShadowController rebakeSignal={bakeSignal} />
 
       {/* ── Ambient IBL Environment ──────────────────────────────────────── */}
       <SceneEnvironment
         mode={mode}
         background={false}
-        defaults={{ preset: "night", envIntensity: 0 }}
+        defaults={{ preset: "forest", envIntensity: 0.35 }}
       />
 
       {/* ── Autonomous Celestial Day-Night Cycle & Orbital Sun Engine ───── */}
       <DayCycleSystem
         blendStateRef={blendStateRef}
-        onSunMove={(dir, color, intensity, elev, azim) => {
+        onSunMove={(dir, color, intensity, elev, azim, night) => {
           sunDirRef.current.copy(dir);
           sunColorRef.current.copy(color);
           setSunIntensity(intensity);
           setSunElev(elev);
           setSunAzim(azim);
+          setIsNight(night);
         }}
         onPhaseChange={(nextMode, nextPreset, phaseName) => {
           onPresetChange(nextPreset);
@@ -146,6 +148,7 @@ export default function GrassSceneContent({
         blendStateRef={blendStateRef}
         moonElevOverride={sunElev}
         moonAzimOverride={sunAzim}
+        isNight={isNight}
         onPresetChange={onPresetChange}
       />
 

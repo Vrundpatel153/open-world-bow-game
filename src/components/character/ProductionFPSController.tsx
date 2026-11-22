@@ -44,6 +44,13 @@ export default function ProductionFPSController({
   const yaw = useRef(0)
   const pitch = useRef(-0.06) // Slight natural downward gaze
 
+  useEffect(() => {
+    ;(window as any).__setCamera = (newYaw: number, newPitch: number) => {
+      yaw.current = newYaw
+      pitch.current = newPitch
+    }
+  }, [])
+
   // Head Bobbing & Landing Dip
   const bobPhase = useRef(0)
   const currentBobY = useRef(0)
