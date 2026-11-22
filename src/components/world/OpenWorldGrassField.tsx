@@ -122,17 +122,17 @@ export default function OpenWorldGrassField({
 
   // Pre-allocated Color objects for zero GC per frame
   const colorsRef = useRef({
-    grassBottom: new THREE.Color('#2f5712'),
-    grassTop: new THREE.Color('#82ac1e'),
-    transColor: new THREE.Color('#c1e54d'),
-    dirtColor: new THREE.Color('#284411'),
+    grassBottom: new THREE.Color('#1e3d0c'),
+    grassTop: new THREE.Color('#3b6e16'),
+    transColor: new THREE.Color('#3d7a14'),
+    dirtColor: new THREE.Color('#233b10'),
     barkTint: new THREE.Color('#2b2118'),
   })
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
   const { terrainMesh, bladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
     // 1. Terrain Ground Mesh for high-density sampling (playable sanctuary radius ~36m)
-    const samplePlaneGeo = new THREE.PlaneGeometry(74, 74, 60, 60)
+    const samplePlaneGeo = new THREE.PlaneGeometry(74, 74, 64, 64)
     samplePlaneGeo.rotateX(-Math.PI / 2)
     const sPosAttr = samplePlaneGeo.attributes.position
     for (let i = 0; i < sPosAttr.count; i++) {
@@ -142,17 +142,17 @@ export default function OpenWorldGrassField({
     }
     samplePlaneGeo.computeVertexNormals()
 
-    // 2. Scatter 56,000 Dense, Lush Grass Blades (Gapless, Overlapping Carpet)
+    // 2. Scatter 88,000 Slender, Realistic Grass Blades (Fluid, Organic Curvature, No Giant Cones)
     const blades = scatterBlades(new THREE.Mesh(samplePlaneGeo), {
       uniforms: u.surface,
-      density: 15,
-      maxCount: 56_000,
-      minWidth: 0.16,
-      maxWidth: 0.24,
-      minLength: 0.48,
-      maxLength: 0.74,
-      tiltMax: 0.30,
-      segments: 3,
+      density: 38,
+      maxCount: 88_000,
+      minWidth: 0.034,
+      maxWidth: 0.054,
+      minLength: 0.28,
+      maxLength: 0.44,
+      tiltMax: 0.44,
+      segments: 5,
     })
 
     // Clamp boundary at active sanctuary perimeter (r > 36m) - ZERO HOLE IN CENTER!
@@ -189,8 +189,8 @@ export default function OpenWorldGrassField({
     }
     terrainGeo.computeVertexNormals()
 
-    // Deep forest moss green ground material
-    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#325812'))
+    // Deep forest moss green ground material perfectly matching grass blade bases
+    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#1e3d0c'))
     const groundMesh = new THREE.Mesh(terrainGeo, groundMat)
     groundMesh.receiveShadow = true
     groundMesh.castShadow = false
@@ -440,30 +440,30 @@ export default function OpenWorldGrassField({
     s.uWindLean.value = 0.5
     s.uWindFixLocal.value = 1
 
-    // Colors (Rich lush emerald meadow)
+    // Colors (Rich, natural Studio Ghibli / Tsushima emerald meadow — ZERO yellow cast!)
     const c = colorsRef.current
-    c.grassBottom.set('#2f5712')
-    c.grassTop.set('#82ac1e')
+    c.grassBottom.set('#1e3d0c')
+    c.grassTop.set('#3b6e16')
     s.uGrassBottom.value.copy(c.grassBottom)
     s.uGrassTop.value.copy(c.grassTop)
-    s.uGradStart.value = 0.12
-    s.uGradEnd.value = 1.0
-    s.uGradPower.value = 1.6
-    s.uBrightness.value = 0.95
+    s.uGradStart.value = 0.06
+    s.uGradEnd.value = 0.94
+    s.uGradPower.value = 1.15
+    s.uBrightness.value = 0.92
 
-    // Lush vs Dry patches
-    s.uPatchLush.value.copy(c.grassBottom)
-    s.uPatchDry.value.copy(c.grassTop)
-    s.uPatchStrength.value = 0.25
-    s.uPatchScale.value = 0.15
-    s.uPatchBias.value = 1.8
+    // Lush vs Dry environmental patches (Harmonious forest hues, NO yellow wheat)
+    s.uPatchLush.value.set('#1e3d0c')
+    s.uPatchDry.value.set('#487d1c')
+    s.uPatchStrength.value = 0.16
+    s.uPatchScale.value = 0.08
+    s.uPatchBias.value = 1.3
 
-    // Translucency (Subsurface sun scatter)
-    c.transColor.set('#c1e54d')
+    // Translucency (Subsurface sun scatter — pure vibrant emerald leaf transmission, NOT yellow!)
+    c.transColor.set('#3d7a14')
     s.uTransColor.value.copy(c.transColor)
-    s.uTransStrength.value = 2.8
-    s.uTransPower.value = 3.0
-    s.uTransTip.value = 0.65
+    s.uTransStrength.value = 0.35
+    s.uTransPower.value = 3.8
+    s.uTransTip.value = 0.8
     s.uTransShadow.value = 1.0
 
     // Shadows

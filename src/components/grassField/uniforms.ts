@@ -197,20 +197,20 @@ export function createGrassFieldUniforms(): GrassFieldUniforms {
       uWindLean: { value: 0.5 },
       uWindDir: { value: new THREE.Vector2(1, 0) },
 
-      uGrassBottom: { value: new THREE.Color("#4f7c13") },
-      uGrassTop: { value: new THREE.Color("#79a01c") },
-      uBrightness: { value: 0.8 },
-      uGradStart: { value: 0.15 },
-      uGradEnd: { value: 1.0 },
-      uGradPower: { value: 1.6 },
+      uGrassBottom: { value: new THREE.Color("#1e3d0c") },
+      uGrassTop: { value: new THREE.Color("#3b6e16") },
+      uBrightness: { value: 0.92 },
+      uGradStart: { value: 0.06 },
+      uGradEnd: { value: 0.94 },
+      uGradPower: { value: 1.15 },
 
       // Lush defaults close to the grass colour, so low-noise areas barely shift
       // and only the dry patches stand out.
-      uPatchLush: { value: new THREE.Color("#6f9a2a") },
-      uPatchDry: { value: new THREE.Color("#b8a94e") },
-      uPatchStrength: { value: 0.35 },
-      uPatchScale: { value: 0.15 },
-      uPatchBias: { value: 1.6 },
+      uPatchLush: { value: new THREE.Color("#1e3d0c") },
+      uPatchDry: { value: new THREE.Color("#487d1c") },
+      uPatchStrength: { value: 0.16 },
+      uPatchScale: { value: 0.08 },
+      uPatchBias: { value: 1.3 },
 
       uShadowStrength: { value: 0.6 },
       uShadowSamples: { value: 4 },
@@ -218,7 +218,7 @@ export function createGrassFieldUniforms(): GrassFieldUniforms {
       uShadowRadius: { value: 0.3 },
 
       // Coverage 0 keeps the dirt feature dormant until it is dialled in.
-      uDirtColor: { value: new THREE.Color("#ac956c") },
+      uDirtColor: { value: new THREE.Color("#233b10") },
       uDirtScale: { value: 0.4 },
       uDirtCoverage: { value: 0.0 },
       uDirtSoftness: { value: 0.06 },
@@ -239,10 +239,10 @@ export function createGrassFieldUniforms(): GrassFieldUniforms {
 
       uSunDir: { value: new THREE.Vector3(0, 1, 0) },
       uSunColor: { value: new THREE.Color(1, 1, 1) },
-      uTransColor: { value: new THREE.Color("#c1e54d") },
-      uTransStrength: { value: 0.9 },
-      uTransPower: { value: 3.0 },
-      uTransTip: { value: 0.6 },
+      uTransColor: { value: new THREE.Color("#3d7a14") },
+      uTransStrength: { value: 0.35 },
+      uTransPower: { value: 3.8 },
+      uTransTip: { value: 0.8 },
       uTransShadow: { value: 1.0 },
 
       uDebugChannel: { value: 0 },
