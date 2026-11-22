@@ -22,18 +22,13 @@ import { scatterBlades, scatterFlowers } from '../grassField/utils/scatter'
 export const WORLD_SIZE = 140
 export const WORLD_SEGMENTS = 64
 
-// Smooth gentle rolling elevation that seamlessly blends with the central diorama (r < 7.2m)
+// Smooth, natural rolling elevation across the open world sanctuary
 export function getOpenWorldHeight(x: number, z: number): number {
-  const dist = Math.sqrt(x * x + z * z)
-  if (dist < 7.2) {
-    return 0 // Flat base matching the central diorama
-  }
-  const blend = Math.min(1, (dist - 7.2) / 6.0)
-  const hills =
-    Math.sin(x * 0.055) * 1.2 +
-    Math.cos(z * 0.048) * 1.0 +
-    Math.sin(x * 0.12 + z * 0.09) * 0.4
-  return hills * blend
+  return (
+    Math.sin(x * 0.055) * 1.1 +
+    Math.cos(z * 0.048) * 0.95 +
+    Math.sin(x * 0.12 + z * 0.09) * 0.35
+  )
 }
 
 interface OpenWorldGrassFieldProps {
@@ -117,8 +112,8 @@ export default function OpenWorldGrassField({
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
   const { terrainMesh, bladesMesh, flowerMeshes, foliageClusters, pathMarkers } = useMemo(() => {
-    // 1. Terrain Ground Mesh for high-density sampling (radius ~54m)
-    const samplePlaneGeo = new THREE.PlaneGeometry(108, 108, 54, 54)
+    // 1. Terrain Ground Mesh for high-density sampling (playable sanctuary radius ~36m)
+    const samplePlaneGeo = new THREE.PlaneGeometry(74, 74, 60, 60)
     samplePlaneGeo.rotateX(-Math.PI / 2)
     const sPosAttr = samplePlaneGeo.attributes.position
     for (let i = 0; i < sPosAttr.count; i++) {
@@ -128,20 +123,20 @@ export default function OpenWorldGrassField({
     }
     samplePlaneGeo.computeVertexNormals()
 
-    // 2. Scatter 54,000 Wide, Lush Grass Blades (Overlapping, Gapless Carpet)
+    // 2. Scatter 56,000 Dense, Lush Grass Blades (Gapless, Overlapping Carpet)
     const blades = scatterBlades(new THREE.Mesh(samplePlaneGeo), {
       uniforms: u.surface,
-      density: 10,
-      maxCount: 40_000,
-      minWidth: 0.26,
-      maxWidth: 0.36,
-      minLength: 0.58,
-      maxLength: 0.94,
-      tiltMax: 0.28,
+      density: 15,
+      maxCount: 56_000,
+      minWidth: 0.16,
+      maxWidth: 0.24,
+      minLength: 0.48,
+      maxLength: 0.74,
+      tiltMax: 0.30,
       segments: 3,
     })
 
-    // Filter inner diorama blades (r < 7.0m) and clamp boundary (r > 52m)
+    // Clamp boundary at active sanctuary perimeter (r > 36m) - ZERO HOLE IN CENTER!
     const dummy = new THREE.Matrix4()
     const p = new THREE.Vector3()
     const rot = new THREE.Quaternion()
@@ -151,7 +146,7 @@ export default function OpenWorldGrassField({
       blades.getMatrixAt(i, dummy)
       dummy.decompose(p, rot, s)
       const d2 = p.x * p.x + p.z * p.z
-      if (d2 < 7.0 * 7.0 || d2 > 52.0 * 52.0) {
+      if (d2 > 36.0 * 36.0) {
         s.set(0, 0, 0)
         dummy.compose(p, rot, s)
         blades.setMatrixAt(i, dummy)
@@ -188,9 +183,9 @@ export default function OpenWorldGrassField({
       texA: u.flowerTexA,
       texB: u.flowerTexB,
       dirt: u.surface,
-      density: 0.22,
-      maxCount: 1200,
-      size: 0.44,
+      density: 0.28,
+      maxCount: 1400,
+      size: 0.38,
       mixA: 0.5,
     })
 
@@ -199,7 +194,7 @@ export default function OpenWorldGrassField({
         fim.getMatrixAt(i, dummy)
         dummy.decompose(p, rot, s)
         const d2 = p.x * p.x + p.z * p.z
-        if (d2 < 7.0 * 7.0 || d2 > 50.0 * 50.0) {
+        if (d2 > 35.0 * 35.0) {
           s.set(0, 0, 0)
           dummy.compose(p, rot, s)
           fim.setMatrixAt(i, dummy)
@@ -244,6 +239,10 @@ export default function OpenWorldGrassField({
       cluster.scale.setScalar(scaleVal)
       return cluster
     }
+
+    // Central Sanctuary Grove (Authentic rocks & pines embedded naturally)
+    clusters.push(createAuthenticCluster(0, 0, 0, 1.0))
+    clusters.push(createAuthenticCluster(6, -4, Math.PI * 0.7, 0.95))
 
     // A. Outer Perimeter Mountain Woodlands (Framing the horizon)
     clusters.push(createAuthenticCluster(-36, 26, Math.PI * 0.4, 1.28))

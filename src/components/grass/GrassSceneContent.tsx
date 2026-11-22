@@ -151,19 +151,20 @@ export default function GrassSceneContent({
 
       {/* ── 3D Environments ──────────────────────────────────────────────── */}
       <Suspense fallback={null}>
-        {/* 1. Exact Cortiz Diorama Model (grass-scene.glb) */}
-        <GrassField
-          preset={grassPreset}
-          wireframe={false}
-          onLoaded={handleModelLoaded}
-          playerPosRef={playerPosRef}
-        />
-
-        {/* 2. Expanded Open World with 54,000 Dense Gapless Blades & Ancient Forest */}
-        {isFirstPerson && (
+        {/* 1. Exact Cortiz Diorama Model (grass-scene.glb) for Diorama Showcase */}
+        {!isFirstPerson ? (
+          <GrassField
+            preset={grassPreset}
+            wireframe={false}
+            onLoaded={handleModelLoaded}
+            playerPosRef={playerPosRef}
+          />
+        ) : (
+          /* 2. Expanded Open World with 56,000 Dense Gapless Blades & Ancient Forest */
           <OpenWorldGrassField
             preset={grassPreset}
             playerPosRef={playerPosRef}
+            onLoaded={handleModelLoaded}
           />
         )}
       </Suspense>

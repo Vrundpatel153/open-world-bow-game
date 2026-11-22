@@ -283,14 +283,6 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
 
   // ── Input Listeners & Keybinds ─────────────────────────────────────────────
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.closest('input, textarea')) return
-
-      if (e.code === 'Digit1' || e.key === '1') {
-        toggleBowEquipped()
-      }
-    }
-
     const handleMouseDown = (e: MouseEvent) => {
       if ((e.target as HTMLElement)?.closest('button, [class*="leva"], a, input')) return
 
@@ -349,13 +341,11 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
 
     const preventContext = (e: MouseEvent) => e.preventDefault()
 
-    window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('mousedown', handleMouseDown)
     window.addEventListener('mouseup', handleMouseUp)
     window.addEventListener('contextmenu', preventContext)
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('mousedown', handleMouseDown)
       window.removeEventListener('mouseup', handleMouseUp)
       window.removeEventListener('contextmenu', preventContext)
@@ -470,18 +460,18 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const aimT = aimProgress.current
 
     // Hip stance: natural lower-right position, screen center 100% clear
-    // ADS stance: arrow (0, 0) aligned right on the eye sightline, bow canted ~20 deg outward
-    const hipX = 0.22
-    const hipY = -0.18
-    const hipZ = -0.34
-    const hipCantZ = 0.28  // ~16 deg outward wrist cant in hip stance
-    const hipTiltX = -0.06
-    const hipYawY = 0.16   // aligns arrow neatly along right screen boundary in hip stance
+    // ADS stance: arrow (0, 0) aligned right on the eye sightline, bow canted ~18 deg outward
+    const hipX = 0.25
+    const hipY = -0.23
+    const hipZ = -0.36
+    const hipCantZ = 0.38  // ~22 deg outward wrist cant tilts upper limb away from screen center & compass
+    const hipTiltX = -0.04 // slight forward pitch
+    const hipYawY = -0.01  // arrow faces straight forward into camera direction
 
     const adsX = 0.0       // arrow shaft is exactly at eye sightline center (X = 0)
-    const adsY = -0.045    // arrow shaft sits 4.5cm below eye level
-    const adsZ = -0.28
-    const adsCantZ = 0.35  // ~20 deg outward cant tilts upper limb away from center & compass!
+    const adsY = -0.055    // arrow shaft sits 5.5cm below eye level
+    const adsZ = -0.26
+    const adsCantZ = 0.32  // ~18 deg outward cant tilts upper limb away from center & compass
     const adsTiltX = 0.0   // dead flat ballistic trajectory into reticle
     const adsYawY = 0.0    // 100% parallel with camera sightline into crosshair
 
@@ -520,7 +510,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
   })
 
   return (
-    <group ref={bowRootRef} scale={0.58} renderOrder={100}>
+    <group ref={bowRootRef} scale={0.54} renderOrder={100}>
       {/* ── 1. Sculpted Wood Riser Handle (offset so arrow shelf is at (0,0)) ─ */}
       <mesh
         geometry={riserGeo}

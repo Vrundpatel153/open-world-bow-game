@@ -7,6 +7,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import { PCFSoftShadowMap } from "three";
 import * as THREE from "three";
+import { Leva } from "leva";
 
 import LoadingOverlay from "@/components/overlay/LoadingOverlay";
 import {
@@ -97,6 +98,9 @@ export default function GrassCanvas() {
         />
       </Canvas>
 
+      {/* Completely suppress Leva editing panels */}
+      <Leva hidden />
+
       {/* ── High-Budget Diegetic Game HUD (Skyrim Compass, Reticle, Quest) ── */}
       <GameHUD
         playerPosRef={playerPosRef}
@@ -106,7 +110,7 @@ export default function GrassCanvas() {
       />
 
       {/* ── First-Person Pointer Lock Prompt (Clean RPG Style) ────────────── */}
-      {!isPointerLocked && (
+      {!isPointerLocked && !isLoadingModel && (
         <div
           style={{
             position: "absolute",
