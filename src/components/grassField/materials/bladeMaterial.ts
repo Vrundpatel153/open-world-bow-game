@@ -25,40 +25,44 @@ import { DEBUG_FRAGMENT_UNIFORMS, DEBUG_VIEW_FRAGMENT } from "../shaders/debug";
 // ─────────────────────────────────────────────────────────────────────────────
 
 function bladeHalfWidth(t: number): number {
-  return 0.5 * Math.pow(Math.max(0.0, 1.0 - t), 1.15);
+  return 0.5 * Math.pow(Math.max(0.0, 1.0 - t), 0.72);
 }
 
 /**
- * Organic 10-Blade Broad Interlocking Grass Sod Geometry.
- * Each instance generates a multi-tiered circular sod of 10 slender, curved blades:
- *   - 2 central core upright blades
- *   - 4 mid-tier blades at radius ~1.1 (in world ~7cm)
- *   - 4 outer arching blades splayed to radius ~2.1 (in world ~15cm, tips arching to 22cm)
+ * Organic 14-Blade Broad Interlocking Grass Sod Geometry.
+ * Each instance generates a multi-tiered circular sod of 14 slender, curved blades:
+ *   - 3 central core upright blades (height ~1.0, staggered yaws)
+ *   - 5 mid-tier blades at radius ~1.2 to 1.6 (spread 12-16cm)
+ *   - 6 outer arching blades splayed to radius ~2.2 to 2.8 (spread 22-28cm, arching to 35cm)
  *
- * When scattered across the terrain, neighbouring sods overlap by over 50%,
- * completely eliminating bare gaps, clump clustering, and tepee artifacts.
- * The entire landscape becomes a 100% continuous, rich, velvety, wind-animated meadow.
+ * Sods heavily overlap by over 75% across the landscape, completely eliminating
+ * bare gaps, clump clustering, and tepee artifacts from any viewing angle.
+ * The entire terrain becomes a rich, velvety, wind-animated continuous meadow.
  */
 export function makeBladeGeometry(segments = 2): THREE.BufferGeometry {
   const seg = Math.max(1, Math.round(segments));
   const vertsPerBlade = seg * 2 + 1;
 
   const bladeConfigs = [
-    // 1-2. Central core blades
-    { yaw:  0.20, tilt: 0.14, hScale: 1.00, wScale: 0.95, xOff:  0.00, zOff:  0.00 },
-    { yaw: -2.10, tilt: 0.16, hScale: 0.96, wScale: 0.90, xOff:  0.45, zOff: -0.35 },
+    // 1-3. Central core upright blades
+    { yaw: 0.15, tilt: 0.12, hScale: 1.00, wScale: 1.05, xOff: 0.00, zOff: 0.00 },
+    { yaw: 2.15, tilt: 0.14, hScale: 0.98, wScale: 1.00, xOff: 0.45, zOff: -0.35 },
+    { yaw: -2.05, tilt: 0.15, hScale: 0.96, wScale: 0.98, xOff: -0.40, zOff: 0.35 },
 
-    // 3-6. Inner ring blades (spread radius ~1.1)
-    { yaw:  1.05, tilt: 0.22, hScale: 0.94, wScale: 0.88, xOff:  1.10, zOff:  0.60 },
-    { yaw: -0.85, tilt: 0.20, hScale: 0.92, wScale: 0.88, xOff: -1.05, zOff:  0.70 },
-    { yaw:  2.40, tilt: 0.24, hScale: 0.90, wScale: 0.85, xOff:  0.75, zOff: -1.05 },
-    { yaw: -2.75, tilt: 0.23, hScale: 0.88, wScale: 0.85, xOff: -0.85, zOff: -0.95 },
+    // 4-8. Mid-tier spreading blades (spread radius ~1.2 to 1.6)
+    { yaw: 0.95, tilt: 0.22, hScale: 0.94, wScale: 0.95, xOff: 1.15, zOff: 0.65 },
+    { yaw: -0.85, tilt: 0.21, hScale: 0.92, wScale: 0.95, xOff: -1.10, zOff: 0.75 },
+    { yaw: 2.45, tilt: 0.23, hScale: 0.91, wScale: 0.92, xOff: 0.85, zOff: -1.15 },
+    { yaw: -2.65, tilt: 0.24, hScale: 0.89, wScale: 0.92, xOff: -0.95, zOff: -1.05 },
+    { yaw: 0.05, tilt: 0.20, hScale: 0.93, wScale: 0.94, xOff: 0.10, zOff: 1.35 },
 
-    // 7-10. Outer broad splay blades (spread radius ~2.1, arching outward to interlock with adjacent sods)
-    { yaw:  0.45, tilt: 0.32, hScale: 0.86, wScale: 0.82, xOff:  1.90, zOff:  1.20 },
-    { yaw: -1.45, tilt: 0.34, hScale: 0.84, wScale: 0.80, xOff: -2.10, zOff:  0.40 },
-    { yaw:  1.95, tilt: 0.30, hScale: 0.85, wScale: 0.82, xOff:  1.40, zOff: -1.80 },
-    { yaw: -2.95, tilt: 0.35, hScale: 0.82, wScale: 0.80, xOff: -1.60, zOff: -1.50 },
+    // 9-14. Outer broad interlocking arch blades (spread radius ~2.2 to 2.8, arching outward to interlock with adjacent sods)
+    { yaw: 0.45, tilt: 0.34, hScale: 0.87, wScale: 0.90, xOff: 2.20, zOff: 1.10 },
+    { yaw: -1.35, tilt: 0.36, hScale: 0.85, wScale: 0.88, xOff: -2.35, zOff: 0.50 },
+    { yaw: 1.85, tilt: 0.33, hScale: 0.86, wScale: 0.90, xOff: 1.55, zOff: -2.05 },
+    { yaw: -2.85, tilt: 0.37, hScale: 0.83, wScale: 0.88, xOff: -1.75, zOff: -1.75 },
+    { yaw: 3.10, tilt: 0.35, hScale: 0.84, wScale: 0.88, xOff: -0.20, zOff: -2.40 },
+    { yaw: -0.40, tilt: 0.32, hScale: 0.86, wScale: 0.90, xOff: 2.10, zOff: -0.80 },
   ];
   const numBlades = bladeConfigs.length;
   const totalVerts = vertsPerBlade * numBlades;

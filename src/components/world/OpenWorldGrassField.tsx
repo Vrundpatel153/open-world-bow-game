@@ -152,8 +152,8 @@ export default function OpenWorldGrassField({
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
   const { terrainMesh, coreBladesMesh, outerBladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
-    // 1. High-Density Core Sanctuary Meadow Plane (62m x 62m centered on exploration zone)
-    const coreMeadowGeo = new THREE.PlaneGeometry(62, 62, 80, 80)
+    // 1. High-Density Core Sanctuary Meadow Plane (68m x 68m centered on exploration zone)
+    const coreMeadowGeo = new THREE.PlaneGeometry(68, 68, 88, 88)
     coreMeadowGeo.rotateX(-Math.PI / 2)
     const cPosAttr = coreMeadowGeo.attributes.position
     for (let i = 0; i < cPosAttr.count; i++) {
@@ -163,23 +163,23 @@ export default function OpenWorldGrassField({
     }
     coreMeadowGeo.computeVertexNormals()
 
-    // 75,000 10-blade broad interlocking sods (750,000 blades, ~20 sods/m², ~200 blades/m²) across sanctuary:
-    // Sods span ~35cm diameter and overlap by over 50%, completely eliminating bald spots and clump tepees
+    // 85,000 14-blade broad interlocking sods (1,190,000 blades, ~22 sods/m², ~300 blades/m²) across sanctuary:
+    // Sods span ~40cm diameter and overlap by over 75%, completely eliminating bald spots and clump tepees
     const coreBlades = scatterBlades(new THREE.Mesh(coreMeadowGeo), {
       uniforms: u.surface,
-      density: 20,
-      maxCount: 75_000,
-      minWidth: 0.065,
-      maxWidth: 0.090,
-      minLength: 0.22,
-      maxLength: 0.35,
-      tiltMax: 0.16,
+      density: 22,
+      maxCount: 85_000,
+      minWidth: 0.080,
+      maxWidth: 0.115,
+      minLength: 0.26,
+      maxLength: 0.42,
+      tiltMax: 0.18,
       segments: 2,
     })
 
-    // 2. Perimeter Foothills Meadow Ring (Radius 29m to 54m)
-    // 35,000 10-blade interlocking sods (350,000 blades) providing smooth, seamless transition toward boundary hills
-    const outerMeadowGeo = new THREE.RingGeometry(29, 54, 48, 12)
+    // 2. Perimeter Foothills Meadow Ring (Radius 28m to 82m)
+    // 65,000 14-blade interlocking sods (910,000 blades) providing continuous, lush, gapless coverage across all hills & boundary ridges
+    const outerMeadowGeo = new THREE.RingGeometry(28, 82, 64, 16)
     outerMeadowGeo.rotateX(-Math.PI / 2)
     const oPosAttr = outerMeadowGeo.attributes.position
     for (let i = 0; i < oPosAttr.count; i++) {
@@ -191,13 +191,13 @@ export default function OpenWorldGrassField({
 
     const outerBlades = scatterBlades(new THREE.Mesh(outerMeadowGeo), {
       uniforms: u.surface,
-      density: 8,
-      maxCount: 35_000,
-      minWidth: 0.070,
-      maxWidth: 0.095,
-      minLength: 0.24,
-      maxLength: 0.38,
-      tiltMax: 0.18,
+      density: 14,
+      maxCount: 65_000,
+      minWidth: 0.085,
+      maxWidth: 0.120,
+      minLength: 0.28,
+      maxLength: 0.44,
+      tiltMax: 0.20,
       segments: 2,
     })
 
