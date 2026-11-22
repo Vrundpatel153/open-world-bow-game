@@ -131,8 +131,8 @@ export default function OpenWorldGrassField({
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
   const { terrainMesh, bladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
-    // 1. Terrain Ground Mesh for high-density sampling across entire playable sanctuary (~112m x 112m)
-    const samplePlaneGeo = new THREE.PlaneGeometry(112, 112, 96, 96)
+    // 1. Terrain Ground Mesh for high-density sampling across the ENTIRE 140m x 140m world
+    const samplePlaneGeo = new THREE.PlaneGeometry(140, 140, 120, 120)
     samplePlaneGeo.rotateX(-Math.PI / 2)
     const sPosAttr = samplePlaneGeo.attributes.position
     for (let i = 0; i < sPosAttr.count; i++) {
@@ -142,39 +142,19 @@ export default function OpenWorldGrassField({
     }
     samplePlaneGeo.computeVertexNormals()
 
-    // 2. Scatter 96,000 Slender, Realistic Grass Blades (Fluid, Organic Curvature, Continuous Open World)
+    // 2. Scatter 110,000 multi-blade clumps = 330,000 dense, organic grass blades across the entire world!
+    // Zero bald cutoffs, zero plain gaps: continuous rolling meadow carpet all the way to horizon hills.
     const blades = scatterBlades(new THREE.Mesh(samplePlaneGeo), {
       uniforms: u.surface,
-      density: 22,
-      maxCount: 96_000,
+      density: 16,
+      maxCount: 110_000,
       minWidth: 0.038,
-      maxWidth: 0.062,
-      minLength: 0.32,
-      maxLength: 0.52,
-      tiltMax: 0.44,
-      segments: 5,
+      maxWidth: 0.058,
+      minLength: 0.35,
+      maxLength: 0.58,
+      tiltMax: 0.40,
+      segments: 4,
     })
-
-    // Natural feathered outer perimeter fade towards mountain horizon (ZERO harsh circular pop!)
-    const dummy = new THREE.Matrix4()
-    const p = new THREE.Vector3()
-    const rot = new THREE.Quaternion()
-    const s = new THREE.Vector3()
-
-    for (let i = 0; i < blades.count; i++) {
-      blades.getMatrixAt(i, dummy)
-      dummy.decompose(p, rot, s)
-      const dist = Math.hypot(p.x, p.z)
-      if (dist > 54.0) {
-        s.set(0, 0, 0)
-      } else if (dist > 46.0) {
-        const fade = (54.0 - dist) / 8.0
-        s.multiplyScalar(fade)
-      }
-      dummy.compose(p, rot, s)
-      blades.setMatrixAt(i, dummy)
-    }
-    blades.instanceMatrix.needsUpdate = true
 
     // 3. Horizon Open World Terrain Plane (140m x 140m)
     const terrainGeo = new THREE.PlaneGeometry(
@@ -193,40 +173,23 @@ export default function OpenWorldGrassField({
     terrainGeo.computeVertexNormals()
 
     // Deep forest moss green ground material perfectly matching grass blade bases
-    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#1b380a'))
+    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#18340a'))
     const groundMesh = new THREE.Mesh(terrainGeo, groundMat)
     groundMesh.receiveShadow = true
     groundMesh.castShadow = false
     groundMesh.updateMatrixWorld(true)
 
-    // 4. Scatter Wildflowers in active meadows
+    // 4. Scatter Wildflowers across active meadows
     const flowerInstances = scatterFlowers(new THREE.Mesh(samplePlaneGeo), {
       uniforms: u.flower,
       texA: u.flowerTexA,
       texB: u.flowerTexB,
       dirt: u.surface,
       density: 0.18,
-      maxCount: 1600,
+      maxCount: 2200,
       size: 0.38,
       mixA: 0.5,
     })
-
-    for (const fim of flowerInstances) {
-      for (let i = 0; i < fim.count; i++) {
-        fim.getMatrixAt(i, dummy)
-        dummy.decompose(p, rot, s)
-        const dist = Math.hypot(p.x, p.z)
-        if (dist > 52.0) {
-          s.set(0, 0, 0)
-        } else if (dist > 44.0) {
-          const fade = (52.0 - dist) / 8.0
-          s.multiplyScalar(fade)
-        }
-        dummy.compose(p, rot, s)
-        fim.setMatrixAt(i, dummy)
-      }
-      fim.instanceMatrix.needsUpdate = true
-    }
 
     // 5. Rich Ancient Pine Forest & Conifer Copses (18+ Diverse Groves)
     const barkMat = makeBarkMaterial(u.bark)
@@ -264,9 +227,9 @@ export default function OpenWorldGrassField({
             const center = bs.center.clone().applyMatrix4(m.matrixWorld)
             const scale = new THREE.Vector3().setFromMatrixScale(m.matrixWorld)
             const maxS = Math.max(scale.x, scale.z)
-            const r = bs.radius * maxS * 1.12 // 112% radius for solid non-clipping boundary
+            const r = bs.radius * maxS * 1.25 // Generous physical collision radius
 
-            if (r > 0.30) { // Skip tiny ground pebbles
+            if (r > 0.28) {
               colliders.push({
                 id: `rock_${posX.toFixed(1)}_${posZ.toFixed(1)}_${m.id}`,
                 tag: 'rock',
@@ -274,9 +237,7 @@ export default function OpenWorldGrassField({
                 z: center.z,
                 y: center.y,
                 radius: r,
-                height: bs.radius * scale.y * 2.8,
-                minY: center.y - bs.radius * scale.y - 1.5,
-                maxY: center.y + bs.radius * scale.y + 2.5,
+                height: Math.max(2.5, bs.radius * scale.y * 3.0),
               })
             }
           } else if (srcMat.name === TRUNK_MATERIAL) {
@@ -285,7 +246,7 @@ export default function OpenWorldGrassField({
             const bs = m.geometry.boundingSphere!
             const center = bs.center.clone().applyMatrix4(m.matrixWorld)
             const scale = new THREE.Vector3().setFromMatrixScale(m.matrixWorld)
-            const trunkRadius = Math.max(0.48, bs.radius * Math.min(scale.x, scale.z) * 0.55)
+            const trunkRadius = Math.max(0.55, bs.radius * Math.min(scale.x, scale.z) * 0.65)
 
             colliders.push({
               id: `tree_${posX.toFixed(1)}_${posZ.toFixed(1)}_${m.id}`,
@@ -294,9 +255,7 @@ export default function OpenWorldGrassField({
               z: center.z,
               y: posY,
               radius: trunkRadius,
-              height: 22.0 * scaleVal,
-              minY: posY - 2.0,
-              maxY: posY + 22.0 * scaleVal,
+              height: 24.0 * scaleVal,
             })
             m.material = barkMat
           } else if (srcMat.name === LEAF_MATERIAL) {

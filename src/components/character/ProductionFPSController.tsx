@@ -176,8 +176,8 @@ export default function ProductionFPSController({
       pos.current.x += vel.current.x * FIXED_DT
       pos.current.z += vel.current.z * FIXED_DT
 
-      // World Collision Resolution against Rocks, Trees, Pillars & Shrines (0.62m buffer prevents camera clipping)
-      worldCollisionSystem.resolvePlayerCollision(pos.current, vel.current, 0.62)
+      // World Collision Resolution against Rocks, Trees, Pillars & Shrines (0.65m buffer prevents camera clipping)
+      worldCollisionSystem.resolvePlayerCollision(pos.current, vel.current, 0.65)
 
       // World boundary constraint
       const currentRadius = Math.hypot(pos.current.x, pos.current.z)

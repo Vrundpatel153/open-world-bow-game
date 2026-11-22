@@ -22,8 +22,9 @@ interface BowViewModelProps {
 }
 
 // Arrow shelf & rest offsets so (0, 0) is the arrow shaft axis
-const RISER_OFFSET_X = 0.038
-const RISER_OFFSET_Y = -0.015
+// Riser and limbs sit to the LEFT of the sightline for clear, authentic archer window
+const RISER_OFFSET_X = -0.052
+const RISER_OFFSET_Y = 0.0
 const STRING_REST_Z = 0.08 // Strung brace height behind riser
 
 export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
@@ -72,16 +73,17 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     arrowRestGeo,
   } = useMemo(() => {
     // 1. Central Ergonomic Riser Handle (Height ~0.26m)
+    // Positioned to the left of arrow axis (X < 0) with shelf cutout on the right
     const riserShape = new THREE.Shape()
-    riserShape.moveTo(-0.016, -0.13)
-    riserShape.lineTo(0.015, -0.11)
-    riserShape.lineTo(0.018, -0.03)
-    // Ergonomic arrow shelf cutout on the left
-    riserShape.lineTo(-0.024, 0.01)
-    riserShape.lineTo(-0.024, 0.055)
+    riserShape.moveTo(-0.018, -0.13)
+    riserShape.lineTo(0.016, -0.11)
+    riserShape.lineTo(0.018, -0.02)
+    // Ergonomic arrow shelf cutout on the right (facing arrow axis)
+    riserShape.lineTo(0.028, 0.01)
+    riserShape.lineTo(0.028, 0.055)
     riserShape.lineTo(0.016, 0.11)
-    riserShape.lineTo(-0.016, 0.13)
-    riserShape.lineTo(-0.020, 0.0)
+    riserShape.lineTo(-0.018, 0.13)
+    riserShape.lineTo(-0.022, 0.0)
     riserShape.closePath()
 
     const extrudeSettings = {
@@ -494,20 +496,20 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const aimT = aimProgress.current
 
     // Hip Stance: natural lower-right position, 85% of screen 100% clear
-    const hipX = 0.24
-    const hipY = -0.20
-    const hipZ = -0.32
-    const hipCantZ = -0.32 // ~18 deg outward wrist cant (tilts limbs to the right away from center)
-    const hipTiltX = -0.06 // slight forward pitch
-    const hipYawY = -0.02
+    const hipX = 0.16
+    const hipY = -0.15
+    const hipZ = -0.22
+    const hipCantZ = 0.22 // ~13 deg outward wrist cant (tilts limbs to the right away from center)
+    const hipTiltX = -0.04 // slight forward pitch
+    const hipYawY = -0.03
 
     // ADS Stance: Arrow shaft points directly down crosshair sightline!
-    // The riser sits safely to the right (+X); outward cant (~-7 deg) ensures upper limb never cuts across crosshair!
-    const adsX = 0.002     // Arrow shaft is on center eye sightline
-    const adsY = -0.046    // Arrow shaft sits 4.6cm below eye level
-    const adsZ = -0.22
-    const adsCantZ = -0.10 // ~6 deg outward cant keeps sight window completely open
-    const adsTiltX = 0.0   // Dead-flat ballistic sightline into crosshair
+    // The riser sits safely to the left (-X); sight window is completely open to the reticle!
+    const adsX = 0.0       // Arrow shaft is on exact center eye sightline
+    const adsY = -0.038    // Arrow shaft sits 3.8cm below eye level
+    const adsZ = -0.18     // Comfortably close to eye
+    const adsCantZ = 0.05  // Slight cant keeps sight window completely clear
+    const adsTiltX = 0.0   // Dead-flat ballistic sightline straight through crosshair
     const adsYawY = 0.0
 
     const targetLocalX = THREE.MathUtils.lerp(hipX, adsX, aimT) + swayX.current + bobX + breathX + shakeX
@@ -548,10 +550,10 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
   })
 
   return (
-    <group ref={bowRootRef} scale={0.34} renderOrder={100}>
+    <group ref={bowRootRef} scale={0.24} renderOrder={100}>
       {/* ── Dedicated Viewmodel Lighting Rig (Ensures warm PBR shading in all conditions) ── */}
-      <pointLight position={[0.25, 0.40, 0.15]} intensity={1.8} color="#fff6e5" distance={3.5} />
-      <pointLight position={[-0.30, -0.20, 0.15]} intensity={0.7} color="#cce0ff" distance={3.5} />
+      <directionalLight position={[0.4, 0.8, 1.0]} intensity={2.6} color="#fff6e8" />
+      <ambientLight intensity={1.4} color="#fff2df" />
 
       {/* ── 1. Sculpted Wood Riser Handle (offset so arrow shelf is at (0,0)) ─ */}
       <mesh

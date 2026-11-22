@@ -82,10 +82,8 @@ class WorldCollisionSystem {
         // Fast bounding box rejection
         if (Math.abs(dx) > maxDist || Math.abs(dz) > maxDist) continue
 
-        // Vertical overlap check with generous slope & height tolerance
-        if (c.minY !== undefined && c.maxY !== undefined) {
-          if (pos.y + 2.0 < c.minY || pos.y - 0.4 > c.maxY) continue
-        }
+        // Vertical overlap check with generous vertical tolerance (only ignore if flying high above)
+        if (c.y !== undefined && Math.abs(pos.y - c.y) > 6.5) continue
 
         const distSq = dx * dx + dz * dz
         if (distSq < maxDist * maxDist) {

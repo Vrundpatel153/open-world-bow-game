@@ -52,6 +52,7 @@ export default function GameHUD({
   const isAiming = useQuestStore((s) => s.isAiming)
   const isBowEquipped = useQuestStore((s) => s.isBowEquipped)
   const activeItem = useQuestStore((s) => s.activeItem)
+  const toggleItem = useQuestStore((s) => s.toggleItem)
   const hitMarkerId = useQuestStore((s) => s.hitMarkerId)
   const notification = useQuestStore((s) => s.notification)
   const gameWon = useQuestStore((s) => s.gameWon)
@@ -800,19 +801,23 @@ export default function GameHUD({
             borderRadius: 3,
             backdropFilter: 'blur(12px)',
             boxShadow: '0 8px 24px rgba(0,0,0,0.7)',
+            pointerEvents: 'auto',
           }}
         >
           {/* Slot 1: Bow */}
           <div
+            onClick={() => toggleItem('bow')}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 6,
               padding: '3px 8px',
               borderRadius: 2,
+              cursor: 'pointer',
               background: activeItem === 'bow' ? 'rgba(214, 184, 120, 0.18)' : 'transparent',
               border: `1px solid ${activeItem === 'bow' ? '#d4af37' : 'rgba(255,255,255,0.08)'}`,
               boxShadow: activeItem === 'bow' ? '0 0 10px rgba(212, 175, 55, 0.35)' : 'none',
+              transition: 'all 0.15s ease',
             }}
           >
             <kbd
@@ -843,15 +848,18 @@ export default function GameHUD({
 
           {/* Slot 2: Wood Torch */}
           <div
+            onClick={() => toggleItem('torch')}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 6,
               padding: '3px 8px',
               borderRadius: 2,
+              cursor: 'pointer',
               background: activeItem === 'torch' ? 'rgba(255, 140, 40, 0.2)' : 'transparent',
               border: `1px solid ${activeItem === 'torch' ? '#ff9426' : 'rgba(255,255,255,0.08)'}`,
               boxShadow: activeItem === 'torch' ? '0 0 10px rgba(255, 148, 38, 0.4)' : 'none',
+              transition: 'all 0.15s ease',
             }}
           >
             <kbd
@@ -882,15 +890,18 @@ export default function GameHUD({
 
           {/* Slot 3: Wooden Sword */}
           <div
+            onClick={() => toggleItem('sword')}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 6,
               padding: '3px 8px',
               borderRadius: 2,
+              cursor: 'pointer',
               background: activeItem === 'sword' ? 'rgba(214, 184, 120, 0.18)' : 'transparent',
               border: `1px solid ${activeItem === 'sword' ? '#d4af37' : 'rgba(255,255,255,0.08)'}`,
               boxShadow: activeItem === 'sword' ? '0 0 10px rgba(212, 175, 55, 0.35)' : 'none',
+              transition: 'all 0.15s ease',
             }}
           >
             <kbd
