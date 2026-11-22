@@ -163,17 +163,17 @@ export default function OpenWorldGrassField({
     }
     coreMeadowGeo.computeVertexNormals()
 
-    // 55,000 5-blade clumps (275,000 blades) across core sanctuary: thick, lush, gapless carpet
+    // High-Density Sanctuary Meadow with authentic slender blades cloned from the model
     const coreBlades = scatterBlades(new THREE.Mesh(coreMeadowGeo), {
       uniforms: u.surface,
-      density: 22,
-      maxCount: 55_000,
-      minWidth: 0.32,
-      maxWidth: 0.48,
-      minLength: 0.72,
-      maxLength: 1.05,
-      tiltMax: 0.28,
-      segments: 4,
+      density: 28,
+      maxCount: 75_000,
+      minWidth: 0.08,
+      maxWidth: 0.14,
+      minLength: 0.26,
+      maxLength: 0.48,
+      tiltMax: 0.22,
+      segments: 3,
     })
 
     // 2. Horizon Open World Terrain Plane (140m x 140m)
@@ -193,7 +193,7 @@ export default function OpenWorldGrassField({
     terrainGeo.computeVertexNormals()
 
     // Vibrant forest meadow moss ground material perfectly matching grass blade bases
-    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#1a3f0e'))
+    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#2d5612'))
     const groundMesh = new THREE.Mesh(terrainGeo, groundMat)
     groundMesh.receiveShadow = true
     groundMesh.castShadow = false
@@ -462,30 +462,30 @@ export default function OpenWorldGrassField({
     s.uWindLean.value = 0.45
     s.uWindFixLocal.value = 1
 
-    // Colors (Rich, natural Studio Ghibli / Tsushima emerald meadow — ZERO yellow cast!)
+    // Colors (Authentic Studio Ghibli stylized meadow matching cloned model)
     const c = colorsRef.current
-    c.grassBottom.set('#1a3f0e')
-    c.grassTop.set('#4da01e')
+    c.grassBottom.set('#2d5612')
+    c.grassTop.set('#7ea81e')
     s.uGrassBottom.value.copy(c.grassBottom)
     s.uGrassTop.value.copy(c.grassTop)
-    s.uGradStart.value = 0.04
-    s.uGradEnd.value = 0.96
+    s.uGradStart.value = 0.10
+    s.uGradEnd.value = 0.95
     s.uGradPower.value = 1.15
     s.uBrightness.value = 0.94
 
-    // Lush vs Dry environmental patches (Harmonious forest hues, NO yellow wheat)
-    s.uPatchLush.value.set('#183c0e')
-    s.uPatchDry.value.set('#367e1a')
-    s.uPatchStrength.value = 0.06
+    // Lush vs Dry environmental patches
+    s.uPatchLush.value.set('#244a0e')
+    s.uPatchDry.value.set('#84aa22')
+    s.uPatchStrength.value = 0.10
     s.uPatchScale.value = 0.08
     s.uPatchBias.value = 1.3
 
-    // Translucency (Subsurface sun scatter — pure vibrant emerald leaf transmission, NOT yellow!)
-    c.transColor.set('#6ea822')
+    // Translucency (Subsurface sun scatter — luminous golden-green leaf transmission from model)
+    c.transColor.set('#c2e646')
     s.uTransColor.value.copy(c.transColor)
-    s.uTransStrength.value = 0.07
-    s.uTransPower.value = 4.2
-    s.uTransTip.value = 0.85
+    s.uTransStrength.value = 2.2
+    s.uTransPower.value = 3.6
+    s.uTransTip.value = 0.82
     s.uTransShadow.value = 1.0
 
     // Shadows
