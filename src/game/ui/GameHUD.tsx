@@ -664,8 +664,8 @@ export default function GameHUD({
             <div
               style={{
                 position: 'absolute',
-                width: drawProgress > 0.88 ? 3.5 : 2.5,
-                height: drawProgress > 0.88 ? 3.5 : 2.5,
+                width: drawProgress > 0.88 ? 3 : 2.5,
+                height: drawProgress > 0.88 ? 3 : 2.5,
                 borderRadius: '50%',
                 background: drawProgress > 0.88 ? '#ffd700' : '#ffffff',
                 boxShadow:
@@ -676,13 +676,13 @@ export default function GameHUD({
               }}
             />
 
-            {/* 4 Precision Crosshair Notches (Crisp, Small, Dynamic Inward Contraction) */}
+            {/* 4 Precision Crosshair Notches (Exact match with Reference Target Image) */}
             {(() => {
-              const notchOffset = Math.max(3.5, 7 - drawProgress * 3.5)
-              const notchLength = 4
-              const notchThickness = 1.5
+              const notchOffset = Math.max(6, 9 - drawProgress * 3)
+              const notchLength = 8
+              const notchThickness = 2.2
               const notchColor =
-                drawProgress > 0.88 ? 'rgba(255, 220, 100, 0.95)' : 'rgba(255, 255, 255, 0.85)'
+                drawProgress > 0.88 ? 'rgba(255, 225, 110, 0.98)' : 'rgba(255, 255, 255, 0.92)'
               const notchShadow = '0 1px 2px rgba(0,0,0,0.9)'
               return (
                 <>
@@ -693,6 +693,7 @@ export default function GameHUD({
                       left: -notchOffset - notchLength,
                       width: notchLength,
                       height: notchThickness,
+                      borderRadius: 1,
                       background: notchColor,
                       boxShadow: notchShadow,
                     }}
@@ -704,6 +705,7 @@ export default function GameHUD({
                       right: -notchOffset - notchLength,
                       width: notchLength,
                       height: notchThickness,
+                      borderRadius: 1,
                       background: notchColor,
                       boxShadow: notchShadow,
                     }}
@@ -715,6 +717,7 @@ export default function GameHUD({
                       top: -notchOffset - notchLength,
                       width: notchThickness,
                       height: notchLength,
+                      borderRadius: 1,
                       background: notchColor,
                       boxShadow: notchShadow,
                     }}
@@ -726,6 +729,7 @@ export default function GameHUD({
                       bottom: -notchOffset - notchLength,
                       width: notchThickness,
                       height: notchLength,
+                      borderRadius: 1,
                       background: notchColor,
                       boxShadow: notchShadow,
                     }}
