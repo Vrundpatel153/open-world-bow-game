@@ -1,9 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // BowViewModel — AAA First-Person Hunting Recurve Bow (Target Reference Match)
 //
-// Strictly engineered to match the reference weapon design:
+// Strictly engineered to match the reference weapon design (Image 9):
 // 1. Bow Positioning: Stands vertically on the right side of the screen, with
-//    its carved wood & brass grip in the lower-right foreground.
+//    its carved mahogany & golden brass grip in the lower-right foreground.
 // 2. Arrow Positioning: Sits naturally on the inner shelf on the left of the grip,
 //    shaft aligned diagonally forward towards the center crosshair.
 // 3. Bowstring: Continuous taut string connecting upper tip -> arrow nock -> lower tip,
@@ -69,74 +69,70 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     flowerEmblemGeo,
     upperLimbGeo,
     lowerLimbGeo,
-    tipNockGeo,
     arrowShaftGeo,
     arrowTipGeo,
     ferruleGeo,
     fletchingGeo,
     arrowNockGeo,
   } = useMemo(() => {
-    // 1. Central Carved Mahogany Riser (Height 0.26m)
-    // Modeled with an integrated arrow shelf cut into the left face
+    // 1. Central Carved Mahogany Riser (Height 0.24m)
+    // Modeled with an integrated arrow shelf on the inner left face
     const riserShape = new THREE.Shape()
-    riserShape.moveTo(-0.015, -0.13)
-    riserShape.lineTo(0.015, -0.13)
+    riserShape.moveTo(-0.014, -0.12)
+    riserShape.lineTo(0.014, -0.12)
     riserShape.lineTo(0.016, -0.03)
     // Shelf floor on the inner left face
-    riserShape.lineTo(0.016, 0.06)
-    riserShape.lineTo(0.014, 0.13)
-    riserShape.lineTo(-0.014, 0.13)
-    riserShape.lineTo(-0.016, 0.06)
-    riserShape.lineTo(-0.024, 0.04)  // Cutout shelf recess
-    riserShape.lineTo(-0.024, 0.00)
-    riserShape.lineTo(-0.016, -0.02)
+    riserShape.lineTo(0.016, 0.05)
+    riserShape.lineTo(0.013, 0.12)
+    riserShape.lineTo(-0.013, 0.12)
+    riserShape.lineTo(-0.016, 0.05)
+    riserShape.lineTo(-0.022, 0.03)  // Cutout shelf recess
+    riserShape.lineTo(-0.022, -0.01)
+    riserShape.lineTo(-0.015, -0.02)
     riserShape.closePath()
 
     const riser = new THREE.ExtrudeGeometry(riserShape, {
-      depth: 0.036,
+      depth: 0.034,
       bevelEnabled: true,
       bevelSegments: 2,
-      bevelSize: 0.003,
-      bevelThickness: 0.003,
+      bevelSize: 0.0025,
+      bevelThickness: 0.0025,
     })
     riser.center()
 
-    // 2. Leather Wrapped Grip Handle (Center grip from Y = -0.07 to 0.01)
-    const gripWrap = new THREE.CylinderGeometry(0.018, 0.019, 0.09, 14)
+    // 2. Leather Wrapped Grip Handle (Center grip from Y = -0.06 to 0.00)
+    const gripWrap = new THREE.CylinderGeometry(0.017, 0.018, 0.08, 14)
 
-    // 3. Golden Brass Reinforcement Collars (Signature feature in Reference Image)
-    // Upper Collar Bracket
-    const upperCollar = new THREE.BoxGeometry(0.040, 0.032, 0.044)
-
-    // Lower Collar Bracket with downward flared decorative tabs
-    const lowerCollar = new THREE.BoxGeometry(0.040, 0.034, 0.044)
+    // 3. Golden Brass Reinforcement Collars (Signature feature in Reference Image 9)
+    const upperCollar = new THREE.BoxGeometry(0.038, 0.028, 0.042)
+    const lowerCollar = new THREE.BoxGeometry(0.038, 0.030, 0.042)
 
     // Embossed Diamond Crest (Heraldic diamond plaque on upper collar)
     const diamondShape = new THREE.Shape()
-    diamondShape.moveTo(0, 0.014)
-    diamondShape.lineTo(0.011, 0)
-    diamondShape.lineTo(0, -0.014)
-    diamondShape.lineTo(-0.011, 0)
+    diamondShape.moveTo(0, 0.013)
+    diamondShape.lineTo(0.010, 0)
+    diamondShape.lineTo(0, -0.013)
+    diamondShape.lineTo(-0.010, 0)
     diamondShape.closePath()
 
     const diamondCrest = new THREE.ExtrudeGeometry(diamondShape, {
       depth: 0.003,
       bevelEnabled: true,
       bevelSegments: 1,
-      bevelSize: 0.0012,
-      bevelThickness: 0.0012,
+      bevelSize: 0.001,
+      bevelThickness: 0.001,
     })
     diamondCrest.center()
 
     // 4-petal flower motif inside diamond
     const flowerShape = new THREE.Shape()
-    flowerShape.moveTo(0, 0.005)
+    flowerShape.moveTo(0, 0.004)
     flowerShape.lineTo(0.002, 0.002)
-    flowerShape.lineTo(0.005, 0)
+    flowerShape.lineTo(0.004, 0)
     flowerShape.lineTo(0.002, -0.002)
-    flowerShape.lineTo(0, -0.005)
+    flowerShape.lineTo(0, -0.004)
     flowerShape.lineTo(-0.002, -0.002)
-    flowerShape.lineTo(-0.005, 0)
+    flowerShape.lineTo(-0.004, 0)
     flowerShape.lineTo(-0.002, 0.002)
     flowerShape.closePath()
     const flowerEmblem = new THREE.ExtrudeGeometry(flowerShape, {
@@ -145,16 +141,16 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     })
     flowerEmblem.center()
 
-    // 4. Upper & Lower Recurve Limbs (Graceful sweeping curve, ~0.48m each)
+    // 4. Upper & Lower Recurve Limbs (Sweeping curves)
     const upperPoints: THREE.Vector3[] = []
     const lowerPoints: THREE.Vector3[] = []
 
     for (let i = 0; i <= 14; i++) {
       const t = i / 14
-      const y = t * 0.48
-      // Subtle sweep: curves slightly back (+Z) then arches forward (-Z) at tips
-      const x = Math.sin(t * Math.PI * 0.5) * 0.025
-      const z = Math.sin(t * Math.PI * 0.75) * 0.06 - Math.pow(t, 2.2) * 0.04
+      const y = t * 0.28
+      // Curve up and arch forward gracefully
+      const x = Math.sin(t * Math.PI * 0.5) * 0.04
+      const z = Math.sin(t * Math.PI * 0.6) * 0.05 + Math.pow(t, 2.0) * 0.04
       upperPoints.push(new THREE.Vector3(x, y, z))
       lowerPoints.push(new THREE.Vector3(x, -y, z))
     }
@@ -162,29 +158,27 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const upperCurve = new THREE.CatmullRomCurve3(upperPoints)
     const lowerCurve = new THREE.CatmullRomCurve3(lowerPoints)
 
-    const upperLimb = new THREE.TubeGeometry(upperCurve, 22, 0.013, 8, false)
-    const lowerLimb = new THREE.TubeGeometry(lowerCurve, 22, 0.013, 8, false)
+    const upperLimb = new THREE.TubeGeometry(upperCurve, 20, 0.012, 8, false)
+    const lowerLimb = new THREE.TubeGeometry(lowerCurve, 20, 0.012, 8, false)
 
-    // Brass Limb Tip Caps / Nocks
-    const tipNock = new THREE.CylinderGeometry(0.008, 0.012, 0.026, 8)
-
-    // 5. Nocked Hunting Arrow Components (Length 0.76m)
-    // Cedar wood shaft (length 0.70m, diameter 9mm, along Z)
-    const shaft = new THREE.CylinderGeometry(0.0045, 0.0045, 0.70, 8)
+    // 5. Nocked Hunting Arrow Components (Length 0.72m)
+    // Cedar wood shaft (diameter 9mm, length 0.68m, centered along Z)
+    const shaft = new THREE.CylinderGeometry(0.0045, 0.0045, 0.68, 8)
     shaft.rotateX(Math.PI / 2) // Orient along Z
 
     // Metal ferrule collar
-    const ferrule = new THREE.CylinderGeometry(0.0055, 0.0048, 0.022, 8)
+    const ferrule = new THREE.CylinderGeometry(0.0055, 0.0048, 0.024, 8)
     ferrule.rotateX(Math.PI / 2)
 
-    // Polished Silver Razor Broadhead Blade (Matches Reference Image)
+    // Polished Silver Razor Broadhead Blade (sharp point facing -Z, pointing forward into screen)
     const tipShape = new THREE.Shape()
-    tipShape.moveTo(0, 0)
-    tipShape.lineTo(0.016, -0.045)
-    tipShape.lineTo(0.005, -0.038)
-    tipShape.lineTo(0, -0.042)
-    tipShape.lineTo(-0.005, -0.038)
-    tipShape.lineTo(-0.016, -0.045)
+    tipShape.moveTo(0, 0.0) // Point
+    tipShape.lineTo(0.016, 0.048) // Right barb extending backward
+    tipShape.lineTo(0.005, 0.038)
+    tipShape.lineTo(0.005, 0.052)
+    tipShape.lineTo(-0.005, 0.052)
+    tipShape.lineTo(-0.005, 0.038)
+    tipShape.lineTo(-0.016, 0.048) // Left barb extending backward
     tipShape.closePath()
 
     const tipExtrude = new THREE.ExtrudeGeometry(tipShape, {
@@ -194,14 +188,15 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
       bevelSize: 0.0012,
       bevelThickness: 0.0012,
     })
-    tipExtrude.rotateX(Math.PI / 2) // Point +Z in local arrow space
+    tipExtrude.center()
+    tipExtrude.rotateX(Math.PI / 2) // Orient flat in XY
 
     // 3 Aerodynamic White Turkey Feathers (Matches Reference Image)
     const fletchShape = new THREE.Shape()
     fletchShape.moveTo(0, 0)
-    fletchShape.lineTo(0.015, -0.014)
-    fletchShape.lineTo(0.012, -0.088)
-    fletchShape.lineTo(0, -0.078)
+    fletchShape.lineTo(0.015, 0.014)
+    fletchShape.lineTo(0.012, 0.088)
+    fletchShape.lineTo(0, 0.078)
     fletchShape.closePath()
     const fletching = new THREE.ShapeGeometry(fletchShape)
     fletching.rotateX(Math.PI / 2)
@@ -219,7 +214,6 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
       flowerEmblemGeo: flowerEmblem,
       upperLimbGeo: upperLimb,
       lowerLimbGeo: lowerLimb,
-      tipNockGeo: tipNock,
       arrowShaftGeo: shaft,
       arrowTipGeo: tipExtrude,
       ferruleGeo: ferrule,
@@ -360,26 +354,26 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         // Launch origin from current arrow tip in world coordinates
         const arrowTipPos = new THREE.Vector3()
         if (arrowGroupRef.current) {
-          arrowGroupRef.current.localToWorld(arrowTipPos.set(0, 0, 0.42))
+          arrowGroupRef.current.localToWorld(arrowTipPos.set(0, 0, -0.36))
         } else {
-          arrowTipPos.copy(camPos).addScaledVector(camDir, 0.45)
+          arrowTipPos.copy(camPos).addScaledVector(camDir, 0.6)
         }
 
         const fireDir = targetPoint.clone().sub(arrowTipPos).normalize()
         onFireArrow(arrowTipPos, fireDir, power)
 
         // Recoil kickback animation
-        recoilOffset.current = 0.045 * power
-        recoilRotation.current = -0.065 * power
+        recoilOffset.current = 0.04 * power
+        recoilRotation.current = -0.05 * power
         stringVibration.current = 1.0
 
         isDrawing.current = false
         drawTension.current = 0
         setDrawProgress(0)
 
-        // Reload Cycle (nock fresh arrow onto shelf)
+        // Reload Cycle (fresh arrow slides onto shelf)
         isReloading.current = true
-        reloadTimer.current = 0.35
+        reloadTimer.current = 0.32
       }
 
       if (e.button === 2) {
@@ -430,14 +424,14 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         sound.playArrowNock()
         reloadProgress = 1.0
       } else {
-        reloadProgress = 1.0 - reloadTimer.current / 0.35
+        reloadProgress = 1.0 - reloadTimer.current / 0.32
       }
     }
 
     // 2. Draw Tension Physics
     if (isDrawing.current && isBowEquipped) {
       const prev = drawTension.current
-      drawTension.current = Math.min(1.0, drawTension.current + dt * 2.2)
+      drawTension.current = Math.min(1.0, drawTension.current + dt * 2.4)
       setDrawProgress(drawTension.current)
 
       if (drawTension.current > prev + 0.18) {
@@ -504,9 +498,10 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     // - Arrow rests on inner left shelf, pointing diagonally forward to screen center crosshair.
     const isAiming = (isDrawing.current || useQuestStore.getState().isAiming) && isBowEquipped
 
-    const baseLocalX = isAiming ? 0.20 : 0.23
-    const baseLocalY = isAiming ? -0.15 : -0.17
-    const baseLocalZ = isAiming ? -0.34 : -0.37
+    // Base camera-space coordinates for the bow riser:
+    const baseLocalX = isAiming ? 0.20 : 0.22
+    const baseLocalY = isAiming ? -0.05 : -0.06
+    const baseLocalZ = isAiming ? -0.48 : -0.50
 
     const localX = baseLocalX + swayX.current + bobX + shakeX
     const localY = baseLocalY + swayY.current + bobY + shakeY + (1.0 - equipProgress.current) * -0.5
@@ -515,43 +510,43 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     rigGroupRef.current.position.set(localX, localY, localZ)
 
     // Bow orientation: vertical, slight inward angle toward target
-    const pitchX = -0.04 + recoilRotation.current + swayY.current * 0.25
-    const yawY = -0.09 + swayX.current * 0.35
-    const rollZ = 0.07 // slight natural inward cant (~4 deg)
+    const pitchX = -0.02 + recoilRotation.current + swayY.current * 0.25
+    const yawY = -0.06 + swayX.current * 0.35
+    const rollZ = 0.05 // slight natural inward cant (~3 deg)
 
     rigGroupRef.current.rotation.set(pitchX, yawY, rollZ, 'YXZ')
 
     // ── 6. Dynamic Bow Limb Flexing & Bowstring Clamping ─────────────────────
     const tension = drawTension.current
-    const pullDistance = 0.20 * tension
+    const pullDistance = 0.16 * tension
 
     // String vibration on loose
     stringVibration.current = THREE.MathUtils.damp(stringVibration.current, 0, 14, dt)
-    const vibZ = Math.sin(state.clock.elapsedTime * 95) * 0.006 * stringVibration.current
+    const vibZ = Math.sin(state.clock.elapsedTime * 95) * 0.005 * stringVibration.current
 
     // Limbs flex slightly under tension
-    const limbFlex = tension * 0.06
+    const limbFlex = tension * 0.05
     if (upperLimbRef.current && lowerLimbRef.current) {
       upperLimbRef.current.rotation.x = limbFlex
       lowerLimbRef.current.rotation.x = -limbFlex
     }
 
-    // Limb tips in rig local space
-    const upperTip = new THREE.Vector3(0.025, 0.58 - limbFlex * 0.015, 0.02 + limbFlex * 0.04)
-    const lowerTip = new THREE.Vector3(0.025, -0.54 + limbFlex * 0.015, 0.02 + limbFlex * 0.04)
+    // Limb tips in rig local space:
+    // Upper tip at Y ~ +0.28, Lower tip at Y ~ -0.26
+    const upperTip = new THREE.Vector3(0.04, 0.28 - limbFlex * 0.015, 0.09 + limbFlex * 0.03)
+    const lowerTip = new THREE.Vector3(0.04, -0.26 + limbFlex * 0.015, 0.09 + limbFlex * 0.03)
 
     // Arrow Shelf on the inner-left face of the riser:
-    const shelfPos = new THREE.Vector3(-0.022, 0.025, 0.01)
+    const shelfPos = new THREE.Vector3(-0.022, 0.015, 0.0)
 
-    // Aiming Direction in Rig Space (points toward center crosshair):
+    // Aiming Direction in Rig Space (points forward into screen toward crosshair):
     // In camera space, center crosshair is at (0, 0, -100).
-    // From rig position (0.23, -0.17, -0.37), aim vector points (-0.23, +0.17, -100):
-    const arrowDir = new THREE.Vector3(-0.20, 0.14, -1.0).normalize()
+    const arrowDir = new THREE.Vector3(-0.35, 0.07, -0.93).normalize()
 
     // Arrow Nock clamping to string:
-    // In idle: nock rests ~0.26m behind the shelf.
+    // In idle: nock rests ~0.20m behind the shelf.
     // In draw: pulls backward along -arrowDir by pullDistance.
-    const idleNockDist = 0.26
+    const idleNockDist = 0.20
     const totalNockDist = idleNockDist + pullDistance
 
     const nockPos = new THREE.Vector3(
@@ -567,15 +562,15 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
       } else {
         arrowGroupRef.current.visible = true
 
-        // Orient arrow along arrowDir: local +Z points along arrowDir
+        // Orient arrow along arrowDir: local -Z points along arrowDir
         const arrowQuat = new THREE.Quaternion().setFromUnitVectors(
-          new THREE.Vector3(0, 0, 1),
+          new THREE.Vector3(0, 0, -1),
           arrowDir
         )
         arrowGroupRef.current.quaternion.copy(arrowQuat)
 
-        // In arrow group space:
-        // Broadhead tip is at +0.42, shelf contact at 0.0, nock at -0.32
+        // Arrow position along shelf:
+        // Broadhead tip is at local z = -0.36, shelf at z = 0, nock at z = +0.20
         const currentArrowPos = shelfPos.clone().addScaledVector(arrowDir, -pullDistance)
 
         // Reload animation: arrow slides up onto shelf
@@ -610,61 +605,58 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         <mesh geometry={riserGeo} material={woodMat} position={[0, 0, 0]} castShadow={false} />
 
         {/* Stitched Leather Hand Grip Wrap */}
-        <mesh geometry={gripWrapGeo} material={leatherMat} position={[0, -0.03, 0.005]} />
+        <mesh geometry={gripWrapGeo} material={leatherMat} position={[0, -0.03, 0.004]} />
 
         {/* ── Golden Brass Collars (Signature Aesthetic from Reference Image 9) ─ */}
         {/* Upper Collar Bracket with Embossed Diamond Crest */}
-        <group position={[0, 0.09, 0.005]}>
+        <group position={[0, 0.08, 0.004]}>
           <mesh geometry={upperCollarGeo} material={brassMat} />
           {/* Diamond Heraldic Plaque (❖ motif facing player/camera) */}
-          <group position={[-0.008, 0, 0.024]} rotation={[0, 0.12, 0]}>
+          <group position={[-0.006, 0, 0.022]} rotation={[0, 0.10, 0]}>
             <mesh geometry={diamondCrestGeo} material={brassAccentMat} />
             <mesh geometry={flowerEmblemGeo} material={brassMat} position={[0, 0, 0.002]} />
           </group>
         </group>
 
         {/* Lower Collar Bracket */}
-        <group position={[0, -0.09, 0.005]}>
+        <group position={[0, -0.08, 0.004]}>
           <mesh geometry={lowerCollarGeo} material={brassMat} />
-          <group position={[-0.008, 0, 0.024]} rotation={[0, 0.12, 0]}>
+          <group position={[-0.006, 0, 0.022]} rotation={[0, 0.10, 0]}>
             <mesh geometry={diamondCrestGeo} material={brassAccentMat} />
           </group>
         </group>
 
         {/* ── 2. Upper Recurve Limb ───────────────────────────────────────── */}
-        <group ref={upperLimbRef} position={[0, 0.09, 0]}>
+        <group ref={upperLimbRef} position={[0, 0.08, 0]}>
           <mesh geometry={upperLimbGeo} material={woodMat} />
-          {/* Brass Tip Nock Notch */}
-          <mesh geometry={tipNockGeo} material={brassMat} position={[0.025, 0.48, 0.02]} />
         </group>
 
         {/* ── 3. Lower Recurve Limb ───────────────────────────────────────── */}
-        <group ref={lowerLimbRef} position={[0, -0.09, 0]}>
+        <group ref={lowerLimbRef} position={[0, -0.08, 0]}>
           <mesh geometry={lowerLimbGeo} material={woodMat} />
-          <mesh geometry={tipNockGeo} material={brassMat} position={[0.025, -0.46, 0.02]} />
         </group>
 
         {/* ── 4. Continuous Dynamic Bowstring ─────────────────────────────── */}
         <primitive object={stringLine} />
 
         {/* ── 5. Nocked Hunting Arrow (Cedar Shaft, Razor Tip, White Vanes) ─── */}
-        {/* Arrow rests directly on shelf; local +Z is along flight direction */}
+        {/* Arrow rests directly on shelf; local -Z points forward along flight direction */}
         <group ref={arrowGroupRef}>
-          {/* Cedar Arrow Shaft (Length 0.70m, extends from z = -0.32 to z = +0.38) */}
-          <mesh geometry={arrowShaftGeo} material={arrowShaftMat} position={[0, 0, 0.03]} />
+          {/* Cedar Arrow Shaft (Length 0.68m, centered at z = -0.08, extends from -0.34 to +0.20) */}
+          <mesh geometry={arrowShaftGeo} material={arrowShaftMat} position={[0, 0, -0.08]} />
 
-          {/* Metal Ferrule Collar at base of broadhead (z = +0.38) */}
-          <mesh geometry={ferruleGeo} material={ferruleMat} position={[0, 0, 0.38]} />
+          {/* Metal Ferrule Collar at base of broadhead (z = -0.34) */}
+          <mesh geometry={ferruleGeo} material={ferruleMat} position={[0, 0, -0.34]} />
 
-          {/* Polished Razor Silver Broadhead Blade (sharp tip at z = +0.42, pointing +Z) */}
-          <mesh geometry={arrowTipGeo} material={broadheadMat} position={[0, 0, 0.42]} />
+          {/* Polished Razor Silver Broadhead Blade (sharp tip at z = -0.36, pointing forward -Z) */}
+          <mesh geometry={arrowTipGeo} material={broadheadMat} position={[0, 0, -0.36]} />
 
-          {/* Carved Bone Nock clamped to string (z = -0.32) */}
-          <mesh geometry={arrowNockGeo} material={arrowNockMat} position={[0, 0, -0.32]} />
+          {/* Carved Bone Nock clamped to string (z = +0.20) */}
+          <mesh geometry={arrowNockGeo} material={arrowNockMat} position={[0, 0, 0.20]} />
 
-          {/* 3 White Turkey Feather Fletchings (120 deg apart around rear shaft at z = -0.24) */}
+          {/* 3 White Turkey Feather Fletchings (120 deg apart around rear shaft at z = +0.12) */}
           {[0, (Math.PI * 2) / 3, (Math.PI * 4) / 3].map((angle, i) => (
-            <group key={i} position={[0, 0, -0.24]} rotation={[0, 0, angle]}>
+            <group key={i} position={[0, 0, 0.12]} rotation={[0, 0, angle]}>
               <mesh geometry={fletchingGeo} material={fletchMat} position={[0, 0.005, 0]} />
             </group>
           ))}
