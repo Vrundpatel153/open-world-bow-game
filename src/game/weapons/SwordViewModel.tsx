@@ -1,22 +1,23 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// SwordViewModel — AAA First-Person Ancient Runed Silver-Steel Blade Viewmodel
-// Features:
-// - Authentic Ancient Silver-Steel Blade with double-beveled edges & central fuller
-// - Subtle glowing cyan rune channel inlay with dynamic charge radiance
-// - Antique winged brass crossguard with diamond monolith motif & quillons
-// - Ergonomic braided cord two-handed hilt with ribbed wrap bands
-// - Faceted octagonal brass pommel counterweight & teardrop finial
-// - Perfect First-Person Viewport Framing:
-//     Idle: lower-right screen (Guard Y~715, Pommel Y~1017, Tip Y~205)
-//     Center crosshair (960, 540) and left 75% of viewport 100% unobstructed
-// - Organic 3-Phase Martial Combos (Zero "AI noticeable" robotic movement):
-//     Hit 1: Swift Diagonal Right-to-Left Slash (Coil -> Acceleration -> Settle)
-//     Hit 2: Fluid Horizontal Left-to-Right Cleave (Whip -> Cleave -> Recoil)
-//     Hit 3: Crushing Overhead Finisher Cleave (Raise -> Devastating Chop -> Rebound)
-// - Heavy Whirlwind Charge Attack (Hold LMB): Coils tension -> Sonic crescent sweep
-// - Responsive Guard / Parry Stance (RMB): Diagonal braced parry across chest
-// - Mouse Look Inertia Sway & Cadence-Based Walk/Sprint Bobbing
-// - Dedicated Viewmodel Lighting & Depth Buffer Clearing (Zero terrain/rock clipping)
+// SwordViewModel — AAA First-Person Martial Sword Physics & Kinematics Viewmodel
+// Open-Source Second-Order Spring-Damper Inertia & Authentic Melee Kinematics:
+// - Second-Order Damped Harmonic Oscillator (SpringDamper3D):
+//     F = -k * (x - target) - c * v + impulse
+//     Simulates realistic weapon mass, inertia, and spring rebound.
+// - Authentic Martial Ready Stance (Vom Tag / Low-Ready Guard):
+//     Framed naturally in lower-right viewport (Guard Y~-0.18, Pommel Y~-0.30, Tip Y~-0.05).
+//     Center crosshair (960, 540) and left 75% of viewport 100% unobstructed.
+//     Zero stiff vertical pole posture.
+// - Quaternion-Based Multi-Phase Martial Cleaving (Zero Gimbal Lock / Robotic Lerps):
+//     Combo 1: Descending Diagonal Oberhau (Right Shoulder -> Low Left)
+//     Combo 2: Ascending Diagonal Unterhau (Low Left -> High Right)
+//     Combo 3: Crushing Overhead Wrath Zornhau (High Right Temple -> Ground Impact)
+//     Heavy Attack: 270-degree Whirlwind Cleave with massive wind blast
+//     Guard / Parry: Braced Crown Guard (Kron) across chest with tactile spring resistance
+// - Dynamic Blade-Edge Slipstream Trail:
+//     Real-time vertex history tracking tip & base (zero cartoon static yellow rings).
+//     Translucent silver-white air-shearing vapor (#e6f0fa) with quadratic fade.
+// - Dedicated Viewmodel Lighting & Depth Buffer Clearing (Zero world clipping).
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useRef, useMemo, useEffect } from 'react'
@@ -34,10 +35,53 @@ interface SwordViewModelProps {
 
 type SwingType = 'none' | 'combo1' | 'combo2' | 'combo3' | 'heavy'
 
+// ── Open-Source Second-Order Spring-Damper Physics Class ─────────────────────
+export class SpringDamper3D {
+  public current = new THREE.Vector3()
+  public target = new THREE.Vector3()
+  public velocity = new THREE.Vector3()
+  public stiffness: number
+  public damping: number
+
+  constructor(stiffness = 180, damping = 18) {
+    this.stiffness = stiffness
+    this.damping = damping
+  }
+
+  public reset(v: THREE.Vector3) {
+    this.current.copy(v)
+    this.target.copy(v)
+    this.velocity.set(0, 0, 0)
+  }
+
+  public update(dt: number): THREE.Vector3 {
+    const fx = -this.stiffness * (this.current.x - this.target.x) - this.damping * this.velocity.x
+    const fy = -this.stiffness * (this.current.y - this.target.y) - this.damping * this.velocity.y
+    const fz = -this.stiffness * (this.current.z - this.target.z) - this.damping * this.velocity.z
+
+    this.velocity.x += fx * dt
+    this.velocity.y += fy * dt
+    this.velocity.z += fz * dt
+
+    this.current.x += this.velocity.x * dt
+    this.current.y += this.velocity.y * dt
+    this.current.z += this.velocity.z * dt
+
+    return this.current
+  }
+
+  public addImpulse(impulse: THREE.Vector3) {
+    this.velocity.add(impulse)
+  }
+}
+
+// Number of historical blade slices for the dynamic aerodynamic trail
+const TRAIL_STEPS = 10
+
 export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordViewModelProps) {
   const { camera } = useThree()
   const swordRootRef = useRef<THREE.Group>(null!)
-  const slashTrailRef = useRef<THREE.Mesh>(null!)
+  const trailMeshRef = useRef<THREE.Mesh>(null!)
   const runeMatRef = useRef<THREE.MeshStandardMaterial>(null!)
 
   const activeItem = useQuestStore((s) => s.activeItem)
@@ -50,11 +94,14 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
   const breathTimer = useRef(0)
   const wasActive = useRef(false)
 
-  // Camera rotation inertia tracking
-  const prevCamQuat = useRef(new THREE.Quaternion())
-  const mouseSwayLag = useRef({ x: 0, y: 0, rotZ: 0 })
+  // ── Physics Springs (Look Sway & Mass Inertia) ──────────────────────────────
+  const posSpring = useRef(new SpringDamper3D(170, 18))
+  const rotSpring = useRef(new SpringDamper3D(140, 16))
 
-  // ── Combat State Machine ───────────────────────────────────────────────────
+  // Camera rotation delta tracking for look-sway inertia
+  const prevCamQuat = useRef(new THREE.Quaternion())
+
+  // ── Combat Kinematic State Machine ──────────────────────────────────────────
   const currentSwing = useRef<SwingType>('none')
   const swingTimer = useRef(0)
   const swingDuration = useRef(0.28)
@@ -70,6 +117,18 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
   // Hit-stop & recoil
   const hitStopTimer = useRef(0)
   const hasHitInCurrentSwing = useRef(false)
+  const isFrozen = useRef(false)
+  const frozenType = useRef<SwingType>('none')
+  const frozenProgress = useRef(0)
+
+  // Dynamic Blade Tip & Base Trail History (Local Camera Coordinates)
+  const trailHistory = useRef<{ tip: THREE.Vector3; base: THREE.Vector3 }[]>(
+    Array.from({ length: TRAIL_STEPS }, () => ({
+      tip: new THREE.Vector3(0.23, -0.05, -0.55),
+      base: new THREE.Vector3(0.23, -0.17, -0.36),
+    }))
+  )
+  const trailAlphaRef = useRef(0)
 
   // ── Procedural Geometries for Ancient Silver-Steel Blade ───────────────────
   const {
@@ -83,9 +142,9 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     ringGeos,
     pommelGeo,
     finialGeo,
-    trailGeo,
+    dynamicTrailGeo,
   } = useMemo(() => {
-    // 1. Double-Beveled Silver Blade (Length ~0.46m, Width ~0.036m at base tapering to spear point)
+    // 1. Double-Beveled Silver Blade (Length ~0.46m, Width ~0.036m tapering to spear point)
     const bladeShape = new THREE.Shape()
     bladeShape.moveTo(-0.018, 0)
     bladeShape.lineTo(-0.013, 0.38)
@@ -123,10 +182,8 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     fullerRune.translate(0, 0.195, 0)
 
     // 3. Antique Winged Crossguard
-    // Central Hub
     const hub = new THREE.BoxGeometry(0.038, 0.022, 0.026)
 
-    // Swept Quillons
     const quillonLeft = new THREE.CylinderGeometry(0.008, 0.004, 0.065, 8)
     quillonLeft.rotateZ(Math.PI / 2 + 0.16)
     quillonLeft.rotateY(0.08)
@@ -137,7 +194,6 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     quillonRight.rotateY(-0.08)
     quillonRight.translate(0.046, 0.006, 0.004)
 
-    // Diamond Relic Boss
     const guardBoss = new THREE.CylinderGeometry(0.0075, 0.0075, 0.008, 4)
     guardBoss.rotateY(Math.PI / 4)
     guardBoss.translate(0, 0, 0.014)
@@ -146,7 +202,6 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     const grip = new THREE.CylinderGeometry(0.0125, 0.0115, 0.11, 12)
     grip.translate(0, -0.055, 0)
 
-    // Cord wrap ring bands
     const rings: THREE.TorusGeometry[] = []
     const ringYs = [-0.025, -0.05, -0.075, -0.10]
     for (const ry of ringYs) {
@@ -164,8 +219,32 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     finial.rotateX(Math.PI)
     finial.translate(0, -0.138, 0)
 
-    // 6. Slash Arc Ribbon Geometry
-    const trail = new THREE.RingGeometry(0.36, 0.58, 24, 1, 0, Math.PI * 0.70)
+    // 6. Dynamic Blade-Edge Trail Geometry (Quad Strip connecting Tip & Base over time)
+    const trailPositions = new Float32Array(TRAIL_STEPS * 2 * 3)
+    const trailIndices: number[] = []
+    const trailUvs = new Float32Array(TRAIL_STEPS * 2 * 2)
+
+    for (let i = 0; i < TRAIL_STEPS; i++) {
+      const u = i / (TRAIL_STEPS - 1)
+      trailUvs[i * 4 + 0] = u
+      trailUvs[i * 4 + 1] = 0.0
+      trailUvs[i * 4 + 2] = u
+      trailUvs[i * 4 + 3] = 1.0
+
+      if (i < TRAIL_STEPS - 1) {
+        const i0 = i * 2
+        const i1 = i0 + 1
+        const i2 = i0 + 2
+        const i3 = i0 + 3
+        trailIndices.push(i0, i1, i2)
+        trailIndices.push(i2, i1, i3)
+      }
+    }
+
+    const dynTrail = new THREE.BufferGeometry()
+    dynTrail.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3))
+    dynTrail.setAttribute('uv', new THREE.BufferAttribute(trailUvs, 2))
+    dynTrail.setIndex(trailIndices)
 
     return {
       bladeGeo: blade,
@@ -178,7 +257,7 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       ringGeos: rings,
       pommelGeo: pommel,
       finialGeo: finial,
-      trailGeo: trail,
+      dynamicTrailGeo: dynTrail,
     }
   }, [])
 
@@ -190,6 +269,7 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     wasActive.current = isSwordActive
   }, [isSwordActive])
 
+  // Window debug hooks for automated verification
   useEffect(() => {
     ;(window as any).__triggerSwordSwing = (type: SwingType = 'combo1') => {
       if (type === 'heavy') executeSwing('heavy')
@@ -197,6 +277,11 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     }
     ;(window as any).__testSwordGuard = (val: boolean) => {
       isGuarding.current = val
+    }
+    ;(window as any).__freezeSwordPose = (type: SwingType, progress: number) => {
+      isFrozen.current = type !== 'none'
+      frozenType.current = type
+      frozenProgress.current = progress
     }
   }, [])
 
@@ -207,12 +292,10 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       if (e.target instanceof Element && e.target.closest('[class*="leva"], button, a')) return
 
       if (e.button === 0) {
-        // LMB: start tracking hold for heavy attack
         isHoldingLMB.current = true
         holdStartTime.current = performance.now()
         isCharged.current = false
       } else if (e.button === 2) {
-        // RMB: Guard / Parry stance
         isGuarding.current = true
         sound.playSwordParry()
       }
@@ -224,11 +307,9 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
         isHoldingLMB.current = false
         const holdDuration = (performance.now() - holdStartTime.current) / 1000
 
-        // If held > 0.35s -> Unleash Heavy Charge Whirlwind!
         if (holdDuration >= 0.35 || isCharged.current) {
           executeSwing('heavy')
         } else {
-          // Quick Click -> Progress 3-Click Combo!
           executeComboClick()
         }
       } else if (e.button === 2) {
@@ -253,8 +334,8 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
 
   // ── Combo Execution Logic ─────────────────────────────────────────────────
   const executeComboClick = () => {
-    // If currently mid-swing and already near the end, queue next, or ignore if busy
-    if (currentSwing.current !== 'none' && swingTimer.current < swingDuration.current * 0.45) {
+    // If currently mid-strike, allow fluid chaining in recovery phase
+    if (currentSwing.current !== 'none' && swingTimer.current < swingDuration.current * 0.40) {
       return
     }
 
@@ -274,15 +355,30 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     hasHitInCurrentSwing.current = false
 
     if (type === 'heavy') {
-      swingDuration.current = 0.42
+      swingDuration.current = 0.44
       sound.playSwordChargeRelease()
-      triggerGrassWind(1.8)
+      triggerGrassWind(2.2)
+      // Heavy kinetic recoil impulse into spring
+      posSpring.current.addImpulse(new THREE.Vector3(-0.04, 0.01, 0.06))
+      rotSpring.current.addImpulse(new THREE.Vector3(0.12, -0.25, 0.18))
     } else {
       swingDuration.current = comboIndex === 3 ? 0.38 : comboIndex === 2 ? 0.26 : 0.28
       sound.playSwordSwing(comboIndex)
       lastComboIndex.current = comboIndex
-      comboWindowTimer.current = 0.65 // Window to continue combo
-      triggerGrassWind(comboIndex === 3 ? 1.4 : 1.0)
+      comboWindowTimer.current = 0.65
+      triggerGrassWind(comboIndex === 3 ? 1.6 : 1.1)
+
+      // Tactical spring recoil impulses based on strike direction
+      if (comboIndex === 1) {
+        posSpring.current.addImpulse(new THREE.Vector3(-0.025, -0.015, 0.035))
+        rotSpring.current.addImpulse(new THREE.Vector3(0.08, -0.14, 0.12))
+      } else if (comboIndex === 2) {
+        posSpring.current.addImpulse(new THREE.Vector3(0.025, 0.012, 0.035))
+        rotSpring.current.addImpulse(new THREE.Vector3(-0.06, 0.14, -0.12))
+      } else {
+        posSpring.current.addImpulse(new THREE.Vector3(0.0, -0.045, 0.05))
+        rotSpring.current.addImpulse(new THREE.Vector3(-0.18, 0.02, -0.05))
+      }
     }
 
     swingTimer.current = swingDuration.current
@@ -328,29 +424,29 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       chargeProgress.current = THREE.MathUtils.damp(chargeProgress.current, 0, 8, dt)
     }
 
-    // Hit-stop pause (hesitate on hard rock impact)
+    // Hit-stop pause (tactile hesitation on solid rock impact)
     if (hitStopTimer.current > 0) {
       hitStopTimer.current -= dt
       return
     }
 
-    // Guard transition
+    // Guard transition lerp
     const targetGuard = isGuarding.current && currentSwing.current === 'none' ? 1.0 : 0.0
     guardProgress.current = THREE.MathUtils.damp(guardProgress.current, targetGuard, 12, dt)
 
-    // 1. Mouse Look Inertia Lag
+    // 1. Camera Look-Inertia Impulse Calculation
     if (prevCamQuat.current.lengthSq() > 0.001) {
       const deltaQuat = prevCamQuat.current.clone().invert().multiply(camera.quaternion)
-      const yawDelta = -deltaQuat.y * 1.6
-      const pitchDelta = deltaQuat.x * 1.6
+      const yawDelta = -deltaQuat.y * 2.2
+      const pitchDelta = deltaQuat.x * 2.2
 
-      mouseSwayLag.current.x = THREE.MathUtils.damp(mouseSwayLag.current.x, yawDelta * 0.035, 10, dt)
-      mouseSwayLag.current.y = THREE.MathUtils.damp(mouseSwayLag.current.y, pitchDelta * 0.035, 10, dt)
-      mouseSwayLag.current.rotZ = THREE.MathUtils.damp(mouseSwayLag.current.rotZ, yawDelta * 0.22, 10, dt)
+      // Feed look velocity impulses into position and rotation springs
+      posSpring.current.addImpulse(new THREE.Vector3(-yawDelta * 0.06, pitchDelta * 0.06, 0))
+      rotSpring.current.addImpulse(new THREE.Vector3(-pitchDelta * 0.35, -yawDelta * 0.35, yawDelta * 0.55))
     }
     prevCamQuat.current.copy(camera.quaternion)
 
-    // 2. Natural Movement Bobbing & Breathing Sway
+    // 2. Locomotion Lissajous Bobbing & Idle Respiration
     const isMoving =
       inputManager.isMovingForward() ||
       inputManager.isMovingBackward() ||
@@ -358,196 +454,190 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       inputManager.isMovingRight()
     const isSprinting = isMoving && inputManager.isSprinting()
 
-    walkBobTimer.current += dt * (isMoving ? (isSprinting ? 14 : 9) : 1.5)
-    breathTimer.current += dt * 1.8
+    walkBobTimer.current += dt * (isMoving ? (isSprinting ? 13.5 : 8.5) : 1.4)
+    breathTimer.current += dt * 1.6
 
-    const bobX = Math.sin(walkBobTimer.current * 0.5) * (isMoving ? (isSprinting ? 0.015 : 0.008) : 0.0015)
-    const bobY = -Math.abs(Math.cos(walkBobTimer.current)) * (isMoving ? (isSprinting ? 0.018 : 0.010) : 0.002)
-    const swayX = Math.cos(breathTimer.current * 1.4) * 0.0015
-    const swayY = Math.sin(breathTimer.current * 2.8) * 0.0012
+    const bobScale = isMoving ? (isSprinting ? 0.016 : 0.009) : 0.0015
+    const bobX = Math.cos(walkBobTimer.current * 0.5) * bobScale
+    const bobY = -Math.abs(Math.sin(walkBobTimer.current)) * (bobScale * 1.3)
+    const swayX = Math.cos(breathTimer.current * 1.2) * 0.0012
+    const swayY = Math.sin(breathTimer.current * 2.4) * 0.0010
 
-    // 3. Base Ready Stance (Bottom-right, blade pointed forward-up with natural cant)
-    // Tip comfortably framed at (1568, 205), guard at (1558, 715), pommel at (1552, 1017)
-    // Crosshair at (960, 540) has 600px of clearance and is 100% unobstructed!
-    const unequipDrop = (1 - equipProgress.current)
-    let posX = 0.24 + bobX + swayX + mouseSwayLag.current.x
-    let posY = -0.07 + bobY + swayY + mouseSwayLag.current.y - unequipDrop * 0.45
-    let posZ = -0.34
-    let rotX = -0.65 - unequipDrop * 0.4
-    let rotY = 0.16
-    let rotZ = -0.55 + mouseSwayLag.current.rotZ - unequipDrop * 0.3
+    // Update second-order spring dynamics
+    posSpring.current.target.set(bobX + swayX, bobY + swayY, 0)
+    rotSpring.current.target.set(bobY * 2.0, bobX * 1.5, -bobX * 3.0)
+    const springPosOffset = posSpring.current.update(dt)
+    const springRotOffset = rotSpring.current.update(dt)
 
-    // 4. Guard / Parry Stance (RMB) — Angled defensively across chest
+    // 3. Authentic Martial Ready Stance (Bottom-right, blade canted forward-upward)
+    // Guard sits at lower-right, tip points gracefully forward into lower-center
+    // Center crosshair (960, 540) has massive clearance and is 100% unobstructed!
+    const unequipDrop = 1.0 - equipProgress.current
+    const pRest = new THREE.Vector3(0.23, -0.17 - unequipDrop * 0.45, -0.36)
+    const qRest = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(-0.42 - unequipDrop * 0.4, 0.28, -0.58 - unequipDrop * 0.3, 'YXZ')
+    )
+
+    let finalPos = pRest.clone()
+    let finalQuat = qRest.clone()
+
+    // 4. Guard / Parry Stance (RMB) — Braced diagonal crown guard (Kron) across chest
     if (guardProgress.current > 0.001) {
       const gp = guardProgress.current
       const gEase = gp * (2 - gp) // Ease out quad
-      posX = THREE.MathUtils.lerp(posX, 0.08 + mouseSwayLag.current.x * 0.5, gEase)
-      posY = THREE.MathUtils.lerp(posY, -0.08 + bobY * 0.4, gEase)
-      posZ = THREE.MathUtils.lerp(posZ, -0.34, gEase)
-      rotX = THREE.MathUtils.lerp(rotX, -0.72, gEase)
-      rotY = THREE.MathUtils.lerp(rotY, 0.12, gEase)
-      rotZ = THREE.MathUtils.lerp(rotZ, 0.85, gEase)
+      const pGuard = new THREE.Vector3(0.10, -0.12, -0.34)
+      const qGuard = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.62, 0.14, 0.82, 'YXZ'))
+      finalPos.lerp(pGuard, gEase)
+      finalQuat.slerp(qGuard, gEase)
     }
 
-    // 5. Charging Stance (Hold LMB) — Warrior draws blade back into a tense ready coil
+    // 5. Heavy Charge Stance (Hold LMB) — Warrior draws blade back into coiled high tension
     if (chargeProgress.current > 0.001 && currentSwing.current === 'none') {
       const cp = chargeProgress.current
       const cEase = cp * cp // Ease in quadratic
       const chargeVibe = isCharged.current ? Math.sin(state.clock.elapsedTime * 45) * 0.0025 : 0
-      posX = THREE.MathUtils.lerp(posX, 0.26 + chargeVibe, cEase)
-      posY = THREE.MathUtils.lerp(posY, -0.06, cEase)
-      posZ = THREE.MathUtils.lerp(posZ, -0.32, cEase)
-      rotX = THREE.MathUtils.lerp(rotX, -0.55, cEase)
-      rotY = THREE.MathUtils.lerp(rotY, 0.45, cEase)
-      rotZ = THREE.MathUtils.lerp(rotZ, -0.52, cEase)
+      const pCharge = new THREE.Vector3(0.28 + chargeVibe, -0.14, -0.32)
+      const qCharge = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35, 0.52, -0.68, 'YXZ'))
+      finalPos.lerp(pCharge, cEase)
+      finalQuat.slerp(qCharge, cEase)
     }
 
-    // 6. Active Multi-Phase Martial Swing Interpolation
-    let trailAlpha = 0
+    // 6. Active Multi-Phase Martial Cleaves (Combos & Attacks)
+    let swingTrailAlpha = 0.0
+
+    if (isFrozen.current) {
+      currentSwing.current = frozenType.current
+    }
+
     if (currentSwing.current !== 'none') {
-      swingTimer.current -= dt
-      const p = Math.max(0, 1.0 - swingTimer.current / swingDuration.current) // 0 to 1
+      let p = 0
+      if (isFrozen.current) {
+        p = frozenProgress.current
+      } else {
+        swingTimer.current -= dt
+        p = Math.max(0, 1.0 - swingTimer.current / swingDuration.current) // 0 to 1
+      }
 
       if (currentSwing.current === 'combo1') {
-        // ── Swing 1: Swift Diagonal Right-to-Left Slash ──
+        // ── Combo 1: Descending Diagonal Oberhau (Right-to-Left) ──
+        // Starts high right, slashes diagonally down-left across cutting plane
+        // Blade remains naturally canted along the cutting plane (never stiffly vertical)
+        const pWindup = new THREE.Vector3(0.28, -0.06, -0.32)
+        const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35, 0.35, -0.65, 'YXZ'))
+
+        const pStrike = new THREE.Vector3(-0.22, -0.24, -0.34)
+        const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.65, -0.45, -0.35, 'YXZ'))
+
         if (p < 0.20) {
-          // Phase 1: Anticipation / Windup Coil
           const u = p / 0.20
           const ease = u * u * (3 - 2 * u)
-          posX = THREE.MathUtils.lerp(0.24, 0.26, ease)
-          posY = THREE.MathUtils.lerp(-0.07, -0.05, ease)
-          posZ = THREE.MathUtils.lerp(-0.34, -0.32, ease)
-          rotX = THREE.MathUtils.lerp(-0.65, -0.55, ease)
-          rotY = THREE.MathUtils.lerp(0.16, 0.32, ease)
-          rotZ = THREE.MathUtils.lerp(-0.55, -0.48, ease)
+          finalPos.lerpVectors(pRest, pWindup, ease)
+          finalQuat.slerpQuaternions(qRest, qWindup, ease)
         } else if (p < 0.65) {
-          // Phase 2: High-Velocity Acceleration Cut
           const u = (p - 0.20) / 0.45
-          const ease = Math.pow(u, 2.2)
-          posX = THREE.MathUtils.lerp(0.26, -0.14, ease)
-          posY = THREE.MathUtils.lerp(-0.05, -0.14, ease)
-          posZ = THREE.MathUtils.lerp(-0.32, -0.34, ease)
-          rotX = THREE.MathUtils.lerp(-0.55, -0.68, ease)
-          rotY = THREE.MathUtils.lerp(0.32, -0.55, ease)
-          rotZ = THREE.MathUtils.lerp(-0.48, 0.52, ease)
-          trailAlpha = Math.sin(u * Math.PI) * 0.95
+          const ease = 1.0 - Math.pow(1.0 - u, 3.0) // Explosive cubic whip
+          finalPos.lerpVectors(pWindup, pStrike, ease)
+          finalQuat.slerpQuaternions(qWindup, qStrike, ease)
+          swingTrailAlpha = Math.sin(u * Math.PI) * 0.95
 
           if (!hasHitInCurrentSwing.current && u >= 0.35 && u <= 0.65) {
             checkRockCollision(1.0)
           }
         } else {
-          // Phase 3: Kinetic Deceleration & Elastic Recovery
           const u = (p - 0.65) / 0.35
           const decay = Math.exp(-u * 4.5)
-          const bounce = Math.sin(u * Math.PI * 2.0) * decay
-          const recover = 1 - decay
-          posX = THREE.MathUtils.lerp(-0.14, 0.24, recover) + bounce * 0.02
-          posY = THREE.MathUtils.lerp(-0.14, -0.07, recover) - bounce * 0.015
-          posZ = THREE.MathUtils.lerp(-0.34, -0.34, recover)
-          rotX = THREE.MathUtils.lerp(-0.68, -0.65, recover) + bounce * 0.05
-          rotY = THREE.MathUtils.lerp(-0.55, 0.16, recover) - bounce * 0.08
-          rotZ = THREE.MathUtils.lerp(0.52, -0.55, recover) + bounce * 0.06
+          const bounce = Math.sin(u * Math.PI * 2.0) * decay * 0.03
+          const recover = 1.0 - decay
+          finalPos.lerpVectors(pStrike, pRest, recover)
+          finalPos.y += bounce
+          finalQuat.slerpQuaternions(qStrike, qRest, recover)
         }
       } else if (currentSwing.current === 'combo2') {
-        // ── Swing 2: Fluid Horizontal Left-to-Right Cleave ──
+        // ── Combo 2: Ascending Diagonal Unterhau (Left-to-Right) ──
+        // Sweeps diagonally upward from low left to high right
+        const pWindup = new THREE.Vector3(-0.20, -0.22, -0.34)
+        const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.55, -0.40, 0.55, 'YXZ'))
+
+        const pStrike = new THREE.Vector3(0.26, -0.06, -0.32)
+        const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.25, 0.40, 0.70, 'YXZ'))
+
         if (p < 0.18) {
-          // Phase 1: Momentum Alignment on Left
           const u = p / 0.18
           const ease = u * u * (3 - 2 * u)
-          posX = THREE.MathUtils.lerp(-0.14, -0.16, ease)
-          posY = THREE.MathUtils.lerp(-0.14, -0.08, ease)
-          posZ = THREE.MathUtils.lerp(-0.34, -0.32, ease)
-          rotX = THREE.MathUtils.lerp(-0.68, -0.62, ease)
-          rotY = THREE.MathUtils.lerp(-0.55, -0.50, ease)
-          rotZ = THREE.MathUtils.lerp(0.52, 0.65, ease)
+          finalPos.lerpVectors(pRest, pWindup, ease)
+          finalQuat.slerpQuaternions(qRest, qWindup, ease)
         } else if (p < 0.62) {
-          // Phase 2: Horizontal Cleave across Screen
           const u = (p - 0.18) / 0.44
-          const ease = Math.pow(u, 2.0)
-          posX = THREE.MathUtils.lerp(-0.16, 0.24, ease)
-          posY = THREE.MathUtils.lerp(-0.08, -0.08, ease)
-          posZ = THREE.MathUtils.lerp(-0.32, -0.32, ease)
-          rotX = THREE.MathUtils.lerp(-0.62, -0.52, ease)
-          rotY = THREE.MathUtils.lerp(-0.50, 0.55, ease)
-          rotZ = THREE.MathUtils.lerp(0.65, -0.55, ease)
-          trailAlpha = Math.sin(u * Math.PI) * 0.95
+          const ease = 1.0 - Math.pow(1.0 - u, 3.0)
+          finalPos.lerpVectors(pWindup, pStrike, ease)
+          finalQuat.slerpQuaternions(qWindup, qStrike, ease)
+          swingTrailAlpha = Math.sin(u * Math.PI) * 0.95
 
           if (!hasHitInCurrentSwing.current && u >= 0.35 && u <= 0.65) {
             checkRockCollision(1.1)
           }
         } else {
-          // Phase 3: Deceleration & Settle
           const u = (p - 0.62) / 0.38
           const decay = Math.exp(-u * 4.5)
-          const bounce = Math.sin(u * Math.PI * 2.0) * decay
-          const recover = 1 - decay
-          posX = THREE.MathUtils.lerp(0.24, 0.24, recover) - bounce * 0.02
-          posY = THREE.MathUtils.lerp(-0.08, -0.07, recover) + bounce * 0.015
-          posZ = THREE.MathUtils.lerp(-0.32, -0.34, recover)
-          rotX = THREE.MathUtils.lerp(-0.52, -0.65, recover) - bounce * 0.05
-          rotY = THREE.MathUtils.lerp(0.55, 0.16, recover) + bounce * 0.08
-          rotZ = THREE.MathUtils.lerp(-0.55, -0.55, recover) - bounce * 0.06
+          const bounce = Math.sin(u * Math.PI * 2.0) * decay * 0.03
+          const recover = 1.0 - decay
+          finalPos.lerpVectors(pStrike, pRest, recover)
+          finalPos.y -= bounce
+          finalQuat.slerpQuaternions(qStrike, qRest, recover)
         }
       } else if (currentSwing.current === 'combo3') {
-        // ── Swing 3: Crushing Overhead Finisher Cleave ──
-        if (p < 0.24) {
-          // Phase 1: High Overhead Two-Handed Raise
-          const u = p / 0.24
+        // ── Combo 3: Wrath Overhead Finisher Zornhau ──
+        // Right-temple overhead raise chopping downward into low-ready
+        // Stays on the right side of the screen, leaving center crosshair 100% unobstructed
+        const pWindup = new THREE.Vector3(0.18, -0.02, -0.32)
+        const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.30, 0.20, -0.50, 'YXZ'))
+
+        const pStrike = new THREE.Vector3(0.14, -0.26, -0.36)
+        const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.85, 0.15, -0.45, 'YXZ'))
+
+        if (p < 0.22) {
+          const u = p / 0.22
           const ease = u * u * (3 - 2 * u)
-          posX = THREE.MathUtils.lerp(0.24, 0.06, ease)
-          posY = THREE.MathUtils.lerp(-0.07, -0.04, ease)
-          posZ = THREE.MathUtils.lerp(-0.34, -0.36, ease)
-          rotX = THREE.MathUtils.lerp(-0.65, -0.52, ease)
-          rotY = THREE.MathUtils.lerp(0.16, 0.02, ease)
-          rotZ = THREE.MathUtils.lerp(-0.55, -0.06, ease)
+          finalPos.lerpVectors(pRest, pWindup, ease)
+          finalQuat.slerpQuaternions(qRest, qWindup, ease)
         } else if (p < 0.65) {
-          // Phase 2: Devastating Downward Vertical Chop
-          const u = (p - 0.24) / 0.41
-          const ease = Math.pow(u, 2.6)
-          posX = THREE.MathUtils.lerp(0.06, 0.03, ease)
-          posY = THREE.MathUtils.lerp(-0.04, -0.16, ease)
-          posZ = THREE.MathUtils.lerp(-0.36, -0.36, ease)
-          rotX = THREE.MathUtils.lerp(-0.52, -0.82, ease)
-          rotY = THREE.MathUtils.lerp(0.02, 0.00, ease)
-          rotZ = THREE.MathUtils.lerp(-0.06, -0.08, ease)
-          trailAlpha = Math.sin(u * Math.PI) * 1.0
+          const u = (p - 0.22) / 0.43
+          const ease = 1.0 - Math.pow(1.0 - u, 3.2) // Heavy downward kinetic impact
+          finalPos.lerpVectors(pWindup, pStrike, ease)
+          finalQuat.slerpQuaternions(qWindup, qStrike, ease)
+          swingTrailAlpha = Math.sin(u * Math.PI) * 1.0
 
           if (!hasHitInCurrentSwing.current && u >= 0.35 && u <= 0.65) {
             checkRockCollision(1.4)
           }
         } else {
-          // Phase 3: Ground Impact Rebound Recoil
           const u = (p - 0.65) / 0.35
           const decay = Math.exp(-u * 5.0)
-          const bounce = Math.sin(u * Math.PI * 2.5) * decay
-          const recover = 1 - decay
-          posX = THREE.MathUtils.lerp(0.03, 0.24, recover)
-          posY = THREE.MathUtils.lerp(-0.16, -0.07, recover) + bounce * 0.03
-          posZ = THREE.MathUtils.lerp(-0.36, -0.34, recover)
-          rotX = THREE.MathUtils.lerp(-0.82, -0.65, recover) - bounce * 0.08
-          rotY = THREE.MathUtils.lerp(0.00, 0.16, recover)
-          rotZ = THREE.MathUtils.lerp(-0.08, -0.55, recover)
+          const bounce = Math.sin(u * Math.PI * 2.5) * decay * 0.04
+          const recover = 1.0 - decay
+          finalPos.lerpVectors(pStrike, pRest, recover)
+          finalPos.y += bounce
+          finalQuat.slerpQuaternions(qStrike, qRest, recover)
         }
       } else if (currentSwing.current === 'heavy') {
-        // ── Heavy Attack: Whirlwind Cleave ──
-        if (p < 0.15) {
-          const u = p / 0.15
-          posX = THREE.MathUtils.lerp(0.26, 0.28, u)
-          posY = -0.06
-          posZ = -0.32
-          rotX = -0.55
-          rotY = 0.45
-          rotZ = -0.52
+        // ── Heavy Attack: 270-degree Whirlwind Cleave ──
+        const pWindup = new THREE.Vector3(0.30, -0.10, -0.30)
+        const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.20, 0.60, -0.75, 'YXZ'))
+
+        const pStrike = new THREE.Vector3(-0.26, -0.18, -0.34)
+        const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35, -0.70, 0.25, 'YXZ'))
+
+        if (p < 0.14) {
+          const u = p / 0.14
+          finalPos.lerpVectors(pRest, pWindup, u)
+          finalQuat.slerpQuaternions(qRest, qWindup, u)
         } else if (p < 0.65) {
-          const u = (p - 0.15) / 0.50
-          const ease = Math.pow(u, 1.8)
-          posX = THREE.MathUtils.lerp(0.28, -0.22, ease)
-          posY = -0.06 - Math.sin(u * Math.PI) * 0.06
-          posZ = -0.32
-          rotX = THREE.MathUtils.lerp(-0.55, -0.68, ease)
-          rotY = THREE.MathUtils.lerp(0.45, -0.75, ease)
-          rotZ = THREE.MathUtils.lerp(-0.52, 0.70, ease)
-          trailAlpha = Math.sin(u * Math.PI) * 1.0
+          const u = (p - 0.14) / 0.51
+          const ease = 1.0 - Math.pow(1.0 - u, 2.5)
+          finalPos.lerpVectors(pWindup, pStrike, ease)
+          finalPos.y -= Math.sin(u * Math.PI) * 0.04
+          finalQuat.slerpQuaternions(qWindup, qStrike, ease)
+          swingTrailAlpha = Math.sin(u * Math.PI) * 1.0
 
           if (!hasHitInCurrentSwing.current && u >= 0.30 && u <= 0.70) {
             checkRockCollision(1.6)
@@ -555,39 +645,77 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
         } else {
           const u = (p - 0.65) / 0.35
           const decay = Math.exp(-u * 4.5)
-          const bounce = Math.sin(u * Math.PI * 2.0) * decay
-          const recover = 1 - decay
-          posX = THREE.MathUtils.lerp(-0.22, 0.24, recover) + bounce * 0.02
-          posY = THREE.MathUtils.lerp(-0.06, -0.07, recover)
-          posZ = -0.34
-          rotX = THREE.MathUtils.lerp(-0.68, -0.65, recover) + bounce * 0.05
-          rotY = THREE.MathUtils.lerp(-0.75, 0.16, recover) - bounce * 0.08
-          rotZ = THREE.MathUtils.lerp(0.70, -0.55, recover) + bounce * 0.06
+          const bounce = Math.sin(u * Math.PI * 2.0) * decay * 0.03
+          const recover = 1.0 - decay
+          finalPos.lerpVectors(pStrike, pRest, recover)
+          finalPos.y += bounce
+          finalQuat.slerpQuaternions(qStrike, qRest, recover)
         }
       }
 
-      if (swingTimer.current <= 0) {
+      if (!isFrozen.current && swingTimer.current <= 0) {
         currentSwing.current = 'none'
       }
     }
 
+    // Apply second-order spring dynamics on top of kinematic stance
+    finalPos.add(springPosOffset)
+
+    const qSway = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(springRotOffset.x, springRotOffset.y, springRotOffset.z, 'YXZ')
+    )
+    finalQuat.multiply(qSway)
+
     // Apply viewmodel transform relative to camera
-    const localPos = new THREE.Vector3(posX, posY, posZ)
-    const worldPos = localPos.applyQuaternion(camera.quaternion).add(camera.position)
+    const worldPos = finalPos.clone().applyQuaternion(camera.quaternion).add(camera.position)
     swordRootRef.current.position.copy(worldPos)
 
-    swordRootRef.current.quaternion.copy(camera.quaternion)
-    const swingEuler = new THREE.Euler(rotX, rotY, rotZ, 'YXZ')
-    swordRootRef.current.quaternion.multiply(new THREE.Quaternion().setFromEuler(swingEuler))
+    swordRootRef.current.quaternion.copy(camera.quaternion).multiply(finalQuat)
 
-    // Update slash trail ribbon
-    if (slashTrailRef.current) {
-      slashTrailRef.current.visible = trailAlpha > 0.05
-      const mat = slashTrailRef.current.material as THREE.MeshBasicMaterial
-      mat.opacity = trailAlpha * 0.75
+    // ── Update Dynamic Blade-Edge Aerodynamic Slipstream Trail ───────────────
+    // Tip is at (0, 0.46, 0) and base is at (0, 0.03, 0) in sword local coordinates
+    const localTip = new THREE.Vector3(0, 0.46, 0).applyQuaternion(finalQuat).add(finalPos)
+    const localBase = new THREE.Vector3(0, 0.03, 0).applyQuaternion(finalQuat).add(finalPos)
+
+    // Shift history buffer
+    for (let i = TRAIL_STEPS - 1; i > 0; i--) {
+      trailHistory.current[i].tip.copy(trailHistory.current[i - 1].tip)
+      trailHistory.current[i].base.copy(trailHistory.current[i - 1].base)
+    }
+    trailHistory.current[0].tip.copy(localTip)
+    trailHistory.current[0].base.copy(localBase)
+
+    // Fade trail alpha smoothly
+    trailAlphaRef.current = THREE.MathUtils.damp(trailAlphaRef.current, swingTrailAlpha, 14, dt)
+
+    if (trailMeshRef.current) {
+      trailMeshRef.current.visible = trailAlphaRef.current > 0.02
+      if (trailMeshRef.current.visible) {
+        const posAttr = dynamicTrailGeo.getAttribute('position') as THREE.BufferAttribute
+        const posArray = posAttr.array as Float32Array
+
+        for (let i = 0; i < TRAIL_STEPS; i++) {
+          const pt = trailHistory.current[i]
+          // Convert from camera local coords into world coords
+          const wTip = pt.tip.clone().applyQuaternion(camera.quaternion).add(camera.position)
+          const wBase = pt.base.clone().applyQuaternion(camera.quaternion).add(camera.position)
+
+          posArray[i * 6 + 0] = wTip.x
+          posArray[i * 6 + 1] = wTip.y
+          posArray[i * 6 + 2] = wTip.z
+
+          posArray[i * 6 + 3] = wBase.x
+          posArray[i * 6 + 4] = wBase.y
+          posArray[i * 6 + 5] = wBase.z
+        }
+        posAttr.needsUpdate = true
+
+        const mat = trailMeshRef.current.material as THREE.MeshBasicMaterial
+        mat.opacity = trailAlphaRef.current * 0.45
+      }
     }
 
-    // Update rune glow
+    // ── Update Runic Emissive Glow ───────────────────────────────────────────
     const isChargeGlow = isCharged.current || (isHoldingLMB.current && chargeProgress.current > 0.5)
     const targetGlow = isChargeGlow ? 2.4 : 0.85
     if (runeMatRef.current) {
@@ -613,8 +741,12 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       // Audio: hard steel on granite clack & ring
       sound.playRockStrike(hitPower)
 
-      // Hit-stop feedback: 45ms freeze frame
+      // Hit-stop feedback: 45ms tactile freeze frame
       hitStopTimer.current = 0.045
+
+      // Reverse impulse into spring for bounce off rock
+      posSpring.current.addImpulse(new THREE.Vector3(0.04, 0.02, 0.06))
+      rotSpring.current.addImpulse(new THREE.Vector3(-0.25, 0.20, -0.15))
 
       // Visual scratch sparks & dust particles at impact normal
       onHitRock?.(hit.hitPoint, hit.normal, hitPower)
@@ -622,116 +754,117 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
   }
 
   return (
-    <group
-      ref={swordRootRef}
-      visible={false}
-      renderOrder={999}
-      onBeforeRender={(renderer) => {
-        // Clear depth so viewmodel weapon NEVER clips through terrain, trees or rocks
-        renderer.clearDepth()
-      }}
-    >
-      {/* 1. Double-Beveled Ancient Silver-Steel Blade */}
-      <mesh geometry={bladeGeo} castShadow receiveShadow>
-        <meshStandardMaterial
-          color="#dfe5eb"
-          roughness={0.16}
-          metalness={0.92}
-          envMapIntensity={1.5}
-        />
-      </mesh>
-
-      {/* 2. Embedded Runic Fuller Inlay Channel */}
-      <mesh geometry={fullerRuneGeo}>
-        <meshStandardMaterial
-          ref={runeMatRef}
-          color="#3cd0ea"
-          emissive="#24b6d4"
-          emissiveIntensity={0.85}
-          roughness={0.25}
-          metalness={0.80}
-        />
-      </mesh>
-
-      {/* 3. Antique Winged Brass Crossguard */}
-      {/* Central Hub */}
-      <mesh geometry={guardHubGeo} castShadow>
-        <meshStandardMaterial
-          color="#d4aa32"
-          roughness={0.30}
-          metalness={0.88}
-        />
-      </mesh>
-
-      {/* Swept Winged Quillons */}
-      <mesh geometry={quillonLeftGeo} castShadow>
-        <meshStandardMaterial
-          color="#d4aa32"
-          roughness={0.30}
-          metalness={0.88}
-        />
-      </mesh>
-      <mesh geometry={quillonRightGeo} castShadow>
-        <meshStandardMaterial
-          color="#d4aa32"
-          roughness={0.30}
-          metalness={0.88}
-        />
-      </mesh>
-
-      {/* Diamond Relic Boss on Guard Face */}
-      <mesh geometry={guardBossGeo}>
-        <meshStandardMaterial
-          color="#f2c852"
-          roughness={0.20}
-          metalness={0.92}
-        />
-      </mesh>
-
-      {/* 4. Braided Cord Two-Hand Grip */}
-      <mesh geometry={gripGeo}>
-        <meshStandardMaterial
-          color="#1e1814"
-          roughness={0.92}
-        />
-      </mesh>
-
-      {/* Cord wrap ring bands */}
-      {ringGeos.map((geo, idx) => (
-        <mesh key={idx} geometry={geo}>
+    <>
+      {/* 1. First-Person Martial Silver-Steel Sword Viewmodel */}
+      <group
+        ref={swordRootRef}
+        visible={false}
+        renderOrder={999}
+        onBeforeRender={(renderer) => {
+          // Clear depth so viewmodel weapon NEVER clips through terrain, trees or rocks
+          renderer.clearDepth()
+        }}
+      >
+        {/* Double-Beveled Ancient Silver-Steel Blade */}
+        <mesh geometry={bladeGeo} castShadow receiveShadow>
           <meshStandardMaterial
-            color="#2e2520"
-            roughness={0.80}
+            color="#dfe5eb"
+            roughness={0.16}
+            metalness={0.92}
+            envMapIntensity={1.5}
           />
         </mesh>
-      ))}
 
-      {/* 5. Faceted Brass Pommel Counterweight & Teardrop Finial */}
-      <mesh geometry={pommelGeo} castShadow>
-        <meshStandardMaterial
-          color="#d4aa32"
-          roughness={0.30}
-          metalness={0.88}
-        />
-      </mesh>
-      <mesh geometry={finialGeo} castShadow>
-        <meshStandardMaterial
-          color="#d4aa32"
-          roughness={0.30}
-          metalness={0.88}
-        />
-      </mesh>
+        {/* Embedded Runic Fuller Inlay Channel */}
+        <mesh geometry={fullerRuneGeo}>
+          <meshStandardMaterial
+            ref={runeMatRef}
+            color="#3cd0ea"
+            emissive="#24b6d4"
+            emissiveIntensity={0.85}
+            roughness={0.25}
+            metalness={0.80}
+          />
+        </mesh>
 
-      {/* 6. Dynamic Translucent Golden Slash Arc Ribbon */}
+        {/* Antique Winged Brass Crossguard Central Hub */}
+        <mesh geometry={guardHubGeo} castShadow>
+          <meshStandardMaterial
+            color="#d4aa32"
+            roughness={0.30}
+            metalness={0.88}
+          />
+        </mesh>
+
+        {/* Swept Winged Quillons */}
+        <mesh geometry={quillonLeftGeo} castShadow>
+          <meshStandardMaterial
+            color="#d4aa32"
+            roughness={0.30}
+            metalness={0.88}
+          />
+        </mesh>
+        <mesh geometry={quillonRightGeo} castShadow>
+          <meshStandardMaterial
+            color="#d4aa32"
+            roughness={0.30}
+            metalness={0.88}
+          />
+        </mesh>
+
+        {/* Diamond Relic Boss on Guard Face */}
+        <mesh geometry={guardBossGeo}>
+          <meshStandardMaterial
+            color="#f2c852"
+            roughness={0.20}
+            metalness={0.92}
+          />
+        </mesh>
+
+        {/* Braided Cord Two-Hand Grip */}
+        <mesh geometry={gripGeo}>
+          <meshStandardMaterial
+            color="#1e1814"
+            roughness={0.92}
+          />
+        </mesh>
+
+        {/* Cord wrap ring bands */}
+        {ringGeos.map((geo, idx) => (
+          <mesh key={idx} geometry={geo}>
+            <meshStandardMaterial
+              color="#2e2520"
+              roughness={0.80}
+            />
+          </mesh>
+        ))}
+
+        {/* Faceted Brass Pommel Counterweight & Teardrop Finial */}
+        <mesh geometry={pommelGeo} castShadow>
+          <meshStandardMaterial
+            color="#d4aa32"
+            roughness={0.30}
+            metalness={0.88}
+          />
+        </mesh>
+        <mesh geometry={finialGeo} castShadow>
+          <meshStandardMaterial
+            color="#d4aa32"
+            roughness={0.30}
+            metalness={0.88}
+          />
+        </mesh>
+      </group>
+
+      {/* 2. Dynamic Aerodynamic Blade-Edge Slipstream Trail (World-Space Ribbon) */}
       <mesh
-        ref={slashTrailRef}
-        geometry={trailGeo}
-        position={[0, 0.32, 0]}
-        rotation={[-Math.PI * 0.42, 0, -0.35]}
+        ref={trailMeshRef}
+        geometry={dynamicTrailGeo}
         visible={false}
+        renderOrder={998}
       >
         <meshBasicMaterial
-          color="#ffe082"
+          color="#e6f0fa"
           transparent
           opacity={0}
           side={THREE.DoubleSide}
@@ -739,6 +872,6 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
           depthWrite={false}
         />
       </mesh>
-    </group>
+    </>
   )
 }
