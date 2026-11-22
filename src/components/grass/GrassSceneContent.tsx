@@ -1,5 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GrassSceneContent — Open World FPS Environment with Dynamic Day-Night Cycle
+// GrassSceneContent — Open World FPS Environment with Dynamic Celestial Orbit
+// Synchronizes real-time moving sun/moon trajectories with directional lighting,
+// volumetric sky dome shaders, dense gapless grassland & ancient forest groves.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Suspense, useCallback, useState, useRef } from "react";
@@ -15,7 +17,6 @@ import {
   SKY_PRESETS,
 } from "@/components/skyDome/constants";
 import GrassField from "@/components/grassField";
-import { useGrassBreakdown } from "@/components/grassField/debug/GrassBreakdown";
 import GrassLighting from "./GrassLighting";
 import ShadowController from "./ShadowController";
 import ProductionFPSController from "@/components/character/ProductionFPSController";
@@ -53,11 +54,15 @@ export default function GrassSceneContent({
   onPhaseChange,
   onFogColorChange,
 }: GrassSceneContentProps) {
-  // Breakdown visualisers
-  const { hideField, view } = useGrassBreakdown();
-
   // Arrow System Ref for weapon firing
   const arrowSystemRef = useRef<ArrowSystemHandle>(null);
+
+  // Celestial Orbit Trajectory States (Continuous Sun & Moon Movement)
+  const sunDirRef = useRef(new THREE.Vector3(0, 1, 0));
+  const sunColorRef = useRef(new THREE.Color("#fff8eb"));
+  const [sunIntensity, setSunIntensity] = useState(3.1);
+  const [sunElev, setSunElev] = useState(55);
+  const [sunAzim, setSunAzim] = useState(180);
 
   // Blend State for Autonomous Day-Night Cycle
   const blendStateRef = useRef<BlendState>({
@@ -101,21 +106,32 @@ export default function GrassSceneContent({
       {/* ── 4 Ancient Rune Shrines & Floating Guardian Bell Targets ──────── */}
       <ShrineMonoliths playerPosRef={playerPosRef} />
 
-      {/* ── Lighting & Shadows ───────────────────────────────────────────── */}
-      <GrassLighting preset={activePreset} />
+      {/* ── Dynamic Orbiting Sunlight, Moonlight & Sweeping Shadows ─────── */}
+      <GrassLighting
+        preset={activePreset}
+        sunDir={sunDirRef.current}
+        sunColor={sunColorRef.current}
+        sunIntensity={sunIntensity}
+      />
       <ShadowController rebakeSignal={bakeSignal} />
 
       {/* ── Ambient IBL Environment ──────────────────────────────────────── */}
       <SceneEnvironment
-        folder="Grass Environment"
         mode={mode}
         background={false}
         defaults={{ preset: "night", envIntensity: 0 }}
       />
 
-      {/* ── Autonomous Real-Time Day-Night Cycle Engine ─────────────────── */}
+      {/* ── Autonomous Celestial Day-Night Cycle & Orbital Sun Engine ───── */}
       <DayCycleSystem
         blendStateRef={blendStateRef}
+        onSunMove={(dir, color, intensity, elev, azim) => {
+          sunDirRef.current.copy(dir);
+          sunColorRef.current.copy(color);
+          setSunIntensity(intensity);
+          setSunElev(elev);
+          setSunAzim(azim);
+        }}
         onPhaseChange={(nextMode, nextPreset, phaseName) => {
           onPresetChange(nextPreset);
           onPhaseChange?.(nextMode, nextPreset, phaseName);
@@ -123,41 +139,37 @@ export default function GrassSceneContent({
         onFogColorChange={onFogColorChange}
       />
 
-      {/* ── Volumetric SkyDome (FBM Clouds, Sun/Moon, Gradient, Stars) ───── */}
+      {/* ── Volumetric SkyDome with Smooth Moving Sun & Moon Discs ──────── */}
       <SkyDome
         defaultMode="day"
         targetMode={skyMode}
         blendStateRef={blendStateRef}
+        moonElevOverride={sunElev}
+        moonAzimOverride={sunAzim}
         onPresetChange={onPresetChange}
       />
 
       {/* ── 3D Environments ──────────────────────────────────────────────── */}
       <Suspense fallback={null}>
-        {!hideField && (
-          <>
-            {/* 1. Exact Cortiz Diorama Model (grass-scene.glb) */}
-            <GrassField
-              preset={grassPreset}
-              wireframe={mode === "Frame"}
-              onLoaded={handleModelLoaded}
-              playerPosRef={playerPosRef}
-            />
+        {/* 1. Exact Cortiz Diorama Model (grass-scene.glb) */}
+        <GrassField
+          preset={grassPreset}
+          wireframe={false}
+          onLoaded={handleModelLoaded}
+          playerPosRef={playerPosRef}
+        />
 
-            {/* 2. Expanded Open World with Multiplied Exact Textures & Shaders */}
-            {isFirstPerson && (
-              <OpenWorldGrassField
-                preset={grassPreset}
-                playerPosRef={playerPosRef}
-              />
-            )}
-          </>
+        {/* 2. Expanded Open World with 54,000 Dense Gapless Blades & Ancient Forest */}
+        {isFirstPerson && (
+          <OpenWorldGrassField
+            preset={grassPreset}
+            playerPosRef={playerPosRef}
+          />
         )}
-        {view}
       </Suspense>
 
-      {/* ── Calibrated Stylized Bloom (High-Threshold, Glowing Runes & Beacons Only) ─ */}
+      {/* ── Calibrated Stylized Bloom (Glowing Runes & Celestial Discs Only) ─ */}
       <PostProcessing
-        folder="Grass Postprocessing"
         defaults={{ intensity: 0.85, radius: 0.28, threshold: 0.85 }}
       />
     </>

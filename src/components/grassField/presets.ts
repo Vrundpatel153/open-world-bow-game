@@ -31,34 +31,34 @@ export const GRASS_PRESETS: Record<string, GrassPreset> = {
     label: "Spring",
     values: {
       // Blades (rebuilds)
-      grMinWidth: 0.06,
-      grMaxWidth: 0.06,
-      grMinLength: 0.15,
-      grMaxLength: 0.25,
-      // Color
-      grColorBottom: "#4f7c13",
-      grColorTop: "#79a01c",
-      grGradStart: 0.15,
+      grMinWidth: 0.18,
+      grMaxWidth: 0.28,
+      grMinLength: 0.55,
+      grMaxLength: 0.88,
+      // Color - Lush deep emerald meadow
+      grColorBottom: "#2f5712",
+      grColorTop: "#82ac1e",
+      grGradStart: 0.12,
       grGradEnd: 1.0,
-      grBrightness: 0.8,
-      // Ground
-      grDirtColor: "#ac956c",
-      grDirtCoverage: 0.41,
-      grDirtScale: 0.4,
-      grDirtSoftness: 0.06,
-      grDirtCut: 1.0,
-      grDirtBlend: 0.8,
-      grGndVarColor: "#c4a77d",
-      grGndVarStrength: 0.9,
-      // Translucency
+      grBrightness: 0.92,
+      // Ground - Rich living turf without barren mud craters
+      grDirtColor: "#284411",
+      grDirtCoverage: 0.04,
+      grDirtScale: 0.25,
+      grDirtSoftness: 0.12,
+      grDirtCut: 0.15,
+      grDirtBlend: 0.45,
+      grGndVarColor: "#3a6316",
+      grGndVarStrength: 0.65,
+      // Translucency (Subsurface sun scatter)
       grTransColor: "#c1e54d",
-      grTransStrength: 2.5,
-      // Wind
-      grWindStrength: 0.1,
-      grWindSpeed: 1.3,
-      // Pine leaves
-      grLeafBottom: "#1c3b23",
-      grLeafTop: "#5c8338",
+      grTransStrength: 2.8,
+      // Wind (Dynamic waving meadow ripples)
+      grWindStrength: 0.16,
+      grWindSpeed: 1.35,
+      // Pine leaves (Dense, rich evergreen canopy)
+      grLeafBottom: "#153018",
+      grLeafTop: "#4b7a28",
     },
   },
 

@@ -54,43 +54,18 @@ interface PostProcessingProps {
 
 export default function PostProcessing({
   defaults,
-  folder: folderName = "Postprocessing",
   children,
   after,
   autoClear = true,
   bloom = true,
 }: PostProcessingProps = {}) {
-  const { mipmapBlur, intensity, radius, threshold } = useControls(folderName, {
-    mipmapBlur: { value: defaults?.mipmapBlur ?? true, label: "Mipmap Blur" },
-    intensity: {
-      value: defaults?.intensity ?? 1.1,
-      min: 0,
-      max: 10,
-      step: 0.05,
-      label: "Intensity",
-    },
-    radius: {
-      value: defaults?.radius ?? 0.65,
-      min: 0,
-      max: 1,
-      step: 0.01,
-      label: "Radius",
-    },
-    threshold: {
-      value: defaults?.threshold ?? 0.33,
-      min: 0,
-      max: 3,
-      step: 0.01,
-      label: "Threshold",
-    },
-  });
+  const mipmapBlur = defaults?.mipmapBlur ?? true;
+  const intensity = defaults?.intensity ?? 0.85;
+  const radius = defaults?.radius ?? 0.28;
+  const threshold = defaults?.threshold ?? 0.85;
 
   return (
     <EffectComposer autoClear={autoClear}>
-      {/* Wrapped in a fragment: the composer types each child as a single
-          element, and this way "none" and "several" both satisfy that. It
-          collects passes by walking the objects underneath, so the extra
-          fragment costs nothing. */}
       <>{children}</>
       <Bloom
         mipmapBlur={mipmapBlur}

@@ -41,7 +41,8 @@ canvas {
   touch-action: none;
 }
 
-/* Leva panel override — keep it accessible */
-[class^="leva-"] {
-  z-index: 100 !important;
+/* Hide all Leva editing panels permanently */
+[class^="leva-"], .leva__panel {
+  display: none !important;
+  pointer-events: none !important;
 }

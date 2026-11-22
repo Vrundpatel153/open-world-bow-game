@@ -37,32 +37,11 @@ export default function SceneEnvironment({
   mode,
   background,
   defaults,
-  folder: folderName = "Environment",
 }: SceneEnvironmentProps) {
-  const { preset, bgBlurriness, bgIntensity, envIntensity } = useControls(
-    folderName,
-    {
-      preset: {
-        value: (defaults?.preset ?? "park") as EnvPreset,
-        options: [
-          "apartment",
-          "city",
-          "dawn",
-          "forest",
-          "lobby",
-          "night",
-          "park",
-          "studio",
-          "sunset",
-          "warehouse",
-        ] as EnvPreset[],
-        label: "Preset",
-      },
-      bgBlurriness: { value: defaults?.bgBlurriness ?? 0.9, min: 0, max: 1, step: 0.01, label: "Bg Blur" },
-      bgIntensity: { value: defaults?.bgIntensity ?? 0.3, min: 0, max: 2, step: 0.05, label: "Bg Intensity" },
-      envIntensity: { value: defaults?.envIntensity ?? 1, min: 0, max: 3, step: 0.05, label: "Env Intensity" },
-    },
-  );
+  const preset = (defaults?.preset ?? "park") as EnvPreset;
+  const bgBlurriness = defaults?.bgBlurriness ?? 0.9;
+  const bgIntensity = defaults?.bgIntensity ?? 0.3;
+  const envIntensity = defaults?.envIntensity ?? 0;
 
   return (
     <Environment

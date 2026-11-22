@@ -1,9 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// OpenWorldGrassField — Optimized Open World Stylized 3JS Foliage System
-// Genuine 3D pine trees & rocks cloned directly from grass-scene.glb,
-// wide lush GPU instanced grass blades, wildflowers, winding cobblestone paths,
-// and real-time player grass trampling.
-// Optimized for rock-solid 60+ FPS: Zero GC allocations in useFrame, cached lighting.
+// OpenWorldGrassField — Production Stylized Foliage & Ancient Forest System
+// Features: 54,000 dense, overlapping wind-animated blades with ZERO plain gaps,
+// rich multi-tier conifer forests, cobblestone trail markers, and real-time trampling.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useMemo, useRef } from 'react'
@@ -12,7 +10,6 @@ import { useGLTF, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 
 import { createGrassFieldUniforms } from '../grassField/uniforms'
-import { GRASS_PRESETS } from '../grassField/presets'
 import { MAX_ROCKS } from '../grassField/shaders/grassBlade'
 import { makeGroundMaterial } from '../grassField/materials/groundMaterial'
 import { makeBarkMaterial } from '../grassField/materials/barkMaterial'
@@ -21,11 +18,6 @@ import {
   makePineLeafDepthMaterial,
 } from '../grassField/materials/pineLeafMaterial'
 import { scatterBlades, scatterFlowers } from '../grassField/utils/scatter'
-import {
-  useGrassControls,
-  useFlowerControls,
-  useGrassSceneControls,
-} from '../grassField/utils/controls'
 
 export const WORLD_SIZE = 140
 export const WORLD_SEGMENTS = 64
@@ -73,30 +65,14 @@ const FLOWER_TEXTURES_B = [
 ] as [string, string, string]
 
 export default function OpenWorldGrassField({
-  preset = 'default',
   playerPosRef,
   onLoaded,
 }: OpenWorldGrassFieldProps) {
-  const groupRef = useRef<THREE.Group>(null!)
-
   // Load the authentic 3D GLB model and textures
   const { scene } = useGLTF(GLB_URL)
   const [barkColor, barkAO, barkHeight] = useTexture(BARK_TEXTURES)
   const [maskA, rgbA, gradA] = useTexture(FLOWER_TEXTURES_A)
   const [maskB, rgbB, gradB] = useTexture(FLOWER_TEXTURES_B)
-
-  // Controls
-  const [grass, setGrass] = useGrassControls()
-  const flowers = useFlowerControls()
-  const sceneCtl = useGrassSceneControls()
-
-  // Apply preset
-  useEffect(() => {
-    const p = GRASS_PRESETS[preset]
-    if (p) {
-      setGrass({ ...GRASS_PRESETS.default.values, ...p.values })
-    }
-  }, [preset, setGrass])
 
   // Single shared uniform bag driving all shaders
   const u = useMemo(() => createGrassFieldUniforms(), [])
@@ -125,60 +101,47 @@ export default function OpenWorldGrassField({
     u.flowerTexB.uFlowerGradient.value = gradB
   }, [u, barkColor, barkAO, barkHeight, maskA, rgbA, gradA, maskB, rgbB, gradB])
 
-  // Sunlight tracker with cached reference (zero per-frame scene traversal)
+  // Sunlight tracker with cached reference
   const sunLightRef = useRef<THREE.DirectionalLight | null>(null)
   const sunPos = useRef(new THREE.Vector3())
   const sunTarget = useRef(new THREE.Vector3())
 
   // Pre-allocated Color objects for zero GC per frame
   const colorsRef = useRef({
-    grassBottom: new THREE.Color(),
-    grassTop: new THREE.Color(),
-    transColor: new THREE.Color(),
-    dirtColor: new THREE.Color(),
-    barkTint: new THREE.Color(),
+    grassBottom: new THREE.Color('#2f5712'),
+    grassTop: new THREE.Color('#82ac1e'),
+    transColor: new THREE.Color('#c1e54d'),
+    dirtColor: new THREE.Color('#284411'),
+    barkTint: new THREE.Color('#2b2118'),
   })
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
   const { terrainMesh, bladesMesh, flowerMeshes, foliageClusters, pathMarkers } = useMemo(() => {
-    // 1. Rolling Open World Terrain Plane
-    const terrainGeo = new THREE.PlaneGeometry(
-      WORLD_SIZE,
-      WORLD_SIZE,
-      WORLD_SEGMENTS,
-      WORLD_SEGMENTS
-    )
-    terrainGeo.rotateX(-Math.PI / 2)
-
-    const posAttr = terrainGeo.attributes.position
-    for (let i = 0; i < posAttr.count; i++) {
-      const x = posAttr.getX(i)
-      const z = posAttr.getZ(i)
-      posAttr.setY(i, getOpenWorldHeight(x, z))
+    // 1. Terrain Ground Mesh for high-density sampling (radius ~54m)
+    const samplePlaneGeo = new THREE.PlaneGeometry(108, 108, 54, 54)
+    samplePlaneGeo.rotateX(-Math.PI / 2)
+    const sPosAttr = samplePlaneGeo.attributes.position
+    for (let i = 0; i < sPosAttr.count; i++) {
+      const x = sPosAttr.getX(i)
+      const z = sPosAttr.getZ(i)
+      sPosAttr.setY(i, getOpenWorldHeight(x, z))
     }
-    terrainGeo.computeVertexNormals()
+    samplePlaneGeo.computeVertexNormals()
 
-    // Ground Material using EXACT FBM Dirt & Colormap from Cortiz repo
-    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#4f7c13'))
-    const groundMesh = new THREE.Mesh(terrainGeo, groundMat)
-    groundMesh.receiveShadow = true
-    groundMesh.castShadow = false
-    groundMesh.updateMatrixWorld(true)
-
-    // 2. Scatter 24,000 Wide, Lush 3JS Grass Blades (Locked 60 FPS + Full Meadow Coverage)
-    const blades = scatterBlades(groundMesh, {
+    // 2. Scatter 54,000 Wide, Lush Grass Blades (Overlapping, Gapless Carpet)
+    const blades = scatterBlades(new THREE.Mesh(samplePlaneGeo), {
       uniforms: u.surface,
       density: 12,
-      maxCount: 24_000,
-      minWidth: 0.16,
-      maxWidth: 0.22,
-      minLength: 0.38,
-      maxLength: 0.72,
-      tiltMax: 0.32,
-      segments: 3, // 3 segments = 5 triangles per blade (peak raster efficiency)
+      maxCount: 54_000,
+      minWidth: 0.22,
+      maxWidth: 0.32,
+      minLength: 0.55,
+      maxLength: 0.92,
+      tiltMax: 0.28,
+      segments: 3,
     })
 
-    // Zero out any blades inside the central diorama (r < 7.0m) to avoid overlap with GrassField
+    // Filter inner diorama blades (r < 7.0m) and clamp boundary (r > 52m)
     const dummy = new THREE.Matrix4()
     const p = new THREE.Vector3()
     const rot = new THREE.Quaternion()
@@ -187,7 +150,8 @@ export default function OpenWorldGrassField({
     for (let i = 0; i < blades.count; i++) {
       blades.getMatrixAt(i, dummy)
       dummy.decompose(p, rot, s)
-      if (p.x * p.x + p.z * p.z < 7.0 * 7.0) {
+      const d2 = p.x * p.x + p.z * p.z
+      if (d2 < 7.0 * 7.0 || d2 > 52.0 * 52.0) {
         s.set(0, 0, 0)
         dummy.compose(p, rot, s)
         blades.setMatrixAt(i, dummy)
@@ -195,24 +159,47 @@ export default function OpenWorldGrassField({
     }
     blades.instanceMatrix.needsUpdate = true
 
-    // 3. Scatter Wildflowers
-    const flowerInstances = scatterFlowers(groundMesh, {
+    // 3. Horizon Open World Terrain Plane (140m x 140m)
+    const terrainGeo = new THREE.PlaneGeometry(
+      WORLD_SIZE,
+      WORLD_SIZE,
+      WORLD_SEGMENTS,
+      WORLD_SEGMENTS
+    )
+    terrainGeo.rotateX(-Math.PI / 2)
+    const posAttr = terrainGeo.attributes.position
+    for (let i = 0; i < posAttr.count; i++) {
+      const x = posAttr.getX(i)
+      const z = posAttr.getZ(i)
+      posAttr.setY(i, getOpenWorldHeight(x, z))
+    }
+    terrainGeo.computeVertexNormals()
+
+    // Deep forest moss green ground material
+    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#325812'))
+    const groundMesh = new THREE.Mesh(terrainGeo, groundMat)
+    groundMesh.receiveShadow = true
+    groundMesh.castShadow = false
+    groundMesh.updateMatrixWorld(true)
+
+    // 4. Scatter Wildflowers in active meadows
+    const flowerInstances = scatterFlowers(new THREE.Mesh(samplePlaneGeo), {
       uniforms: u.flower,
       texA: u.flowerTexA,
       texB: u.flowerTexB,
       dirt: u.surface,
-      density: 0.25,
-      maxCount: 1000,
+      density: 0.22,
+      maxCount: 1200,
       size: 0.44,
       mixA: 0.5,
     })
 
-    // Filter inner flowers
     for (const fim of flowerInstances) {
       for (let i = 0; i < fim.count; i++) {
         fim.getMatrixAt(i, dummy)
         dummy.decompose(p, rot, s)
-        if (p.x * p.x + p.z * p.z < 7.0 * 7.0) {
+        const d2 = p.x * p.x + p.z * p.z
+        if (d2 < 7.0 * 7.0 || d2 > 50.0 * 50.0) {
           s.set(0, 0, 0)
           dummy.compose(p, rot, s)
           fim.setMatrixAt(i, dummy)
@@ -221,7 +208,7 @@ export default function OpenWorldGrassField({
       fim.instanceMatrix.needsUpdate = true
     }
 
-    // 4. Cloned Foliage Clusters (Authentic Trees & Rocks)
+    // 5. Rich Ancient Pine Forest & Conifer Copses (18+ Diverse Groves)
     const barkMat = makeBarkMaterial(u.bark)
     const clusters: THREE.Group[] = []
 
@@ -255,12 +242,39 @@ export default function OpenWorldGrassField({
       return cluster
     }
 
-    // 3 strategically positioned companion groves of authentic trees and rocks:
-    clusters.push(createAuthenticCluster(-18, 4, Math.PI * 0.7, 0.92))
-    clusters.push(createAuthenticCluster(14, -22, Math.PI * 1.4, 0.88))
-    clusters.push(createAuthenticCluster(18, 18, Math.PI * 0.25, 0.90))
+    // A. Outer Perimeter Mountain Woodlands (Framing the horizon)
+    clusters.push(createAuthenticCluster(-36, 26, Math.PI * 0.4, 1.28))
+    clusters.push(createAuthenticCluster(-42, -12, Math.PI * 1.1, 1.32))
+    clusters.push(createAuthenticCluster(-28, -36, Math.PI * 0.85, 1.22))
+    clusters.push(createAuthenticCluster(34, 32, Math.PI * 0.15, 1.25))
+    clusters.push(createAuthenticCluster(40, -14, Math.PI * 1.6, 1.30))
+    clusters.push(createAuthenticCluster(26, -38, Math.PI * 0.95, 1.20))
+    clusters.push(createAuthenticCluster(0, 44, Math.PI * 0.3, 1.35))
+    clusters.push(createAuthenticCluster(0, -44, Math.PI * 1.2, 1.30))
 
-    // 5. Winding Ancient Cobblestone Trail Stones connecting spawn to the 4 shrines
+    // B. Shrine Sanctuary Groves (Clustering naturally around each monolith)
+    // 1. West Wind Monolith (-22, 0, 8)
+    clusters.push(createAuthenticCluster(-27, 14, Math.PI * 0.65, 1.15))
+    clusters.push(createAuthenticCluster(-18, 3, Math.PI * 1.3, 0.95))
+
+    // 2. South Solar Flame Monolith (14, 0, -25)
+    clusters.push(createAuthenticCluster(19, -30, Math.PI * 1.7, 1.10))
+    clusters.push(createAuthenticCluster(8, -21, Math.PI * 0.45, 0.92))
+
+    // 3. North Twilight Star Monolith (20, 0, 20)
+    clusters.push(createAuthenticCluster(26, 25, Math.PI * 0.8, 1.12))
+    clusters.push(createAuthenticCluster(15, 15, Math.PI * 1.85, 0.94))
+
+    // 4. Deep Titan Monolith (-8, 0, -22)
+    clusters.push(createAuthenticCluster(-14, -28, Math.PI * 0.35, 1.14))
+    clusters.push(createAuthenticCluster(-3, -17, Math.PI * 1.45, 0.90))
+
+    // C. Scenic Meadow Sentinel Pines (Dotting the rolling landscape)
+    clusters.push(createAuthenticCluster(11, 7, Math.PI * 0.5, 1.08))
+    clusters.push(createAuthenticCluster(-11, -8, Math.PI * 1.25, 1.02))
+    clusters.push(createAuthenticCluster(15, -7, Math.PI * 0.9, 0.96))
+
+    // 6. Ancient Cobblestone Trail Stones guiding to the 4 shrines
     const stoneMarkers: Array<{ pos: [number, number, number]; rot: number; scale: number }> = []
     const shrineTargets = [
       { x: -22, z: 8 },   // West Wind
@@ -270,7 +284,6 @@ export default function OpenWorldGrassField({
     ]
 
     shrineTargets.forEach((st) => {
-      // 5 path stones along each trail
       for (let step = 1; step <= 5; step++) {
         const t = step / 6
         const pathX = t * st.x + Math.sin(t * Math.PI) * 2.2
@@ -297,15 +310,14 @@ export default function OpenWorldGrassField({
     onLoaded?.()
   }, [onLoaded])
 
-  // ── Sync Uniforms Efficiently (Zero GC allocations per frame) ──────────────
+  // ── Sync Uniforms with Zero GC allocations per frame ───────────────────────
   useFrame((state, delta) => {
     const s = u.surface
-    const f = u.flower
     const b = u.bark
 
     s.uTime.value = (s.uTime.value + delta) % 3600
 
-    // Cache sunlight direction (find once, no scene traverse per frame)
+    // Cache sunlight direction
     if (!sunLightRef.current) {
       state.scene.traverse((o) => {
         if (!sunLightRef.current && (o as THREE.DirectionalLight).isDirectionalLight) {
@@ -329,121 +341,117 @@ export default function OpenWorldGrassField({
       s.uRockCount.value = MAX_ROCKS
     }
 
-    // Wind parameters
-    const rad = grass.grWindDir * (Math.PI / 180)
+    // Wind parameters (Dynamic waving meadow ripples)
+    const rad = 45 * (Math.PI / 180)
     s.uWindDir.value.set(Math.cos(rad), Math.sin(rad))
-    s.uWindStrength.value = grass.grWindStrength
-    s.uWindSpeed.value = grass.grWindSpeed
-    s.uWindFreq.value = grass.grWindFreq
-    s.uWindTurb.value = grass.grWindTurb
-    s.uWindLean.value = grass.grWindLean
+    s.uWindStrength.value = 0.16
+    s.uWindSpeed.value = 1.35
+    s.uWindFreq.value = 0.45
+    s.uWindTurb.value = 0.35
+    s.uWindLean.value = 0.5
+    s.uWindFixLocal.value = 1
 
-    // Colors
+    // Colors (Rich lush emerald meadow)
     const c = colorsRef.current
-    c.grassBottom.set(grass.grColorBottom)
-    c.grassTop.set(grass.grColorTop)
+    c.grassBottom.set('#2f5712')
+    c.grassTop.set('#82ac1e')
     s.uGrassBottom.value.copy(c.grassBottom)
     s.uGrassTop.value.copy(c.grassTop)
-    s.uGradStart.value = grass.grGradStart
-    s.uGradEnd.value = grass.grGradEnd
-    s.uGradPower.value = grass.grGradPower
-    s.uBrightness.value = grass.grBrightness
+    s.uGradStart.value = 0.12
+    s.uGradEnd.value = 1.0
+    s.uGradPower.value = 1.6
+    s.uBrightness.value = 0.95
 
     // Lush vs Dry patches
     s.uPatchLush.value.copy(c.grassBottom)
     s.uPatchDry.value.copy(c.grassTop)
-    s.uPatchStrength.value = grass.grPatchStrength
-    s.uPatchScale.value = grass.grPatchScale
-    s.uPatchBias.value = grass.grPatchBias
+    s.uPatchStrength.value = 0.25
+    s.uPatchScale.value = 0.15
+    s.uPatchBias.value = 1.8
 
-    // Translucency & Shadows
-    s.uShadowStrength.value = grass.grShadowStrength
-    s.uShadowSamples.value = 1
-    s.uShadowSampleY.value = grass.grShadowSampleY
-    s.uShadowRadius.value = grass.grShadowRadius
-
-    c.transColor.set(grass.grTransColor)
+    // Translucency (Subsurface sun scatter)
+    c.transColor.set('#c1e54d')
     s.uTransColor.value.copy(c.transColor)
-    s.uTransStrength.value = grass.grTransStrength
-    s.uTransPower.value = grass.grTransPower
-    s.uTransTip.value = grass.grTransTip
-    s.uTransShadow.value = grass.grTransShadow
+    s.uTransStrength.value = 2.8
+    s.uTransPower.value = 3.0
+    s.uTransTip.value = 0.65
+    s.uTransShadow.value = 1.0
 
-    s.uDebugChannel.value = grass.grDebugChannel
-    s.uWindFixLocal.value = grass.grWindFixLocal ? 1 : 0
+    // Shadows
+    s.uShadowStrength.value = 0.6
+    s.uShadowSamples.value = 1
+    s.uShadowSampleY.value = 0.4
+    s.uShadowRadius.value = 0.3
 
     // Trampling settings
-    s.uRockFlatten.value = grass.grRockFlatten
-    s.uRockBend.value = grass.grRockBend
-    s.uRockRadiusMul.value = grass.grRockRadiusMul
-    s.uRockFalloff.value = grass.grRockFalloff
+    s.uRockFlatten.value = 0.85
+    s.uRockBend.value = 0.25
+    s.uRockRadiusMul.value = 1.0
+    s.uRockFalloff.value = 0.35
 
-    // Ground Dirt Mask
-    s.uTintFloor.value = grass.grTintFloor ? 1 : 0
-    s.uFlatFloorNormal.value = grass.grFlatFloorNormal
-    c.dirtColor.set(grass.grDirtColor)
+    // Ground Dirt Mask - subtle accent only, NO bare mud craters
+    s.uTintFloor.value = 1
+    s.uFlatFloorNormal.value = 1
+    c.dirtColor.set('#284411')
     s.uDirtColor.value.copy(c.dirtColor)
-    s.uDirtCoverage.value = Math.max(grass.grDirtCoverage, 0.08)
-    s.uDirtScale.value = grass.grDirtScale
-    s.uDirtSoftness.value = grass.grDirtSoftness
-    s.uDirtWarp.value = grass.grDirtWarp
-    s.uDirtCut.value = grass.grDirtCut
-    s.uDirtBlend.value = grass.grDirtBlend
+    s.uDirtCoverage.value = 0.04
+    s.uDirtScale.value = 0.25
+    s.uDirtSoftness.value = 0.12
+    s.uDirtWarp.value = 0.2
+    s.uDirtCut.value = 0.15
+    s.uDirtBlend.value = 0.45
 
     // Bark Uniforms
-    b.uBarkScale.value = grass.grBarkScale
-    c.barkTint.set(grass.grBarkTint)
+    b.uBarkScale.value = 1.0
+    c.barkTint.set('#2b2118')
     b.uBarkTint.value.copy(c.barkTint)
-    b.uBarkTintStrength.value = grass.grBarkTintStrength
-    b.uBarkSaturation.value = grass.grBarkSaturation
-    b.uBarkBrightness.value = grass.grBarkBrightness
-    b.uBarkAOStrength.value = grass.grBarkAOStrength
-    b.uBarkRelief.value = grass.grBarkRelief
+    b.uBarkTintStrength.value = 0.55
+    b.uBarkSaturation.value = 1.0
+    b.uBarkBrightness.value = 1.0
+    b.uBarkAOStrength.value = 1.0
 
-    // Flower Uniforms
-    f.uTime.value = s.uTime.value
-    f.uWindDir.value.copy(s.uWindDir.value)
-    f.uGrassColor.value.copy(c.grassBottom)
-    f.uBrightness.value = flowers.flBrightness
-    f.uWindStrength.value = flowers.flWindStrength
-    f.uWindSpeed.value = flowers.flWindSpeed
-    f.uWindFreq.value = flowers.flWindFreq
-    f.uWindTurb.value = flowers.flWindTurb
-    f.uWindLean.value = flowers.flWindLean
-    f.uBendAmp.value = flowers.flBendAmp
-    f.uBendFreq.value = flowers.flBendFreq
-    f.uFlDirtMax.value = flowers.flDirtMax
+    // Pine Canopy Foliage
+    s.uLeafBottom.value.set('#153018')
+    s.uLeafTop.value.set('#4b7a28')
+    s.uLeafBrightness.value = 1.15
+    s.uLeafGradPower.value = 1.1
   })
 
   return (
-    <group ref={groupRef}>
-      {/* ── 1. The Ground Surface with FBM Procedural Dirt ─────────────────── */}
+    <group>
+      {/* 1. Rolling Open World Terrain */}
       <primitive object={terrainMesh} />
 
-      {/* ── 2. The Dense Animated Grass Blades (Single Draw Call) ──────────── */}
+      {/* 2. 54,000 Dense, Wide, Lush Grass Blades (Gapless Carpet) */}
       <primitive object={bladesMesh} />
 
-      {/* ── 3. Wildflowers Scattered Across the Meadow ─────────────────────── */}
-      {flowerMeshes.map((fm, idx) => (
-        <primitive key={`flower-im-${idx}`} object={fm} />
+      {/* 3. Wildflowers */}
+      {flowerMeshes.map((fm, i) => (
+        <primitive key={`flowers-${i}`} object={fm} />
       ))}
 
-      {/* ── 4. Cloned Tree & Rock Foliage Clusters ─────────────────────────── */}
-      {foliageClusters.map((cluster, idx) => (
-        <primitive key={`authentic-cluster-${idx}`} object={cluster} />
+      {/* 4. Rich Ancient Forest & Conifer Copses */}
+      {foliageClusters.map((cl, i) => (
+        <primitive key={`grove-${i}`} object={cl} />
       ))}
 
-      {/* ── 5. Winding Ancient Cobblestone Trail Stones ─────────────────────── */}
-      {pathMarkers.map((m, idx) => (
+      {/* 5. Ancient Cobblestone Trail Stones */}
+      {pathMarkers.map((sm, i) => (
         <mesh
-          key={`path-stone-${idx}`}
-          position={m.pos}
-          rotation={[0, m.rot, 0]}
-          scale={[m.scale, 0.08, m.scale * 1.3]}
+          key={`stone-${i}`}
+          position={sm.pos}
+          rotation={[0, sm.rot, 0]}
+          scale={sm.scale}
           receiveShadow
+          castShadow
         >
-          <cylinderGeometry args={[1, 1.1, 0.4, 7]} />
-          <meshStandardMaterial color="#554e47" roughness={0.9} />
+          <cylinderGeometry args={[0.42, 0.48, 0.08, 7]} />
+          <meshStandardMaterial
+            color="#525850"
+            roughness={0.92}
+            metalness={0.08}
+            flatShading
+          />
         </mesh>
       ))}
     </group>
