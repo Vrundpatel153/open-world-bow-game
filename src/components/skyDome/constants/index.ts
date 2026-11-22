@@ -229,15 +229,16 @@ export const SKY_PRESETS: Record<SkyMode, SkyPreset> = {
     moonAzim: 258,
     moonColor: "#fffffd",
     moonGlowColor: "#ff8026",
-    moonSize: 0.015,
-    moonEdgeSoftness: 0.04,
+    moonSize: 0.010,
+    moonEdgeSoftness: 0.02,
     moonPhasePos: 2, // fully lit — no shadow
     moonPhaseSoftness: 0.45,
     moonPhaseAngle: 150,
-    moonEmission: 1.4,
+    moonEmission: 0.40,
     moonSpotColor: "#69c2f6",
     moonSpotStrength: 0, // no spots on the sun
-    moonGlowFalloff: 220,
+    moonGlowFalloff: 650,
+    moonGlowIntensity: 0.10,
     // Daytime clouds
     cloudDensity: 0.36,
     // cloudScale: 15.5,
@@ -295,7 +296,6 @@ export const SKY_PRESETS: Record<SkyMode, SkyPreset> = {
     cloudsEnabled: true,
     moonElev: 10,
     moonAzim: 258,
-    moonGlowIntensity: 0.45,
     sparklesEnabled: true,
     dustCloudsEnabled: true,
 
@@ -311,15 +311,16 @@ export const SKY_PRESETS: Record<SkyMode, SkyPreset> = {
     // Sun disc (reusing moon uniforms)
     moonColor: "#fbfcd6",
     moonGlowColor: "#34a2ef",
-    moonSize: 0.015,
-    moonEdgeSoftness: 0.04,
+    moonSize: 0.010,
+    moonEdgeSoftness: 0.02,
     moonPhasePos: 2, // fully lit — no shadow
     moonPhaseSoftness: 0.45,
     moonPhaseAngle: 150,
-    moonEmission: 1.4,
+    moonEmission: 0.38,
     moonSpotColor: "#69c2f6",
     moonSpotStrength: 0, // no spots on the sun
-    moonGlowFalloff: 220,
+    moonGlowFalloff: 650,
+    moonGlowIntensity: 0.08,
     // Daytime clouds
     cloudDensity: 0.36,
     // cloudScale: 15.5,
@@ -397,14 +398,14 @@ export const SKY_PRESETS: Record<SkyMode, SkyPreset> = {
     moonAzim: 258,
     moonColor: "#fff8dc",
     moonGlowColor: "#c48600",
-    moonSize: 0.015,
-    moonGlowIntensity: 0.15,
-    moonGlowFalloff: 220,
-    moonEdgeSoftness: 0.11,
+    moonSize: 0.011,
+    moonGlowIntensity: 0.10,
+    moonGlowFalloff: 600,
+    moonEdgeSoftness: 0.04,
     moonPhasePos: 2,
     moonPhaseSoftness: 1.3,
     moonPhaseAngle: 150,
-    moonEmission: 0.33,
+    moonEmission: 0.32,
     moonSpotStrength: 0,
 
     // Clouds

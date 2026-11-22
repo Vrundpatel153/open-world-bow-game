@@ -179,6 +179,7 @@ export function scatterBlades(
     } else {
       samplePoint(s, rng, p);
       dummy.position.copy(p);
+      dummy.position.y += 0.025;
       dummy.rotation.set(
         (rng() - 0.5) * 2 * opts.tiltMax,
         rng() * Math.PI * 2,

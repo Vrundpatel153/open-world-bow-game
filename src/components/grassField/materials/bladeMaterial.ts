@@ -26,28 +26,29 @@ import { DEBUG_FRAGMENT_UNIFORMS, DEBUG_VIEW_FRAGMENT } from "../shaders/debug";
 
 function bladeHalfWidth(t: number): number {
   // Broad, lush blade profile with authentic organic parabolic taper to sharp tip
-  return 0.50 * Math.pow(Math.max(0.0, 1.0 - t), 1.20);
+  return 0.65 * Math.pow(Math.max(0.0, 1.0 - t), 1.05);
 }
 
 /**
- * Creates an organic 4-blade fanned grass clump geometry.
- * Each instance in InstancedMesh renders 4 distinct, curved, broad blades
- * that overlap to completely eliminate all bare ground gaps from any camera angle.
+ * Creates an organic 5-blade fanned grass clump geometry.
+ * Each instance in InstancedMesh renders 5 distinct, curved, broad overlapping blades
+ * that form a continuous, lush carpet with ZERO thin-line gaps from any camera angle.
  */
 export function makeBladeGeometry(segments = 4): THREE.BufferGeometry {
   const seg = Math.max(2, Math.round(segments));
   const vertsPerBlade = seg * 2 + 1;
-  const totalVerts = vertsPerBlade * 4;
+  const totalVerts = vertsPerBlade * 5;
 
   const positions = new Float32Array(totalVerts * 3);
   const indices: number[] = [];
 
-  // Blade configurations (angle around Y, tilt angle, height scale, width scale, X offset, Z offset)
+  // 5 Blade configurations forming a dense, natural circular clump
   const bladeConfigs = [
-    { yaw: 0.0, tilt: 0.10, hScale: 1.00, wScale: 0.95, xOff: 0.000, zOff: 0.000 },
-    { yaw: -0.63, tilt: 0.22, hScale: 0.94, wScale: 0.90, xOff: -0.016, zOff: 0.005 },
-    { yaw: 0.66, tilt: 0.20, hScale: 0.90, wScale: 0.88, xOff: 0.015, zOff: -0.004 },
-    { yaw: 2.97, tilt: 0.18, hScale: 0.86, wScale: 0.85, xOff: 0.002, zOff: -0.015 },
+    { yaw: 0.00, tilt: 0.12, hScale: 1.00, wScale: 1.00, xOff: 0.000, zOff: 0.000 },
+    { yaw: -0.85, tilt: 0.24, hScale: 0.95, wScale: 0.94, xOff: -0.035, zOff: 0.012 },
+    { yaw: 0.78, tilt: 0.22, hScale: 0.92, wScale: 0.92, xOff: 0.032, zOff: -0.010 },
+    { yaw: 2.35, tilt: 0.20, hScale: 0.88, wScale: 0.88, xOff: 0.018, zOff: -0.030 },
+    { yaw: -2.40, tilt: 0.21, hScale: 0.86, wScale: 0.86, xOff: -0.022, zOff: -0.026 },
   ];
 
   bladeConfigs.forEach((cfg, bIdx) => {

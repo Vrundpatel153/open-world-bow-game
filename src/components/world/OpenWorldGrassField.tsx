@@ -21,7 +21,7 @@ import { scatterBlades, scatterFlowers } from '../grassField/utils/scatter'
 import { worldCollisionSystem, type WorldCollider } from '@/game/physics/WorldCollisionSystem'
 
 export const WORLD_SIZE = 240
-export const WORLD_SEGMENTS = 96
+export const WORLD_SEGMENTS = 120
 
 // Sword swing wind pressure shockwave trigger
 export const grassWindImpulse = {
@@ -151,8 +151,8 @@ export default function OpenWorldGrassField({
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
   const { terrainMesh, coreBladesMesh, worldBladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
-    // 1. High-Density Core Meadow Plane (160m x 160m covering all active player paths & shrines gaplessly)
-    const coreMeadowGeo = new THREE.PlaneGeometry(160, 160, 120, 120)
+    // 1. High-Density Core Meadow Plane (180m x 180m covering all active player paths & shrines gaplessly)
+    const coreMeadowGeo = new THREE.PlaneGeometry(180, 180, 120, 120)
     coreMeadowGeo.rotateX(-Math.PI / 2)
     const cPosAttr = coreMeadowGeo.attributes.position
     for (let i = 0; i < cPosAttr.count; i++) {
@@ -162,22 +162,22 @@ export default function OpenWorldGrassField({
     }
     coreMeadowGeo.computeVertexNormals()
 
-    // 120,000 multi-blade clumps (480,000 blades) concentrated across core sanctuary: dense gapless lawn!
+    // 120,000 5-blade clumps (600,000 blades) across core sanctuary: thick, lush, gapless carpet
     const coreBlades = scatterBlades(new THREE.Mesh(coreMeadowGeo), {
       uniforms: u.surface,
       density: 24,
       maxCount: 120_000,
-      minWidth: 0.18,
-      maxWidth: 0.28,
-      minLength: 0.60,
-      maxLength: 0.90,
+      minWidth: 0.32,
+      maxWidth: 0.48,
+      minLength: 0.72,
+      maxLength: 1.05,
       tiltMax: 0.28,
       segments: 4,
     })
 
     // 2. Full Open World Horizon Terrain Plane (240m x 240m)
     // Covers all rolling hills and horizon bowls with continuous grass to eliminate any bare hill cutoffs
-    const worldMeadowGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 120, 120)
+    const worldMeadowGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, WORLD_SEGMENTS, WORLD_SEGMENTS)
     worldMeadowGeo.rotateX(-Math.PI / 2)
     const wPosAttr = worldMeadowGeo.attributes.position
     for (let i = 0; i < wPosAttr.count; i++) {
@@ -187,15 +187,15 @@ export default function OpenWorldGrassField({
     }
     worldMeadowGeo.computeVertexNormals()
 
-    // 120,000 multi-blade clumps (480,000 blades) rolling all the way across perimeter hills
+    // 120,000 5-blade clumps (600,000 blades) across horizon hills: broad clumps blanket all ridges
     const worldBlades = scatterBlades(new THREE.Mesh(worldMeadowGeo), {
       uniforms: u.surface,
       density: 20,
       maxCount: 120_000,
-      minWidth: 0.25,
-      maxWidth: 0.38,
-      minLength: 0.68,
-      maxLength: 1.02,
+      minWidth: 0.42,
+      maxWidth: 0.65,
+      minLength: 0.85,
+      maxLength: 1.25,
       tiltMax: 0.28,
       segments: 4,
     })
@@ -288,11 +288,10 @@ export default function OpenWorldGrassField({
         const rcX = (box.min.x + box.max.x) * 0.5
         const rcZ = (box.min.z + box.max.z) * 0.5
         const groundY = getOpenWorldHeight(rcX, rcZ)
-        // Deep grounding: base sunk 0.35m into the soil, completely preventing any floating
-        const desiredBottom = groundY - 0.35 * scaleVal
+        // Deep robust grounding: base sunk 0.50m into soil via transform-aware shift (zero floating on any slope)
+        const desiredBottom = groundY - 0.50 * scaleVal
         const deltaY = desiredBottom - box.min.y
-        rock.position.y += deltaY
-        rock.updateMatrixWorld(true)
+        applyWorldYShift(rock, deltaY)
 
         const bs = rock.geometry.boundingSphere!
         const center = bs.center.clone().applyMatrix4(rock.matrixWorld)
