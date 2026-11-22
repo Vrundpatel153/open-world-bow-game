@@ -29,27 +29,29 @@ function bladeHalfWidth(t: number): number {
 }
 
 /**
- * Organic 5-Blade Fanned Grass Tuft Geometry.
- * Each instance generates a full 360-degree cluster of 5 slender, curved, overlapping blades
- * fanned at varied angles (0°, -72°, +66°, -140°, +135°) with gentle backward camber.
+ * Organic 7-Blade Fanned Grass Tuft Geometry.
+ * Each instance generates a full 360-degree cluster of 7 slender, curved, overlapping blades
+ * splayed at varied radial angles with gentle backward camber and natural offsets.
  * Guarantees 100% gapless, lush coverage from all camera angles with peak raster efficiency.
  */
 export function makeBladeGeometry(segments = 3): THREE.BufferGeometry {
   const seg = Math.max(1, Math.round(segments));
   const vertsPerBlade = seg * 2 + 1;
-  const numBlades = 5;
+
+  const bladeConfigs = [
+    { yaw:  0.00, tilt: 0.16, hScale: 1.00, wScale: 0.95, xOff:  0.00, zOff:  0.00 },
+    { yaw: -0.95, tilt: 0.22, hScale: 0.94, wScale: 0.90, xOff: -0.45, zOff:  0.30 },
+    { yaw:  0.90, tilt: 0.20, hScale: 0.92, wScale: 0.90, xOff:  0.45, zOff:  0.25 },
+    { yaw: -2.15, tilt: 0.24, hScale: 0.88, wScale: 0.85, xOff: -0.40, zOff: -0.35 },
+    { yaw:  2.10, tilt: 0.23, hScale: 0.86, wScale: 0.85, xOff:  0.40, zOff: -0.32 },
+    { yaw:  3.14, tilt: 0.25, hScale: 0.84, wScale: 0.82, xOff:  0.00, zOff: -0.50 },
+    { yaw:  0.05, tilt: 0.18, hScale: 0.96, wScale: 0.88, xOff:  0.00, zOff:  0.42 },
+  ];
+  const numBlades = bladeConfigs.length;
   const totalVerts = vertsPerBlade * numBlades;
 
   const positions = new Float32Array(totalVerts * 3);
   const indices: number[] = [];
-
-  const bladeConfigs = [
-    { yaw: 0.00,  tilt: 0.16, hScale: 1.00, wScale: 1.00, xOff:  0.000, zOff:  0.000 },
-    { yaw: -1.25, tilt: 0.22, hScale: 0.94, wScale: 0.92, xOff: -0.015, zOff:  0.008 },
-    { yaw:  1.18, tilt: 0.20, hScale: 0.90, wScale: 0.90, xOff:  0.014, zOff: -0.006 },
-    { yaw: -2.45, tilt: 0.24, hScale: 0.86, wScale: 0.85, xOff: -0.010, zOff: -0.014 },
-    { yaw:  2.35, tilt: 0.22, hScale: 0.88, wScale: 0.86, xOff:  0.012, zOff: -0.012 },
-  ];
 
   bladeConfigs.forEach((cfg, bIdx) => {
     const vOffset = bIdx * vertsPerBlade;

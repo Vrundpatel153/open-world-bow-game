@@ -213,15 +213,16 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     // Rear: Bone nock throat is at Z = 0.000 where string rests.
     // Zero bare wood or feather extending behind nock or string!
 
-    // Carved Bone Nock: Sleek authentic archery nock (throat at Z = 0.0, ears to +0.0015, sleeve to -0.005)
-    const arrowNock = new THREE.CylinderGeometry(0.0028, 0.0028, 0.0065, 12)
+    // Carved Dark Horn Nock: Sleek authentic archery nock (throat at Z = 0.0, ears to +0.0018, sleeve to -0.0055)
+    // String rests at Z = 0.000 passing directly through the string throat. Zero bare shaft or feather behind nock or string!
+    const arrowNock = new THREE.CylinderGeometry(0.0026, 0.0026, 0.0070, 12)
     arrowNock.rotateX(Math.PI / 2)
-    arrowNock.translate(0, 0, -0.0015) // spans [+0.0015, -0.0050]
+    arrowNock.translate(0, 0, -0.0018) // spans [+0.0017, -0.0053]
 
-    // Cedar Wood Shaft: starts at Z = -0.005 and extends to Z = -0.510 (length 0.505m)
-    const shaft = new THREE.CylinderGeometry(0.0027, 0.0027, 0.505, 12)
+    // Cedar Wood Shaft: starts at Z = -0.0053 and extends to Z = -0.510 (length 0.5047m)
+    const shaft = new THREE.CylinderGeometry(0.0026, 0.0026, 0.5047, 12)
     shaft.rotateX(Math.PI / 2)
-    shaft.translate(0, 0, -0.2575) // spans [-0.005, -0.510]
+    shaft.translate(0, 0, -0.2576) // spans [-0.0053, -0.510]
 
     // Dark steel ferrule collar (Z = -0.505 to -0.525)
     const ferrule = new THREE.CylinderGeometry(0.0035, 0.0030, 0.020, 12)
@@ -365,8 +366,9 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     })
 
     const nock = new THREE.MeshStandardMaterial({
-      color: '#ded6c9', // Natural matte carved bone (no blown-out white glare)
-      roughness: 0.52,
+      color: '#3a281a', // Warm natural dark horn nock (matte, zero blown-out white glare)
+      roughness: 0.85,
+      metalness: 0.0,
     })
 
     return {
@@ -416,16 +418,17 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         // ── Physics: Launch arrow precisely through center crosshair ───────
         const camPos = camera.getWorldPosition(new THREE.Vector3())
         const camDir = camera.getWorldDirection(new THREE.Vector3())
-        const camRight = new THREE.Vector3().crossVectors(camDir, camera.up).normalize()
 
         // Target point 80m straight down the center crosshair sightline
         const targetPoint = camPos.clone().addScaledVector(camDir, 80.0)
 
-        // Launch origin aligns with archery sightline (slightly offset right to match shoulder/viewmodel)
-        const launchPos = camPos.clone()
-          .addScaledVector(camDir, 0.48)
-          .addScaledVector(camRight, 0.032)
-          .addScaledVector(camera.up, -0.018)
+        // Launch origin aligns with arrow broadhead tip in world space
+        const launchPos = new THREE.Vector3()
+        if (arrowGroupRef.current) {
+          arrowGroupRef.current.localToWorld(launchPos.set(0, 0, -0.58))
+        } else {
+          launchPos.copy(camPos).addScaledVector(camDir, 0.40)
+        }
 
         const fireDir = targetPoint.clone().sub(launchPos).normalize()
         onFireArrow(launchPos, fireDir, power)
@@ -565,23 +568,23 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     aimProgress.current = THREE.MathUtils.damp(aimProgress.current, targetAim, 12, dt)
     const aFactor = aimProgress.current
 
-    // Idle stance: bow rests comfortably down in the right third of the screen, completely clear of center
-    // Aim stance: bow raises into sightline, arrow shelf and broadhead needle point sight directly into crosshair
-    const baseLocalX = THREE.MathUtils.lerp(0.138, 0.035, aFactor)
-    const baseLocalY = THREE.MathUtils.lerp(-0.065, -0.035, aFactor)
-    const baseLocalZ = THREE.MathUtils.lerp(-0.340, -0.285, aFactor)
+    // Idle stance: compact recurve framing rests comfortably in the right lower screen quadrant, 100% visible
+    // Aim stance: bow raises into archery sight window, arrow rests on shelf with razor broadhead tip sighted directly into center crosshair
+    const baseLocalX = THREE.MathUtils.lerp(0.125, 0.0094, aFactor)
+    const baseLocalY = THREE.MathUtils.lerp(-0.075, -0.0190, aFactor)
+    const baseLocalZ = THREE.MathUtils.lerp(-0.380, -0.340, aFactor)
 
     const localX = baseLocalX + swayX.current + bobX + shakeX
     const localY = baseLocalY + swayY.current + bobY + shakeY + (1.0 - equipProgress.current) * -0.5
     const localZ = baseLocalZ + recoilOffset.current
 
     rigGroupRef.current.position.set(localX, localY, localZ)
-    rigGroupRef.current.scale.setScalar(0.85)
+    rigGroupRef.current.scale.setScalar(0.72)
 
-    // Dynamic rotation: natural cant tilts the bow inward, eliminating the stiff telephone-pole look
-    const pitchX = THREE.MathUtils.lerp(-0.045, -0.010, aFactor) + recoilRotation.current + swayY.current * 0.18
-    const yawY = THREE.MathUtils.lerp(-0.075, -0.016, aFactor) + swayX.current * 0.25
-    const rollZ = THREE.MathUtils.lerp(0.220, 0.140, aFactor)
+    // Dynamic rotation: natural inward archery cant prevents stiff telephone-pole look
+    const pitchX = THREE.MathUtils.lerp(-0.035, -0.005, aFactor) + recoilRotation.current + swayY.current * 0.18
+    const yawY = THREE.MathUtils.lerp(-0.055, -0.004, aFactor) + swayX.current * 0.25
+    const rollZ = THREE.MathUtils.lerp(0.280, 0.120, aFactor)
 
     rigGroupRef.current.rotation.set(pitchX, yawY, rollZ, 'YXZ')
     rigGroupRef.current.updateMatrixWorld(true)
@@ -622,10 +625,10 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     currentNock.z += pullDistance + vibZ
 
     // In rigGroup space, arrow points along -Z resting in the shelf channel.
-    // In aim stance, convergence points the razor broadhead needle tip straight into the center crosshair!
+    // In aim stance, sightline convergence aligns the razor broadhead needle tip directly into the center crosshair
     const arrowDir = new THREE.Vector3(
-      THREE.MathUtils.lerp(0.0, -0.028, aFactor),
-      THREE.MathUtils.lerp(0.0, 0.022, aFactor),
+      THREE.MathUtils.lerp(0.0, -0.008, aFactor),
+      THREE.MathUtils.lerp(0.0, 0.015, aFactor),
       -1.0
     ).normalize()
 
@@ -673,10 +676,6 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
       }}
     >
       <group ref={rigGroupRef}>
-        {/* Viewmodel Lighting: Dedicated soft illumination prevents blown-out white glare */}
-        <directionalLight position={[0.4, 0.6, 0.6]} intensity={1.1} color="#fff6eb" />
-        <ambientLight intensity={0.8} color="#fbf4ec" />
-
         {/* ── 1. Central Carved Mahogany Riser with Arrow Shelf Cutout ──────── */}
         <mesh geometry={riserGeo} material={woodMat} position={[0, 0, 0]} castShadow={false} />
 

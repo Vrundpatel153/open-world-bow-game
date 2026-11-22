@@ -138,8 +138,9 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
     })
 
     const nMat = new THREE.MeshStandardMaterial({
-      color: '#ded6c9', // Natural bone nock
-      roughness: 0.48,
+      color: '#3a281a', // Natural dark horn nock (matte, zero blown-out white glare)
+      roughness: 0.85,
+      metalness: 0.0,
     })
 
     const thMat = new THREE.MeshStandardMaterial({

@@ -126,9 +126,9 @@ export default function GrassCanvas() {
           }}
           style={{
             position: "absolute",
-            top: "54%",
+            bottom: "14%",
             left: "50%",
-            transform: "translate(-50%, -50%)",
+            transform: "translateX(-50%)",
             cursor: "pointer",
             pointerEvents: "auto",
             background: "linear-gradient(180deg, rgba(16, 22, 16, 0.94) 0%, rgba(8, 12, 9, 0.96) 100%)",

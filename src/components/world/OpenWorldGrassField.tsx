@@ -151,9 +151,9 @@ export default function OpenWorldGrassField({
   const foliageClustersRef = useRef<THREE.Group[]>([])
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
-  const { terrainMesh, coreBladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
-    // 1. High-Density Core Meadow Plane (116m x 116m covering sanctuary & rolling hills seamlessly)
-    const coreMeadowGeo = new THREE.PlaneGeometry(116, 116, 120, 120)
+  const { terrainMesh, coreBladesMesh, outerBladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
+    // 1. High-Density Core Sanctuary Meadow Plane (74m x 74m centered on exploration zone)
+    const coreMeadowGeo = new THREE.PlaneGeometry(74, 74, 80, 80)
     coreMeadowGeo.rotateX(-Math.PI / 2)
     const cPosAttr = coreMeadowGeo.attributes.position
     for (let i = 0; i < cPosAttr.count; i++) {
@@ -163,21 +163,45 @@ export default function OpenWorldGrassField({
     }
     coreMeadowGeo.computeVertexNormals()
 
-    // 95,000 5-blade organic tufts (475,000 curved slender blades) across core sanctuary:
-    // Rich, lush, dense, completely gapless carpet that smoothly fades into horizon fog
+    // 85,000 5-blade organic tufts (425,000 fine slender blades, ~80 blades/m²) across sanctuary:
+    // Rich, lush, dense, completely gapless carpet of natural, fine, silky grass blades
     const coreBlades = scatterBlades(new THREE.Mesh(coreMeadowGeo), {
       uniforms: u.surface,
-      density: 12,
-      maxCount: 95_000,
-      minWidth: 0.16,
-      maxWidth: 0.24,
-      minLength: 0.30,
-      maxLength: 0.50,
-      tiltMax: 0.24,
+      density: 16,
+      maxCount: 85_000,
+      minWidth: 0.055,
+      maxWidth: 0.080,
+      minLength: 0.18,
+      maxLength: 0.30,
+      tiltMax: 0.18,
       segments: 3,
     })
 
-    // 2. Horizon Open World Terrain Plane (140m x 140m)
+    // 2. Perimeter Foothills Meadow Ring (Radius 35m to 56m)
+    // 35,000 5-blade organic tufts (175,000 blades) providing smooth, seamless transition toward boundary hills
+    const outerMeadowGeo = new THREE.RingGeometry(35, 56, 48, 12)
+    outerMeadowGeo.rotateX(-Math.PI / 2)
+    const oPosAttr = outerMeadowGeo.attributes.position
+    for (let i = 0; i < oPosAttr.count; i++) {
+      const x = oPosAttr.getX(i)
+      const z = oPosAttr.getZ(i)
+      oPosAttr.setY(i, getOpenWorldHeight(x, z))
+    }
+    outerMeadowGeo.computeVertexNormals()
+
+    const outerBlades = scatterBlades(new THREE.Mesh(outerMeadowGeo), {
+      uniforms: u.surface,
+      density: 7,
+      maxCount: 35_000,
+      minWidth: 0.060,
+      maxWidth: 0.090,
+      minLength: 0.20,
+      maxLength: 0.34,
+      tiltMax: 0.20,
+      segments: 3,
+    })
+
+    // 3. Horizon Open World Terrain Plane (140m x 140m)
     const terrainGeo = new THREE.PlaneGeometry(
       WORLD_SIZE,
       WORLD_SIZE,
@@ -206,9 +230,9 @@ export default function OpenWorldGrassField({
       texA: u.flowerTexA,
       texB: u.flowerTexB,
       dirt: u.surface,
-      density: 0.22,
+      density: 0.35,
       maxCount: 2200,
-      size: 0.38,
+      size: 0.32,
       mixA: 0.5,
     })
 
@@ -387,6 +411,7 @@ export default function OpenWorldGrassField({
     return {
       terrainMesh: groundMesh,
       coreBladesMesh: coreBlades,
+      outerBladesMesh: outerBlades,
       flowerMeshes: flowerInstances,
       foliageClusters: clusters,
       pathMarkers: stoneMarkers,
@@ -564,10 +589,13 @@ export default function OpenWorldGrassField({
       {/* 1. Rolling Open World Terrain */}
       <primitive object={terrainMesh} />
 
-      {/* 2. 55,000 Dense, Wide, Lush Grass Blades (Gapless Sanctuary Meadow) */}
+      {/* 2. 85,000 Dense, Slender, Fine Grass Blades (Gapless Core Sanctuary Meadow) */}
       <primitive object={coreBladesMesh} />
 
-      {/* 3. Wildflowers */}
+      {/* 3. 35,000 Perimeter Foothills Grass Blades (Smooth Horizon Transition) */}
+      <primitive object={outerBladesMesh} />
+
+      {/* 4. Wildflowers */}
       {flowerMeshes.map((fm, i) => (
         <primitive key={`flowers-${i}`} object={fm} />
       ))}
