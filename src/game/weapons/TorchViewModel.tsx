@@ -302,13 +302,13 @@ export default function TorchViewModel() {
     const springRotOffset = rotSpring.current.update(dt)
 
     // 3. Perfect Viewmodel Framing (Held lower-right, flame apex stays well below crosshair)
-    // Base hold position: X=0.28m, Y=-0.24m, Z=-0.42m
+    // Base hold position: X=0.29m, Y=-0.25m, Z=-0.42m
     // Torch head is at Y~-0.12m, flame apex reaches Y~+0.06m in camera space
-    // Crosshair at (960, 540) has massive clearance and is 100% unobstructed!
+    // Crosshair at (960, 540) and left 75% of viewport 100% unobstructed!
     const unequipDrop = 1.0 - equipProgress.current
     const holdPos = new THREE.Vector3(
-      0.28 + springPosOffset.x,
-      -0.24 + springPosOffset.y - unequipDrop * 0.45,
+      0.29 + springPosOffset.x,
+      -0.25 + springPosOffset.y - unequipDrop * 0.45,
       -0.42 + waveThrust + springPosOffset.z
     )
     const worldPos = holdPos.applyQuaternion(camera.quaternion).add(camera.position)

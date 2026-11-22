@@ -470,12 +470,12 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     const springRotOffset = rotSpring.current.update(dt)
 
     // 3. Authentic Martial Ready Stance (Bottom-right, blade canted forward-upward)
-    // Guard sits at lower-right, tip points gracefully forward into lower-center
-    // Center crosshair (960, 540) has massive clearance and is 100% unobstructed!
+    // Guard sits firmly at lower-right, tip points gracefully forward into lower-center
+    // Center crosshair (960, 540) and left 75% of viewport 100% unobstructed!
     const unequipDrop = 1.0 - equipProgress.current
-    const pRest = new THREE.Vector3(0.23, -0.17 - unequipDrop * 0.45, -0.36)
+    const pRest = new THREE.Vector3(0.27, -0.20 - unequipDrop * 0.45, -0.38)
     const qRest = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(-0.42 - unequipDrop * 0.4, 0.28, -0.58 - unequipDrop * 0.3, 'YXZ')
+      new THREE.Euler(-0.38 - unequipDrop * 0.4, 0.24, -0.52 - unequipDrop * 0.3, 'YXZ')
     )
 
     let finalPos = pRest.clone()

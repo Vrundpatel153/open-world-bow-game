@@ -557,7 +557,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     recoilOffset.current = THREE.MathUtils.damp(recoilOffset.current, 0, 14, dt)
     recoilRotation.current = THREE.MathUtils.damp(recoilRotation.current, 0, 12, dt)
 
-    // ── 5. Stance & Positioning (Full Bow Visible Without Fullscreen Clipping) ──
+    // ── 5. Stance & Positioning (Strict Right-Side FPS Framing) ─────────────
     const cam = state.camera
     bowRootRef.current.position.copy(cam.position)
     bowRootRef.current.quaternion.copy(cam.quaternion)
@@ -568,10 +568,11 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     aimProgress.current = THREE.MathUtils.damp(aimProgress.current, targetAim, 12, dt)
     const aFactor = aimProgress.current
 
-    // Idle stance: compact recurve framing rests comfortably in the right lower screen quadrant, 100% visible
-    // Aim stance: bow raises into archery sight window, arrow rests on shelf with razor broadhead tip sighted directly into center crosshair
-    const baseLocalX = THREE.MathUtils.lerp(0.125, 0.0094, aFactor)
-    const baseLocalY = THREE.MathUtils.lerp(-0.075, -0.0190, aFactor)
+    // Idle stance: compact recurve bow rests naturally lowered in the right third of the screen (X~0.27m)
+    // Upper and lower brass tips 100% visible inside the window, center crosshair and left 75% wide open
+    // Aim stance: bow raises into archery sightline, broadhead tip sighted directly into center crosshair
+    const baseLocalX = THREE.MathUtils.lerp(0.270, 0.016, aFactor)
+    const baseLocalY = THREE.MathUtils.lerp(-0.160, -0.018, aFactor)
     const baseLocalZ = THREE.MathUtils.lerp(-0.380, -0.340, aFactor)
 
     const localX = baseLocalX + swayX.current + bobX + shakeX
@@ -579,12 +580,12 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const localZ = baseLocalZ + recoilOffset.current
 
     rigGroupRef.current.position.set(localX, localY, localZ)
-    rigGroupRef.current.scale.setScalar(0.72)
+    rigGroupRef.current.scale.setScalar(0.70)
 
-    // Dynamic rotation: natural inward archery cant prevents stiff telephone-pole look
-    const pitchX = THREE.MathUtils.lerp(-0.035, -0.005, aFactor) + recoilRotation.current + swayY.current * 0.18
-    const yawY = THREE.MathUtils.lerp(-0.055, -0.004, aFactor) + swayX.current * 0.25
-    const rollZ = THREE.MathUtils.lerp(0.280, 0.120, aFactor)
+    // Dynamic rotation: natural outward hunting cant in idle, upright combat alignment in aim
+    const pitchX = THREE.MathUtils.lerp(-0.20, -0.005, aFactor) + recoilRotation.current + swayY.current * 0.18
+    const yawY = THREE.MathUtils.lerp(0.12, -0.004, aFactor) + swayX.current * 0.25
+    const rollZ = THREE.MathUtils.lerp(-0.18, 0.08, aFactor)
 
     rigGroupRef.current.rotation.set(pitchX, yawY, rollZ, 'YXZ')
     rigGroupRef.current.updateMatrixWorld(true)
