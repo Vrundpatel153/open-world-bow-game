@@ -197,8 +197,8 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       const a = activeArrows[i]
       a.life += dt
 
-      // Despawn arrows after 12 seconds
-      if (a.life > 12.0) {
+      // Despawn arrows after 8 seconds
+      if (a.life > 8.0) {
         activeArrows.splice(i, 1)
         arrowsUpdated = true
         continue
@@ -227,7 +227,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       // Append trail point at the tail of the arrow (0.70m behind tip)
       const tailPos = a.pos.clone().addScaledVector(fwd, -0.70)
       a.trail.push(tailPos)
-      if (a.trail.length > 16) {
+      if (a.trail.length > 10) {
         a.trail.shift()
       }
 
@@ -238,6 +238,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       if (envHit) {
         a.pos.copy(envHit.hitPoint)
         a.stuck = true
+        a.trail = []
         a.wobbleAmp = 0.09
         a.wobbleFreq = envHit.collider.tag === 'tree' ? 24 : 36
         a.wobbleTime = 0
@@ -335,6 +336,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       if (a.pos.y <= terrainY) {
         a.pos.y = terrainY
         a.stuck = true
+        a.trail = []
         a.wobbleAmp = 0.07
         a.wobbleTime = 0
         sound.playArrowHitWood()

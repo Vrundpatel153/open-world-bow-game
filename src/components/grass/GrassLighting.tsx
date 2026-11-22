@@ -14,7 +14,7 @@ interface GrassLightingProps {
   preset: SkyPreset;
   sunDir?: THREE.Vector3;
   sunColor?: THREE.Color;
-  sunIntensity?: number;
+  sunIntensity?: number | React.MutableRefObject<number>;
   playerPosRef?: React.MutableRefObject<THREE.Vector3>;
 }
 
@@ -40,6 +40,11 @@ export default function GrassLighting({
     const targetObj = targetRef.current;
     if (!dl) return;
 
+    const effIntensity =
+      typeof sunIntensity === "object" && sunIntensity !== null
+        ? sunIntensity.current
+        : sunIntensity ?? 3.1;
+
     // Follow the player so the shadow map covers the player's active world area
     const targetPos = playerPosRef?.current ?? new THREE.Vector3(0, 0, 0);
 
@@ -50,24 +55,24 @@ export default function GrassLighting({
       dl.position.copy(targetPos).addScaledVector(sunDir, lightDistance);
 
       if (sunColor) dl.color.copy(sunColor);
-      dl.intensity = sunIntensity;
+      dl.intensity = effIntensity;
 
       // Fill light illuminates shadow sides from the opposite azimuth with soft skylight
       const fl = fillLightRef.current;
       if (fl) {
         const fillDir = new THREE.Vector3(-sunDir.x, Math.max(0.3, sunDir.y * 0.5), -sunDir.z).normalize();
         fl.position.copy(targetPos).addScaledVector(fillDir, 45);
-        fl.intensity = sunIntensity > 1.0 ? 0.85 : 0.25;
+        fl.intensity = effIntensity > 1.0 ? 0.85 : 0.25;
       }
 
       // Dynamic 3-tier ambient lighting to eliminate black silhouettes
       if (hemi) {
-        if (sunIntensity > 1.8) {
+        if (effIntensity > 1.8) {
           // Broad Daylight: Radiant blue sky and lush mossy turf bounce
           hemi.intensity = 1.8;
           hemi.color.set("#b8e2ff");
           hemi.groundColor.set("#46702c");
-        } else if (sunIntensity > 0.8) {
+        } else if (effIntensity > 0.8) {
           // Dawn / Dusk: Warm peach sky and amber earth bounce
           hemi.intensity = 1.45;
           hemi.color.set("#ffd8b4");
@@ -81,7 +86,7 @@ export default function GrassLighting({
       }
 
       if (amb) {
-        amb.intensity = sunIntensity > 1.0 ? 0.82 : 0.35;
+        amb.intensity = effIntensity > 1.0 ? 0.82 : 0.35;
       }
     } else {
       const l = preset.light;

@@ -151,9 +151,8 @@ export default function OpenWorldGrassField({
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
   const { terrainMesh, coreBladesMesh, worldBladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
-    // 1. High-Density Core Meadow Plane (100m x 100m covering all active player paths & shrines)
-    // 1. High-Density Core Meadow Plane (120m x 120m covering all active player paths & shrines)
-    const coreMeadowGeo = new THREE.PlaneGeometry(120, 120, 100, 100)
+    // 1. High-Density Core Meadow Plane (160m x 160m covering all active player paths & shrines gaplessly)
+    const coreMeadowGeo = new THREE.PlaneGeometry(160, 160, 120, 120)
     coreMeadowGeo.rotateX(-Math.PI / 2)
     const cPosAttr = coreMeadowGeo.attributes.position
     for (let i = 0; i < cPosAttr.count; i++) {
@@ -163,15 +162,15 @@ export default function OpenWorldGrassField({
     }
     coreMeadowGeo.computeVertexNormals()
 
-    // 100,000 multi-blade clumps (400,000 blades) concentrated across core sanctuary: dense gapless lawn!
+    // 120,000 multi-blade clumps (480,000 blades) concentrated across core sanctuary: dense gapless lawn!
     const coreBlades = scatterBlades(new THREE.Mesh(coreMeadowGeo), {
       uniforms: u.surface,
       density: 24,
-      maxCount: 100_000,
-      minWidth: 0.040,
-      maxWidth: 0.062,
-      minLength: 0.48,
-      maxLength: 0.68,
+      maxCount: 120_000,
+      minWidth: 0.042,
+      maxWidth: 0.065,
+      minLength: 0.50,
+      maxLength: 0.72,
       tiltMax: 0.28,
       segments: 4,
     })
@@ -193,10 +192,10 @@ export default function OpenWorldGrassField({
       uniforms: u.surface,
       density: 20,
       maxCount: 120_000,
-      minWidth: 0.050,
-      maxWidth: 0.072,
-      minLength: 0.55,
-      maxLength: 0.78,
+      minWidth: 0.052,
+      maxWidth: 0.075,
+      minLength: 0.56,
+      maxLength: 0.80,
       tiltMax: 0.28,
       segments: 4,
     })
@@ -271,8 +270,8 @@ export default function OpenWorldGrassField({
             const rcX = (rockBox.min.x + rockBox.max.x) * 0.5
             const rcZ = (rockBox.min.z + rockBox.max.z) * 0.5
             const groundY = getOpenWorldHeight(rcX, rcZ)
-            // Sunk 0.18m into the soil so rock boulders sit solidly without floating in air
-            const desiredBottom = groundY - 0.18 * scaleVal
+            // Sunk 0.28m into the soil so rock boulders sit solidly without floating in air
+            const desiredBottom = groundY - 0.28 * scaleVal
             const deltaWorldY = desiredBottom - rockBox.min.y
             applyWorldYShift(m, deltaWorldY)
 
@@ -515,11 +514,11 @@ export default function OpenWorldGrassField({
     s.uFlatFloorNormal.value = 1
     s.uGndVarColor.value.set('#1e4412')
     s.uGndVarScale.value = 0.35
-    s.uGndVarStrength.value = 0.35
+    s.uGndVarStrength.value = 0.45
     s.uGndGrainScale.value = 4.2
-    s.uGndGrainStrength.value = 0.25
+    s.uGndGrainStrength.value = 0.35
     s.uGndReliefScale.value = 0.6
-    s.uGndReliefStrength.value = 0.12
+    s.uGndReliefStrength.value = 0.28
     c.dirtColor.set('#243b12')
     s.uDirtColor.value.copy(c.dirtColor)
     s.uDirtCoverage.value = 0.0

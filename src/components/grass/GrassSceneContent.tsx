@@ -65,10 +65,10 @@ export default function GrassSceneContent({
   // Celestial Orbit Trajectory States (Continuous Sun & Moon Movement)
   const sunDirRef = useRef(new THREE.Vector3(0, 1, 0));
   const sunColorRef = useRef(new THREE.Color("#fff8eb"));
-  const [sunIntensity, setSunIntensity] = useState(3.1);
-  const [sunElev, setSunElev] = useState(55);
-  const [sunAzim, setSunAzim] = useState(180);
-  const [isNight, setIsNight] = useState(false);
+  const sunIntensityRef = useRef(3.1);
+  const sunElevRef = useRef(55);
+  const sunAzimRef = useRef(180);
+  const isNightRef = useRef(false);
 
   // Blend State for Autonomous Day-Night Cycle
   const blendStateRef = useRef<BlendState>({
@@ -129,7 +129,7 @@ export default function GrassSceneContent({
         preset={activePreset}
         sunDir={sunDirRef.current}
         sunColor={sunColorRef.current}
-        sunIntensity={sunIntensity}
+        sunIntensity={sunIntensityRef}
         playerPosRef={playerPosRef}
       />
 
@@ -146,10 +146,10 @@ export default function GrassSceneContent({
         onSunMove={(dir, color, intensity, elev, azim, night) => {
           sunDirRef.current.copy(dir);
           sunColorRef.current.copy(color);
-          setSunIntensity(intensity);
-          setSunElev(elev);
-          setSunAzim(azim);
-          setIsNight(night);
+          sunIntensityRef.current = intensity;
+          sunElevRef.current = elev;
+          sunAzimRef.current = azim;
+          isNightRef.current = night;
         }}
         onPhaseChange={(nextMode, nextPreset, phaseName) => {
           onPresetChange(nextPreset);
@@ -163,9 +163,9 @@ export default function GrassSceneContent({
         defaultMode="day"
         targetMode={skyMode}
         blendStateRef={blendStateRef}
-        moonElevOverride={sunElev}
-        moonAzimOverride={sunAzim}
-        isNight={isNight}
+        moonElevOverride={sunElevRef}
+        moonAzimOverride={sunAzimRef}
+        isNight={isNightRef}
         onPresetChange={onPresetChange}
       />
 

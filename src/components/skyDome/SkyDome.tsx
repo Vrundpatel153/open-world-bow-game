@@ -670,9 +670,9 @@ interface SkyDomeProps {
    *  direction alone does not point at where the disc appears. */
   moonPosRef?: React.MutableRefObject<THREE.Vector3>;
   /** Override moon elevation for this scene (degrees). */
-  moonElevOverride?: number;
+  moonElevOverride?: number | React.MutableRefObject<number>;
   /** Override moon azimuth for this scene (degrees). */
-  moonAzimOverride?: number;
+  moonAzimOverride?: number | React.MutableRefObject<number>;
   /** Per-mode preset overrides — merged on top of SKY_PRESETS for this SkyDome instance.
    *  Use this to customize cloud/sky values for a specific scene without changing the global presets. */
   presetOverrides?: Partial<Record<SkyMode, Partial<SkyPreset>>>;
@@ -682,7 +682,7 @@ interface SkyDomeProps {
   /** Initial Sky Mode for this scene — may be a key from extraPresets. */
   defaultMode?: string;
   /** Whether currently in night cycle */
-  isNight?: boolean;
+  isNight?: boolean | React.MutableRefObject<boolean>;
 }
 
 export default function SkyDome({
@@ -1469,8 +1469,18 @@ export default function SkyDome({
       ...(preset.moonElev !== undefined && { moonElev: preset.moonElev }),
       ...(preset.moonAzim !== undefined && { moonAzim: preset.moonAzim }),
       // Scene-level overrides take priority over preset values
-      ...(moonElevOverride !== undefined && { moonElev: moonElevOverride }),
-      ...(moonAzimOverride !== undefined && { moonAzim: moonAzimOverride }),
+      ...(moonElevOverride !== undefined && {
+        moonElev:
+          typeof moonElevOverride === "object" && moonElevOverride !== null
+            ? moonElevOverride.current
+            : moonElevOverride,
+      }),
+      ...(moonAzimOverride !== undefined && {
+        moonAzim:
+          typeof moonAzimOverride === "object" && moonAzimOverride !== null
+            ? moonAzimOverride.current
+            : moonAzimOverride,
+      }),
       ...(preset.moonColor !== undefined && { moonColor: preset.moonColor }),
       ...(preset.moonGlowColor !== undefined && {
         moonGlowColor: preset.moonGlowColor,
@@ -1646,8 +1656,23 @@ export default function SkyDome({
     u.uHorizonLine.value = preset.horizonLine ?? horizonLine;
     u.uHorizonSpread.value = preset.horizonSpread ?? horizonSpread;
 
-    const effElev = moonElevOverride !== undefined ? moonElevOverride : moonElev;
-    const effAzim = moonAzimOverride !== undefined ? moonAzimOverride : moonAzim;
+    const effElev =
+      typeof moonElevOverride === "object" && moonElevOverride !== null
+        ? moonElevOverride.current
+        : moonElevOverride !== undefined
+        ? moonElevOverride
+        : moonElev;
+    const effAzim =
+      typeof moonAzimOverride === "object" && moonAzimOverride !== null
+        ? moonAzimOverride.current
+        : moonAzimOverride !== undefined
+        ? moonAzimOverride
+        : moonAzim;
+    const nightBool =
+      typeof isNight === "object" && isNight !== null
+        ? Boolean(isNight.current)
+        : Boolean(isNight);
+
     const elRad = effElev * (Math.PI / 180);
     const azRad = effAzim * (Math.PI / 180);
     u.uMoonDir.value.set(
@@ -1662,14 +1687,20 @@ export default function SkyDome({
     // Smooth horizon fade ensures the disc naturally dissolves into atmospheric haze
     const horizonFade = THREE.MathUtils.clamp((effElev + 3.0) / 6.0, 0.0, 1.0);
 
-    if (isNight) {
+    // Stars strictly gated to nocturnal darkness (never render in blue daytime sky)
+    const starFade =
+      nightBool && effElev < -3.0
+        ? THREE.MathUtils.clamp((-effElev - 3.0) / 8.0, 0.0, 1.0)
+        : 0.0;
+
+    if (nightBool) {
       u.uMoonColor.value.set("#eef6ff");
       u.uMoonGlowColor.value.set("#3d77d4");
-      u.uMoonSize.value = 0.022 * Math.max(0.001, horizonFade);
+      u.uMoonSize.value = 0.020 * Math.max(0.001, horizonFade);
       u.uMoonGlowFalloff.value = 160.0;
-      u.uMoonGlowIntensity.value = 0.45 * horizonFade;
+      u.uMoonGlowIntensity.value = 0.38 * horizonFade;
       u.uMoonEdgeSoftness.value = 0.03;
-      u.uMoonPhasePos.value = 0.15; // Natural crescent terminator
+      u.uMoonPhasePos.value = 0.25; // Ethereal crescent moon
       u.uMoonPhaseSoftness.value = 0.35;
       u.uMoonPhaseAngle.value = (150 * Math.PI) / 180;
       u.uMoonEmission.value = 0.85 * horizonFade;
@@ -1685,14 +1716,14 @@ export default function SkyDome({
       // Scaled to realistic stylized game proportions (zero bloom blowout)
       u.uMoonColor.value.set("#fffdf2");
       u.uMoonGlowColor.value.set("#ffaa33");
-      u.uMoonSize.value = 0.016 * Math.max(0.001, horizonFade);
-      u.uMoonGlowFalloff.value = 240.0; // Tight, clean corona (prevents 40% screen bloom blowout)
-      u.uMoonGlowIntensity.value = 0.35 * horizonFade;
+      u.uMoonSize.value = 0.013 * Math.max(0.001, horizonFade);
+      u.uMoonGlowFalloff.value = 450.0; // Tight, clean corona (prevents screen bloom blowout)
+      u.uMoonGlowIntensity.value = 0.20 * horizonFade;
       u.uMoonEdgeSoftness.value = 0.02;
-      u.uMoonPhasePos.value = -2.0; // 100% fully lit spherical sun (zero terminator)
+      u.uMoonPhasePos.value = 2.0; // 100% fully lit spherical sun (zero terminator)
       u.uMoonPhaseSoftness.value = 0.1;
       u.uMoonPhaseAngle.value = 0;
-      u.uMoonEmission.value = 1.15 * horizonFade;
+      u.uMoonEmission.value = 0.90 * horizonFade;
       u.uMoonCloudBleed.value = 0.75;
       u.uMoonSpotColor.value.set("#ffffff");
       u.uMoonSpotStrength.value = 0.0; // Pure immaculate solar disk
@@ -1702,12 +1733,16 @@ export default function SkyDome({
       u.uMoonSpotOctaves.value = 1;
     }
 
-    // Stars — brightness forced to 0 during day, radiant during night / twilight
+    // Stars — strictly 0 during daylight, smoothly radiant during deep night
     u.uStarDensity.value = preset.starDensity ?? starDensity;
     u.uStarSize.value = preset.starSize ?? starSize;
-    u.uStarBrightness.value = (isNight || preset.starsEnabled)
-      ? (preset.starBrightness ?? Math.max(starBrightness, 0.95))
-      : 0;
+    u.uStarBrightness.value =
+      starFade > 0 ? (preset.starBrightness ?? 1.2) * starFade : 0.0;
+    u.uStarFloor.value = starFloor;
+    u.uStarDriftY.value = starDriftY;
+    u.uStarDriftZ.value = starDriftZ;
+    u.uStarTwinkleSpeed.value = starTwinkleSpeed;
+    u.uStarTwinkleAmount.value = starTwinkleAmount;
     u.uStarFloor.value = starFloor;
     u.uStarDriftY.value = starDriftY;
     u.uStarDriftZ.value = starDriftZ;
@@ -1808,19 +1843,23 @@ export default function SkyDome({
       cB.set(to.moonGlowColor ?? "#0a7ace");
       u.uMoonGlowColor.value.lerpColors(cA, cB, t);
       // Calibrated celestial disk size & falloff (never balloon during blend transitions)
-      const baseCelestialSize = isNight ? 0.020 : 0.016;
+      const baseCelestialSize = nightBool ? 0.020 : 0.013;
       u.uMoonSize.value = baseCelestialSize * Math.max(0.001, horizonFade);
-      u.uMoonEmission.value = (isNight ? 0.85 : 1.15) * horizonFade;
-      u.uMoonGlowFalloff.value = isNight ? 160.0 : 240.0;
-      u.uMoonGlowIntensity.value = (isNight ? 0.45 : 0.35) * horizonFade;
-      u.uMoonCloudBleed.value = isNight ? 0.55 : 0.75;
+      u.uMoonEmission.value = (nightBool ? 0.85 : 0.90) * horizonFade;
+      u.uMoonGlowFalloff.value = nightBool ? 160.0 : 450.0;
+      u.uMoonGlowIntensity.value = (nightBool ? 0.38 : 0.20) * horizonFade;
+      u.uMoonCloudBleed.value = nightBool ? 0.55 : 0.75;
+      u.uMoonPhasePos.value = nightBool ? 0.25 : 2.0; // Day: 100% spherical sun; Night: crescent
 
-      // Stars
-      u.uStarBrightness.value = lerp(
-        from.starsEnabled ? starBrightness : 0,
-        to.starsEnabled ? starBrightness : 0,
-        t,
-      );
+      // Stars — strictly 0 during daylight, only fade in when nocturnal darkness is true
+      u.uStarBrightness.value =
+        nightBool && starFade > 0
+          ? lerp(
+              from.starsEnabled ? (from.starBrightness ?? 1.2) : 0,
+              to.starsEnabled ? (to.starBrightness ?? 1.2) : 0,
+              t,
+            ) * starFade
+          : 0.0;
 
       // Cloud colors
       // Cloud shape

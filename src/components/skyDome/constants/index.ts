@@ -379,7 +379,7 @@ export const SKY_PRESETS: Record<SkyMode, SkyPreset> = {
       targetZ: 130.5,
     },
 
-    starsEnabled: true,
+    starsEnabled: false,
     moonEnabled: true, // sun disc
     cloudsEnabled: true,
 
