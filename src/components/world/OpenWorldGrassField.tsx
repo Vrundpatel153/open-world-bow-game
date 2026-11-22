@@ -56,6 +56,25 @@ export function getOpenWorldHeight(x: number, z: number): number {
   return base
 }
 
+// Transform-aware world displacement helper accounting for nested parent scales (e.g. FBX 0.01 scale)
+function applyWorldYShift(obj: THREE.Object3D, deltaWorldY: number) {
+  if (Math.abs(deltaWorldY) < 1e-5) return
+  if (!obj.parent) {
+    obj.position.y += deltaWorldY
+    obj.updateMatrixWorld(true)
+    return
+  }
+  const worldDelta = new THREE.Vector3(0, deltaWorldY, 0)
+  const parentWorldQuat = obj.parent.getWorldQuaternion(new THREE.Quaternion())
+  const parentWorldScale = obj.parent.getWorldScale(new THREE.Vector3())
+  worldDelta.applyQuaternion(parentWorldQuat.invert())
+  if (Math.abs(parentWorldScale.y) > 1e-6) {
+    worldDelta.y /= parentWorldScale.y
+  }
+  obj.position.y += worldDelta.y
+  obj.updateMatrixWorld(true)
+}
+
 interface OpenWorldGrassFieldProps {
   preset?: string
   playerPosRef?: React.MutableRefObject<THREE.Vector3>
@@ -128,36 +147,60 @@ export default function OpenWorldGrassField({
 
   // Pre-allocated Color objects for zero GC per frame
   const colorsRef = useRef({
-    grassBottom: new THREE.Color('#1e3d0c'),
-    grassTop: new THREE.Color('#3b6e16'),
-    transColor: new THREE.Color('#3d7a14'),
-    dirtColor: new THREE.Color('#233b10'),
+    grassBottom: new THREE.Color('#143209'),
+    grassTop: new THREE.Color('#386f18'),
+    transColor: new THREE.Color('#286614'),
+    dirtColor: new THREE.Color('#1a340b'),
     barkTint: new THREE.Color('#2b2118'),
   })
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
-  const { terrainMesh, bladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
-    // 1. Terrain Ground Mesh for high-density sampling across the expanded sanctuary (160m x 160m)
-    const samplePlaneGeo = new THREE.PlaneGeometry(160, 160, 120, 120)
-    samplePlaneGeo.rotateX(-Math.PI / 2)
-    const sPosAttr = samplePlaneGeo.attributes.position
-    for (let i = 0; i < sPosAttr.count; i++) {
-      const x = sPosAttr.getX(i)
-      const z = sPosAttr.getZ(i)
-      sPosAttr.setY(i, getOpenWorldHeight(x, z))
+  const { terrainMesh, coreBladesMesh, worldBladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
+    // 1. High-Density Core Meadow Plane (100m x 100m covering all active player paths & shrines)
+    const coreMeadowGeo = new THREE.PlaneGeometry(100, 100, 90, 90)
+    coreMeadowGeo.rotateX(-Math.PI / 2)
+    const cPosAttr = coreMeadowGeo.attributes.position
+    for (let i = 0; i < cPosAttr.count; i++) {
+      const x = cPosAttr.getX(i)
+      const z = cPosAttr.getZ(i)
+      cPosAttr.setY(i, getOpenWorldHeight(x, z))
     }
-    samplePlaneGeo.computeVertexNormals()
+    coreMeadowGeo.computeVertexNormals()
 
-    // 2. Scatter 140,000 multi-blade clumps = 560,000 dense, slender, curved grass blades across the entire world!
-    // Zero bald cutoffs, zero plain gaps: continuous rolling meadow carpet all the way across the sanctuary.
-    const blades = scatterBlades(new THREE.Mesh(samplePlaneGeo), {
+    // 100,000 multi-blade clumps (400,000 blades) concentrated across core sanctuary: 10 clumps/m² gapless lawn!
+    const coreBlades = scatterBlades(new THREE.Mesh(coreMeadowGeo), {
       uniforms: u.surface,
-      density: 22,
-      maxCount: 140_000,
-      minWidth: 0.024,
-      maxWidth: 0.038,
-      minLength: 0.35,
-      maxLength: 0.48,
+      density: 26,
+      maxCount: 100_000,
+      minWidth: 0.038,
+      maxWidth: 0.058,
+      minLength: 0.46,
+      maxLength: 0.65,
+      tiltMax: 0.28,
+      segments: 4,
+    })
+
+    // 2. Full Open World Horizon Terrain Plane (240m x 240m)
+    // Covers all rolling hills and horizon bowls with continuous grass to eliminate any bare hill cutoffs
+    const worldMeadowGeo = new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE, 120, 120)
+    worldMeadowGeo.rotateX(-Math.PI / 2)
+    const wPosAttr = worldMeadowGeo.attributes.position
+    for (let i = 0; i < wPosAttr.count; i++) {
+      const x = wPosAttr.getX(i)
+      const z = wPosAttr.getZ(i)
+      wPosAttr.setY(i, getOpenWorldHeight(x, z))
+    }
+    worldMeadowGeo.computeVertexNormals()
+
+    // 70,000 multi-blade clumps (280,000 blades) rolling all the way across perimeter hills
+    const worldBlades = scatterBlades(new THREE.Mesh(worldMeadowGeo), {
+      uniforms: u.surface,
+      density: 16,
+      maxCount: 70_000,
+      minWidth: 0.040,
+      maxWidth: 0.060,
+      minLength: 0.48,
+      maxLength: 0.68,
       tiltMax: 0.28,
       segments: 4,
     })
@@ -179,19 +222,19 @@ export default function OpenWorldGrassField({
     terrainGeo.computeVertexNormals()
 
     // Vibrant forest meadow moss ground material perfectly matching grass blade bases
-    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#1a3f0e'))
+    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#143209'))
     const groundMesh = new THREE.Mesh(terrainGeo, groundMat)
     groundMesh.receiveShadow = true
     groundMesh.castShadow = false
     groundMesh.updateMatrixWorld(true)
 
     // 4. Scatter Wildflowers across active meadows
-    const flowerInstances = scatterFlowers(new THREE.Mesh(samplePlaneGeo), {
+    const flowerInstances = scatterFlowers(new THREE.Mesh(coreMeadowGeo), {
       uniforms: u.flower,
       texA: u.flowerTexA,
       texB: u.flowerTexB,
       dirt: u.surface,
-      density: 0.18,
+      density: 0.22,
       maxCount: 2200,
       size: 0.38,
       mixA: 0.5,
@@ -226,8 +269,17 @@ export default function OpenWorldGrassField({
           m.receiveShadow = true
           const srcMat = Array.isArray(m.material) ? m.material[0] : m.material
 
-          // 1. Rock Boulders
+          // 1. Rock Boulders — Ground each individual rock so its base is solidly embedded in the terrain
           if (srcMat.name === 'RocksStylized_M') {
+            const rockBox = new THREE.Box3().setFromObject(m)
+            const rcX = (rockBox.min.x + rockBox.max.x) * 0.5
+            const rcZ = (rockBox.min.z + rockBox.max.z) * 0.5
+            const groundY = getOpenWorldHeight(rcX, rcZ)
+            // Sunk 0.12m into the soil so rocks sit solidly without floating in air
+            const desiredBottom = groundY - 0.12 * scaleVal
+            const deltaWorldY = desiredBottom - rockBox.min.y
+            applyWorldYShift(m, deltaWorldY)
+
             if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere()
             const bs = m.geometry.boundingSphere!
             const center = bs.center.clone().applyMatrix4(m.matrixWorld)
@@ -247,7 +299,19 @@ export default function OpenWorldGrassField({
               })
             }
           } else if (srcMat.name === TRUNK_MATERIAL) {
-            // 2. Tree Trunks
+            // 2. Tree Trunks — Ground tree so root is firmly planted in the earth
+            const trunkBox = new THREE.Box3().setFromObject(m)
+            const tcX = (trunkBox.min.x + trunkBox.max.x) * 0.5
+            const tcZ = (trunkBox.min.z + trunkBox.max.z) * 0.5
+            const groundY = getOpenWorldHeight(tcX, tcZ)
+            const desiredBottom = groundY - 0.20 * scaleVal
+            const deltaWorldY = desiredBottom - trunkBox.min.y
+            if (m.parent) {
+              applyWorldYShift(m.parent, deltaWorldY)
+            } else {
+              applyWorldYShift(m, deltaWorldY)
+            }
+
             if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere()
             const bs = m.geometry.boundingSphere!
             const center = bs.center.clone().applyMatrix4(m.matrixWorld)
@@ -259,7 +323,7 @@ export default function OpenWorldGrassField({
               tag: 'tree',
               x: center.x,
               z: center.z,
-              y: posY,
+              y: groundY,
               radius: trunkRadius,
               height: 24.0 * scaleVal,
             })
@@ -336,7 +400,8 @@ export default function OpenWorldGrassField({
 
     return {
       terrainMesh: groundMesh,
-      bladesMesh: blades,
+      coreBladesMesh: coreBlades,
+      worldBladesMesh: worldBlades,
       flowerMeshes: flowerInstances,
       foliageClusters: clusters,
       pathMarkers: stoneMarkers,
@@ -482,8 +547,9 @@ export default function OpenWorldGrassField({
       {/* 1. Rolling Open World Terrain */}
       <primitive object={terrainMesh} />
 
-      {/* 2. 54,000 Dense, Wide, Lush Grass Blades (Gapless Carpet) */}
-      <primitive object={bladesMesh} />
+      {/* 2. 170,000 Dense, Wide, Lush Grass Blades (Gapless Core Meadow + Rolling Horizon Hills) */}
+      <primitive object={coreBladesMesh} />
+      <primitive object={worldBladesMesh} />
 
       {/* 3. Wildflowers */}
       {flowerMeshes.map((fm, i) => (

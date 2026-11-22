@@ -94,6 +94,7 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
   for (int i = 0; i < MAX_ROCKS; i++) {
     if (i >= uRockCount) break;
     vec4  rock = uRocks[i];
+    if (rock.w <= 0.001) continue;
     vec2  d    = baseXZ - rock.xz;
     float dist = length(d);
     float rad  = rock.w * uRockRadiusMul;

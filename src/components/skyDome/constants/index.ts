@@ -237,7 +237,7 @@ export const SKY_PRESETS: Record<SkyMode, SkyPreset> = {
     moonEmission: 1.4,
     moonSpotColor: "#69c2f6",
     moonSpotStrength: 0, // no spots on the sun
-    moonGlowFalloff: 53,
+    moonGlowFalloff: 220,
     // Daytime clouds
     cloudDensity: 0.36,
     // cloudScale: 15.5,
@@ -319,7 +319,7 @@ export const SKY_PRESETS: Record<SkyMode, SkyPreset> = {
     moonEmission: 1.4,
     moonSpotColor: "#69c2f6",
     moonSpotStrength: 0, // no spots on the sun
-    moonGlowFalloff: 53,
+    moonGlowFalloff: 220,
     // Daytime clouds
     cloudDensity: 0.36,
     // cloudScale: 15.5,
@@ -398,8 +398,8 @@ export const SKY_PRESETS: Record<SkyMode, SkyPreset> = {
     moonColor: "#fff8dc",
     moonGlowColor: "#c48600",
     moonSize: 0.015,
-    moonGlowIntensity: 0.1,
-    moonGlowFalloff: 0,
+    moonGlowIntensity: 0.15,
+    moonGlowFalloff: 220,
     moonEdgeSoftness: 0.11,
     moonPhasePos: 2,
     moonPhaseSoftness: 1.3,

@@ -48,6 +48,7 @@ export const GROUND_MASK_GLSL = /* glsl */ `
   }
 
   float groundDirt(vec2 worldXZ) {
+    if (uDirtCoverage <= 0.001) return 0.0;
     vec2 p = worldXZ * uDirtScale;
     // Warp the sample point by another noise octave so patches get ragged,
     // organic outlines instead of smooth blobs.

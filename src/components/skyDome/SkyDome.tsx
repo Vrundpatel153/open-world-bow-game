@@ -1807,31 +1807,13 @@ export default function SkyDome({
       cA.set(from.moonGlowColor ?? "#0a7ace");
       cB.set(to.moonGlowColor ?? "#0a7ace");
       u.uMoonGlowColor.value.lerpColors(cA, cB, t);
-      u.uMoonSize.value = lerp(
-        from.moonEnabled ? (from.moonSize ?? 0.025) : 0,
-        to.moonEnabled ? (to.moonSize ?? 0.025) : 0,
-        t,
-      );
-      u.uMoonEmission.value = lerp(
-        from.moonEmission ?? 0.33,
-        to.moonEmission ?? 0.33,
-        t,
-      );
-      u.uMoonCloudBleed.value = lerp(
-        from.moonCloudBleed ?? 0.45,
-        to.moonCloudBleed ?? 0.45,
-        t,
-      );
-      u.uMoonGlowFalloff.value = lerp(
-        from.moonGlowFalloff ?? 80,
-        to.moonGlowFalloff ?? 80,
-        t,
-      );
-      u.uMoonGlowIntensity.value = lerp(
-        from.moonGlowIntensity ?? 0.35,
-        to.moonGlowIntensity ?? 0.35,
-        t,
-      );
+      // Calibrated celestial disk size & falloff (never balloon during blend transitions)
+      const baseCelestialSize = isNight ? 0.020 : 0.016;
+      u.uMoonSize.value = baseCelestialSize * Math.max(0.001, horizonFade);
+      u.uMoonEmission.value = (isNight ? 0.85 : 1.15) * horizonFade;
+      u.uMoonGlowFalloff.value = isNight ? 160.0 : 240.0;
+      u.uMoonGlowIntensity.value = (isNight ? 0.45 : 0.35) * horizonFade;
+      u.uMoonCloudBleed.value = isNight ? 0.55 : 0.75;
 
       // Stars
       u.uStarBrightness.value = lerp(

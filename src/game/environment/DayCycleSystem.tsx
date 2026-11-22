@@ -137,7 +137,9 @@ export default function DayCycleSystem({
 
     // Convert active celestial position (elevation, azimuth) to 3D unit direction vector
     // Standard Coordinates: North = -Z (0°), East = +X (90°), South = +Z (180°), West = -X (270°)
-    const elRad = activeElev * (Math.PI / 180);
+    // Clamp directional light elevation to >= 2.0° to prevent inverted underground shadow casting at horizon
+    const lightElev = Math.max(2.0, activeElev);
+    const elRad = lightElev * (Math.PI / 180);
     const azRad = activeAzim * (Math.PI / 180);
     celestialDir.current.set(
       Math.cos(elRad) * Math.sin(azRad),
