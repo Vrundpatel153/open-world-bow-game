@@ -1662,14 +1662,14 @@ export default function SkyDome({
       typeof moonElevOverride === "object" && moonElevOverride !== null
         ? moonElevOverride.current
         : moonElevOverride !== undefined
-        ? moonElevOverride
-        : moonElev;
+          ? moonElevOverride
+          : moonElev;
     const effAzim =
       typeof moonAzimOverride === "object" && moonAzimOverride !== null
         ? moonAzimOverride.current
         : moonAzimOverride !== undefined
-        ? moonAzimOverride
-        : moonAzim;
+          ? moonAzimOverride
+          : moonAzim;
     const nightBool =
       typeof isNight === "object" && isNight !== null
         ? Boolean(isNight.current)
@@ -1690,10 +1690,7 @@ export default function SkyDome({
     const horizonFade = THREE.MathUtils.clamp((effElev + 3.0) / 6.0, 0.0, 1.0);
 
     // Stars strictly gated to nocturnal darkness (never render in blue daytime sky)
-    const starFade =
-      nightBool && effElev < -3.0
-        ? THREE.MathUtils.clamp((-effElev - 3.0) / 8.0, 0.0, 1.0)
-        : 0.0;
+    const starFade = nightBool ? 1.0 : 0.0;
 
     if (nightBool) {
       u.uMoonColor.value.set("#eef6ff");
@@ -1859,10 +1856,10 @@ export default function SkyDome({
       u.uStarBrightness.value =
         nightBool && starFade > 0 && (from.starsEnabled || to.starsEnabled)
           ? lerp(
-              from.starsEnabled ? (from.starBrightness ?? 1.2) : 0,
-              to.starsEnabled ? (to.starBrightness ?? 1.2) : 0,
-              t,
-            ) * starFade
+            from.starsEnabled ? (from.starBrightness ?? 1.2) : 0,
+            to.starsEnabled ? (to.starBrightness ?? 1.2) : 0,
+            t,
+          ) * starFade
           : 0.0;
 
       // Cloud colors

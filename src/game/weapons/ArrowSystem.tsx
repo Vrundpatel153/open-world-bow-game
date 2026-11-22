@@ -54,54 +54,63 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
   const recordShot = useQuestStore((s) => s.recordShot)
   const hitTarget = useQuestStore((s) => s.hitTarget)
 
-  // ── Realistic 3D Arrow Mesh Template (Length 0.82m, tip at (0,0,0) facing +Z) ──
-  const { shaftGeo, tipGeo, ferruleGeo, fletchGeo, nockGeo, shaftMat, tipMat, ferruleMat, fletchMat, nockMat, trailMat } = useMemo(() => {
+  // ── Realistic 3D Arrow Mesh Template (Length 0.58m, tip at (0,0,0) facing +Z) ──
+  const { shaftGeo, tipGeo, coreGeo, ferruleGeo, fletchGeo, nockGeo, threadGeo, shaftMat, tipMat, ferruleMat, fletchMat, nockMat, threadMat, trailMat } = useMemo(() => {
     // 1. Broadhead Razor Blade (Point at z = 0 pointing forward +Z, barbs at z = -0.065)
     const tipShape = new THREE.Shape()
     tipShape.moveTo(0, 0.0) // Razor point at 0
-    tipShape.lineTo(0.016, -0.065) // Right barb extending backward into -Y
-    tipShape.lineTo(0.005, -0.055)
-    tipShape.lineTo(0.005, -0.075)
-    tipShape.lineTo(-0.005, -0.075)
-    tipShape.lineTo(-0.005, -0.055)
-    tipShape.lineTo(-0.016, -0.065) // Left barb extending backward into -Y
+    tipShape.lineTo(0.014, -0.065) // Right barb extending backward into -Z
+    tipShape.lineTo(0.004, -0.055)
+    tipShape.lineTo(0.004, -0.072)
+    tipShape.lineTo(-0.004, -0.072)
+    tipShape.lineTo(-0.004, -0.055)
+    tipShape.lineTo(-0.014, -0.065) // Left barb extending backward into -Z
     tipShape.closePath()
 
     const tip = new THREE.ExtrudeGeometry(tipShape, {
-      depth: 0.0028,
+      depth: 0.0018,
       bevelEnabled: true,
       bevelSegments: 2,
-      bevelSize: 0.0010,
-      bevelThickness: 0.0010,
+      bevelSize: 0.0006,
+      bevelThickness: 0.0006,
     })
     // Rotate so point is at (0,0,0) pointing +Z, barbs extend backward along -Z
     tip.rotateX(Math.PI / 2)
     tip.rotateZ(Math.PI / 4) // 45 deg blade tilt
 
-    // 2. Metal Ferrule Collar connecting broadhead to shaft (z = -0.06 to -0.085)
-    const ferrule = new THREE.CylinderGeometry(0.0055, 0.0045, 0.025, 12)
+    // Broadhead Diamond Core Spine
+    const core = new THREE.ConeGeometry(0.0032, 0.065, 4)
+    core.rotateX(Math.PI / 2)
+    core.translate(0, 0, -0.032)
+
+    // 2. Metal Ferrule Collar connecting broadhead to shaft (z = -0.055 to -0.075)
+    const ferrule = new THREE.CylinderGeometry(0.0037, 0.0032, 0.020, 12)
     ferrule.rotateX(Math.PI / 2)
-    ferrule.translate(0, 0, -0.072)
+    ferrule.translate(0, 0, -0.065)
 
-    // 3. Cedar Wood Shaft: diameter 8.4mm, length 0.74m, extends from z = -0.07 to z = -0.81
-    const shaft = new THREE.CylinderGeometry(0.0042, 0.0042, 0.74, 12)
+    // 3. Cedar Wood Shaft: diameter 6mm, length 0.502m, extends from z = -0.070 to z = -0.572
+    const shaft = new THREE.CylinderGeometry(0.0030, 0.0030, 0.502, 12)
     shaft.rotateX(Math.PI / 2)
-    shaft.translate(0, 0, -0.44) // Centered at -0.44, spans [-0.07, -0.81]
+    shaft.translate(0, 0, -0.321) // Centered at -0.321, spans [-0.070, -0.572]
 
-    // 4. White Turkey Feathers (3 vanes at rear tail, z = -0.67 to -0.77)
+    // 4. White Turkey Shield-Cut Feathers (3 vanes at rear tail, z = -0.495 to -0.565)
     const fletchShape = new THREE.Shape()
     fletchShape.moveTo(0, 0)
-    fletchShape.lineTo(0.013, -0.015)
-    fletchShape.lineTo(0.012, -0.095)
-    fletchShape.lineTo(0, -0.085)
+    fletchShape.lineTo(0.0085, -0.012)
+    fletchShape.lineTo(0.0080, -0.068)
+    fletchShape.lineTo(0, -0.070)
     fletchShape.closePath()
     const fletch = new THREE.ShapeGeometry(fletchShape)
     fletch.rotateX(Math.PI / 2) // Extends backward along -Z
 
-    // 5. Carved Bone Nock (at rear tail z = -0.81)
-    const nock = new THREE.CylinderGeometry(0.0048, 0.0048, 0.018, 12)
+    // Silk thread whipping rings binding the feather quills
+    const thread = new THREE.CylinderGeometry(0.0033, 0.0033, 0.0035, 12)
+    thread.rotateX(Math.PI / 2)
+
+    // 5. Carved Bone Nock (at rear tail z = -0.572 to -0.584)
+    const nock = new THREE.CylinderGeometry(0.0035, 0.0035, 0.012, 12)
     nock.rotateX(Math.PI / 2)
-    nock.translate(0, 0, -0.81)
+    nock.translate(0, 0, -0.578)
 
     // Materials
     const sMat = new THREE.MeshStandardMaterial({
@@ -133,6 +142,11 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       roughness: 0.32,
     })
 
+    const thMat = new THREE.MeshStandardMaterial({
+      color: '#8b1e1e',
+      roughness: 0.55,
+    })
+
     const trMat = new THREE.MeshBasicMaterial({
       color: '#e2f0ff',
       transparent: true,
@@ -144,14 +158,17 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
     return {
       shaftGeo: shaft,
       tipGeo: tip,
+      coreGeo: core,
       ferruleGeo: ferrule,
       fletchGeo: fletch,
       nockGeo: nock,
+      threadGeo: thread,
       shaftMat: sMat,
       tipMat: tMat,
       ferruleMat: feMat,
       fletchMat: fMat,
       nockMat: nMat,
+      threadMat: thMat,
       trailMat: trMat,
     }
   }, [])
@@ -228,8 +245,8 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       const fwd = a.vel.clone().normalize()
       a.quat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fwd)
 
-      // Append trail point at the tail of the arrow (0.70m behind tip)
-      const tailPos = a.pos.clone().addScaledVector(fwd, -0.70)
+      // Append trail point at the tail of the arrow (0.58m behind tip)
+      const tailPos = a.pos.clone().addScaledVector(fwd, -0.58)
       a.trail.push(tailPos)
       if (a.trail.length > 10) {
         a.trail.shift()
@@ -425,6 +442,9 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
               {/* 1. Silver Broadhead Razor Blade (at front z = 0, pointing +Z) */}
               <mesh geometry={tipGeo} material={tipMat} position={[0, 0, 0]} />
 
+              {/* Diamond Core Spine */}
+              <mesh geometry={coreGeo} material={ferruleMat} position={[0, 0, 0]} />
+
               {/* 2. Metal Ferrule Collar */}
               <mesh geometry={ferruleGeo} material={ferruleMat} position={[0, 0, 0]} />
 
@@ -434,12 +454,16 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
               {/* 4. Carved Bone Nock */}
               <mesh geometry={nockGeo} material={nockMat} position={[0, 0, 0]} />
 
-              {/* 5. 3 White Turkey Feathers (at rear tail z = -0.67 to -0.77) */}
+              {/* 5. 3 White Turkey Shield-Cut Feathers (at rear tail z = -0.495 to -0.565) */}
               {[0, (Math.PI * 2) / 3, (Math.PI * 4) / 3].map((angle, i) => (
-                <group key={i} position={[0, 0, -0.67]} rotation={[0, 0, angle]}>
-                  <mesh geometry={fletchGeo} material={fletchMat} position={[0, 0.0042, 0]} />
+                <group key={i} position={[0, 0, -0.495]} rotation={[0, 0, angle]}>
+                  <mesh geometry={fletchGeo} material={fletchMat} position={[0, 0.0028, 0]} />
                 </group>
               ))}
+
+              {/* Silk Thread Whipping Rings */}
+              <mesh geometry={threadGeo} material={threadMat} position={[0, 0, -0.494]} />
+              <mesh geometry={threadGeo} material={threadMat} position={[0, 0, -0.566]} />
             </group>
           </group>
         )
