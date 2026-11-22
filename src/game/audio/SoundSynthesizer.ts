@@ -121,6 +121,86 @@ class SoundSynthesizer {
     osc.stop(now + 0.35)
   }
 
+  // ── Bow Equip: Leather rustle & subtle string twang ─────────────────────────
+  public playBowEquip() {
+    if (this.isMuted) return
+    this.ensureContext()
+    if (!this.ctx || !this.masterGain) return
+
+    const now = this.ctx.currentTime
+
+    // 1. Leather rustle noise
+    const bufferSize = Math.floor(this.ctx.sampleRate * 0.12)
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.35))
+    }
+    const noise = this.ctx.createBufferSource()
+    noise.buffer = buffer
+
+    const filter = this.ctx.createBiquadFilter()
+    filter.type = 'bandpass'
+    filter.frequency.setValueAtTime(600, now)
+    filter.Q.setValueAtTime(1.5, now)
+
+    const gain = this.ctx.createGain()
+    gain.gain.setValueAtTime(0.18, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12)
+
+    noise.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.masterGain)
+    noise.start(now)
+
+    // 2. Light wooden handle slide
+    const osc = this.ctx.createOscillator()
+    const oscGain = this.ctx.createGain()
+    osc.type = 'triangle'
+    osc.frequency.setValueAtTime(120, now + 0.02)
+    osc.frequency.exponentialRampToValueAtTime(260, now + 0.1)
+
+    oscGain.gain.setValueAtTime(0.001, now)
+    oscGain.gain.linearRampToValueAtTime(0.08, now + 0.04)
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14)
+
+    osc.connect(oscGain)
+    oscGain.connect(this.masterGain)
+    osc.start(now + 0.02)
+    osc.stop(now + 0.14)
+  }
+
+  // ── Bow Unequip: Soft leather stow slide ────────────────────────────────────
+  public playBowUnequip() {
+    if (this.isMuted) return
+    this.ensureContext()
+    if (!this.ctx || !this.masterGain) return
+
+    const now = this.ctx.currentTime
+
+    const bufferSize = Math.floor(this.ctx.sampleRate * 0.1)
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.4))
+    }
+    const noise = this.ctx.createBufferSource()
+    noise.buffer = buffer
+
+    const filter = this.ctx.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.setValueAtTime(450, now)
+
+    const gain = this.ctx.createGain()
+    gain.gain.setValueAtTime(0.14, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1)
+
+    noise.connect(filter)
+    filter.connect(gain)
+    gain.connect(this.masterGain)
+    noise.start(now)
+  }
+
   // ── Arrow Hit: wooden impact thud ──────────────────────────────────────────
   public playArrowHitWood() {
     if (this.isMuted) return

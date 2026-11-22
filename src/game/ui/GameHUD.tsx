@@ -39,6 +39,7 @@ export default function GameHUD({
   const totalCollected = useQuestStore((s) => s.totalCollected)
   const drawProgress = useQuestStore((s) => s.drawProgress)
   const isAiming = useQuestStore((s) => s.isAiming)
+  const isBowEquipped = useQuestStore((s) => s.isBowEquipped)
   const hitMarkerId = useQuestStore((s) => s.hitMarkerId)
   const notification = useQuestStore((s) => s.notification)
   const gameWon = useQuestStore((s) => s.gameWon)
@@ -633,95 +634,146 @@ export default function GameHUD({
           justifyContent: 'center',
         }}
       >
-        {/* Tension Caliper Ring */}
-        <div
-          style={{
-            width: Math.max(14, 42 - drawProgress * 26),
-            height: Math.max(14, 42 - drawProgress * 26),
-            borderRadius: '50%',
-            border: `1.5px solid ${
-              drawProgress > 0.88 ? '#4deeea' : 'rgba(240, 235, 225, 0.65)'
-            }`,
-            boxShadow: drawProgress > 0.88 ? '0 0 12px #4deeea' : '0 0 4px rgba(0,0,0,0.8)',
-            transition: 'border-color 0.08s ease, width 0.04s linear, height 0.04s linear',
-          }}
-        />
-
-        {/* Center Aim Diamond Pip */}
-        <div
-          style={{
-            position: 'absolute',
-            width: drawProgress > 0.9 ? 5 : 3.5,
-            height: drawProgress > 0.9 ? 5 : 3.5,
-            transform: 'rotate(45deg)',
-            background: drawProgress > 0.9 ? '#ffea79' : '#ffffff',
-            boxShadow: drawProgress > 0.9 ? '0 0 8px #ffea79' : '0 0 3px #000',
-            transition: 'all 0.1s ease',
-          }}
-        />
-
-        {/* Range Crosshair Notches */}
-        <div
-          style={{
-            position: 'absolute',
-            left: -18,
-            width: 7,
-            height: 1,
-            background: 'rgba(255, 255, 255, 0.45)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            right: -18,
-            width: 7,
-            height: 1,
-            background: 'rgba(255, 255, 255, 0.45)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            bottom: -18,
-            width: 1,
-            height: 7,
-            background: 'rgba(255, 255, 255, 0.45)',
-          }}
-        />
-
-        {/* Hit Marker Slash (Flash on Marksmanship Hit) */}
-        {showHitMarker && (
+        {!isBowEquipped ? (
+          /* Subtle minimalist exploration pip when unequipped */
           <div
             style={{
-              position: 'absolute',
-              width: 22,
-              height: 22,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              width: 3,
+              height: 3,
+              borderRadius: '50%',
+              background: 'rgba(255, 255, 255, 0.65)',
+              boxShadow: '0 0 3px rgba(0, 0, 0, 0.8)',
             }}
-          >
+          />
+        ) : (
+          <>
+            {/* Dynamic Contracting Tension Ring (fades in as tension builds) */}
+            {drawProgress > 0.04 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  width: Math.max(8, 26 - drawProgress * 18),
+                  height: Math.max(8, 26 - drawProgress * 18),
+                  borderRadius: '50%',
+                  border: `1.5px solid ${
+                    drawProgress > 0.88 ? '#ffd700' : 'rgba(240, 235, 220, 0.75)'
+                  }`,
+                  boxShadow:
+                    drawProgress > 0.88
+                      ? '0 0 10px rgba(255, 215, 0, 0.8)'
+                      : '0 0 4px rgba(0, 0, 0, 0.6)',
+                  transition: 'border-color 0.08s ease',
+                }}
+              />
+            )}
+
+            {/* Center Aim Pip */}
             <div
               style={{
                 position: 'absolute',
-                width: 14,
-                height: 2,
-                background: '#ff4d4f',
-                transform: 'rotate(45deg)',
-                boxShadow: '0 0 8px #ff4d4f',
+                width: drawProgress > 0.88 ? 3.5 : 2.5,
+                height: drawProgress > 0.88 ? 3.5 : 2.5,
+                borderRadius: '50%',
+                background: drawProgress > 0.88 ? '#ffd700' : '#ffffff',
+                boxShadow:
+                  drawProgress > 0.88
+                    ? '0 0 8px #ffd700, 0 1px 2px rgba(0,0,0,0.8)'
+                    : '0 1px 2px rgba(0,0,0,0.9)',
+                transition: 'all 0.1s ease',
               }}
             />
-            <div
-              style={{
-                position: 'absolute',
-                width: 14,
-                height: 2,
-                background: '#ff4d4f',
-                transform: 'rotate(-45deg)',
-                boxShadow: '0 0 8px #ff4d4f',
-              }}
-            />
-          </div>
+
+            {/* 4 Precision Crosshair Notches (Dynamic Inward Contraction) */}
+            {(() => {
+              const notchOffset = Math.max(5, 12 - drawProgress * 7)
+              const notchColor =
+                drawProgress > 0.88 ? 'rgba(255, 220, 100, 0.9)' : 'rgba(255, 255, 255, 0.75)'
+              const notchShadow = '0 1px 2px rgba(0,0,0,0.8)'
+              return (
+                <>
+                  {/* Left */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: -notchOffset - 5,
+                      width: 5,
+                      height: 1.5,
+                      background: notchColor,
+                      boxShadow: notchShadow,
+                    }}
+                  />
+                  {/* Right */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: -notchOffset - 5,
+                      width: 5,
+                      height: 1.5,
+                      background: notchColor,
+                      boxShadow: notchShadow,
+                    }}
+                  />
+                  {/* Top */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: -notchOffset - 5,
+                      width: 1.5,
+                      height: 5,
+                      background: notchColor,
+                      boxShadow: notchShadow,
+                    }}
+                  />
+                  {/* Bottom */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: -notchOffset - 5,
+                      width: 1.5,
+                      height: 5,
+                      background: notchColor,
+                      boxShadow: notchShadow,
+                    }}
+                  />
+                </>
+              )
+            })()}
+
+            {/* Hit Marker Slash (Flash on Marksmanship Hit) */}
+            {showHitMarker && (
+              <div
+                style={{
+                  position: 'absolute',
+                  width: 20,
+                  height: 20,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    width: 13,
+                    height: 2,
+                    background: '#ff4d4f',
+                    transform: 'rotate(45deg)',
+                    boxShadow: '0 0 8px #ff4d4f',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    width: 13,
+                    height: 2,
+                    background: '#ff4d4f',
+                    transform: 'rotate(-45deg)',
+                    boxShadow: '0 0 8px #ff4d4f',
+                  }}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -737,18 +789,36 @@ export default function GameHUD({
           display: 'flex',
           alignItems: 'center',
           gap: 16,
-          background: 'rgba(8, 14, 10, 0.85)',
-          borderTop: '1px solid rgba(214, 184, 120, 0.3)',
-          borderBottom: '1px solid rgba(214, 184, 120, 0.15)',
-          padding: '6px 20px',
+          background: 'rgba(8, 14, 10, 0.88)',
+          borderTop: '1px solid rgba(214, 184, 120, 0.35)',
+          borderBottom: '1px solid rgba(214, 184, 120, 0.18)',
+          padding: '6px 22px',
           borderRadius: 2,
           backdropFilter: 'blur(10px)',
-          boxShadow: '0 6px 20px rgba(0,0,0,0.6)',
+          boxShadow: '0 6px 20px rgba(0,0,0,0.65)',
           fontSize: 10,
           letterSpacing: '0.04em',
-          color: 'rgba(230, 225, 215, 0.85)',
+          color: 'rgba(230, 225, 215, 0.88)',
         }}
       >
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <kbd
+            style={{
+              background: 'rgba(255,255,255,0.12)',
+              border: '1px solid rgba(214, 184, 120, 0.4)',
+              borderRadius: 3,
+              padding: '1px 5px',
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: 9,
+              fontWeight: 700,
+              color: '#d4af37',
+            }}
+          >
+            1
+          </kbd>
+          {isBowEquipped ? 'Stow Bow' : 'Equip Bow'}
+        </span>
+        <span style={{ opacity: 0.3 }}>|</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <kbd
             style={{

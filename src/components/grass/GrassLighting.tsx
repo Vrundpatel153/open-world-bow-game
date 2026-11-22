@@ -75,8 +75,8 @@ export default function GrassLighting({
         intensity={3.1}
         position={[-45, 35, -25]}
         castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
         shadow-camera-near={1}
         shadow-camera-far={160}
         shadow-camera-left={-36}

@@ -131,12 +131,12 @@ export default function OpenWorldGrassField({
     // 2. Scatter 54,000 Wide, Lush Grass Blades (Overlapping, Gapless Carpet)
     const blades = scatterBlades(new THREE.Mesh(samplePlaneGeo), {
       uniforms: u.surface,
-      density: 12,
-      maxCount: 54_000,
-      minWidth: 0.22,
-      maxWidth: 0.32,
-      minLength: 0.55,
-      maxLength: 0.92,
+      density: 10,
+      maxCount: 40_000,
+      minWidth: 0.26,
+      maxWidth: 0.36,
+      minLength: 0.58,
+      maxLength: 0.94,
       tiltMax: 0.28,
       segments: 3,
     })
@@ -219,10 +219,13 @@ export default function OpenWorldGrassField({
         floor.removeFromParent()
       }
 
+      const distCenter = Math.hypot(posX, posZ)
+      const isCaster = distCenter <= 36
+
       cluster.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
           const m = child as THREE.Mesh
-          m.castShadow = true
+          m.castShadow = isCaster
           m.receiveShadow = true
           const srcMat = Array.isArray(m.material) ? m.material[0] : m.material
           if (srcMat.name === TRUNK_MATERIAL) {

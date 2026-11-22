@@ -4,6 +4,8 @@
 // ZERO React re-renders on keystrokes: prevents 60Hz UI thrashing & screen shaking.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { useQuestStore } from '@/game/stores/questStore'
+
 class InputManager {
   private keys = new Set<string>()
   private _isLocked = false
@@ -55,6 +57,11 @@ class InputManager {
 
     this.keys.add(code)
     this.keys.add(key)
+
+    // Equip / Stow Weapon Toggle via [1] key
+    if (code === 'Digit1' || key === '1') {
+      useQuestStore.getState().toggleBowEquipped()
+    }
   }
 
   private handleKeyUp = (e: KeyboardEvent) => {

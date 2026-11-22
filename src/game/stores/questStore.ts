@@ -72,6 +72,7 @@ interface QuestState {
   arrowsHit: number
   gameWon: boolean
   isAiming: boolean
+  isBowEquipped: boolean
   drawProgress: number
   hitMarkerId: number
   notification: string | null
@@ -82,6 +83,8 @@ interface QuestState {
   recordShot: () => void
   setAiming: (aiming: boolean) => void
   setDrawProgress: (p: number) => void
+  setBowEquipped: (equipped: boolean) => void
+  toggleBowEquipped: () => void
   resetGame: () => void
 }
 
@@ -93,6 +96,7 @@ export const useQuestStore = create<QuestState>((set, get) => ({
   arrowsHit: 0,
   gameWon: false,
   isAiming: false,
+  isBowEquipped: true,
   drawProgress: 0,
   hitMarkerId: 0,
   notification: 'Dispel the guardian embers around the four ancient monoliths.',
@@ -164,6 +168,23 @@ export const useQuestStore = create<QuestState>((set, get) => ({
 
   setDrawProgress: (drawProgress) => set({ drawProgress }),
 
+  setBowEquipped: (isBowEquipped) => set({ isBowEquipped }),
+
+  toggleBowEquipped: () => {
+    const nextState = !get().isBowEquipped
+    if (nextState) {
+      sound.playBowEquip()
+    } else {
+      sound.playBowUnequip()
+    }
+    set({
+      isBowEquipped: nextState,
+      isAiming: false,
+      drawProgress: 0,
+      notification: nextState ? 'Recurve Bow readied [1 to stow]' : 'Recurve Bow stowed [1 to draw]',
+    })
+  },
+
   resetGame: () => {
     set({
       shrines: INITIAL_SHRINES.map((s) => ({
@@ -181,3 +202,7 @@ export const useQuestStore = create<QuestState>((set, get) => ({
     })
   },
 }))
+
+if (typeof window !== 'undefined') {
+  ;(window as unknown as { __questStore: typeof useQuestStore }).__questStore = useQuestStore
+}

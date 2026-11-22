@@ -1,8 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // ArrowSystem — Ballistic Physics, Aerodynamic Rotation & Impact Effects
-// Manages high-speed in-flight hunting arrows with parabolic trajectory,
+// Manages high-velocity in-flight hunting arrows with parabolic trajectory,
 // aerodynamic alignment, target detection, ground penetration with kinetic
-// quiver wobble, vapor trails, and celebratory elemental impact sparks.
+// quiver wobble, and celebratory elemental impact sparks.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useRef, useImperativeHandle, forwardRef, useMemo } from 'react'
@@ -18,11 +18,10 @@ export interface ArrowSystemHandle {
 
 interface FlyingArrow {
   id: number
-  pos: THREE.Vector3
+  pos: THREE.Vector3 // Current world position of arrow broadhead TIP
   vel: THREE.Vector3
   rot: THREE.Euler
   stuck: boolean
-  stuckNormal: THREE.Vector3
   wobbleAmp: number
   wobbleFreq: number
   wobbleTime: number
@@ -39,7 +38,7 @@ interface SparkParticle {
   size: number
 }
 
-const GRAVITY = -13.5 // m/s^2 natural ballistic drop
+const GRAVITY = -12.5 // Natural ballistic drop (m/s^2)
 const MAX_ARROWS = 32
 
 export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
@@ -53,26 +52,28 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
   const recordShot = useQuestStore((s) => s.recordShot)
   const hitTarget = useQuestStore((s) => s.hitTarget)
 
-  // ── Realistic 3D Arrow Mesh Template ──────────────────────────────────────
-  const { shaftGeo, tipGeo, fletchGeo, shaftMat, tipMat, fletchMat } = useMemo(() => {
+  // ── Realistic 3D Arrow Mesh Template (Length 0.74m, tip at (0, 0, 0)) ───────
+  const { shaftGeo, tipGeo, fletchGeo, nockGeo, shaftMat, tipMat, fletchMat, nockMat } = useMemo(() => {
     // Carbon-weave cedar shaft
-    const shaft = new THREE.CylinderGeometry(0.006, 0.006, 0.84, 8)
+    const shaft = new THREE.CylinderGeometry(0.0042, 0.0042, 0.74, 8)
     shaft.rotateX(Math.PI / 2) // Orient along Z axis
 
     // Damascus steel broadhead
     const tipShape = new THREE.Shape()
-    tipShape.moveTo(0, 0.045)
-    tipShape.lineTo(0.018, -0.02)
+    tipShape.moveTo(0, 0.038)
+    tipShape.lineTo(0.014, -0.016)
+    tipShape.lineTo(0.005, -0.010)
     tipShape.lineTo(0, -0.015)
-    tipShape.lineTo(-0.018, -0.02)
+    tipShape.lineTo(-0.005, -0.010)
+    tipShape.lineTo(-0.014, -0.016)
     tipShape.closePath()
 
     const tip = new THREE.ExtrudeGeometry(tipShape, {
-      depth: 0.003,
+      depth: 0.0025,
       bevelEnabled: true,
       bevelSegments: 2,
-      bevelSize: 0.002,
-      bevelThickness: 0.002,
+      bevelSize: 0.0015,
+      bevelThickness: 0.0015,
     })
     tip.center()
     tip.rotateX(-Math.PI / 2) // Point along -Z
@@ -80,12 +81,16 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
     // Feathers
     const fletchShape = new THREE.Shape()
     fletchShape.moveTo(0, 0)
-    fletchShape.lineTo(0.018, 0.02)
-    fletchShape.lineTo(0.015, 0.11)
-    fletchShape.lineTo(0, 0.1)
+    fletchShape.lineTo(0.015, 0.016)
+    fletchShape.lineTo(0.012, 0.09)
+    fletchShape.lineTo(0, 0.08)
     fletchShape.closePath()
     const fletch = new THREE.ShapeGeometry(fletchShape)
     fletch.rotateX(Math.PI / 2)
+
+    // Bone nock
+    const nock = new THREE.CylinderGeometry(0.0048, 0.0048, 0.02, 8)
+    nock.rotateX(Math.PI / 2)
 
     const sMat = new THREE.MeshStandardMaterial({
       color: '#5c381e',
@@ -105,13 +110,20 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       side: THREE.DoubleSide,
     })
 
+    const nMat = new THREE.MeshStandardMaterial({
+      color: '#e8e0d5',
+      roughness: 0.35,
+    })
+
     return {
       shaftGeo: shaft,
       tipGeo: tip,
       fletchGeo: fletch,
+      nockGeo: nock,
       shaftMat: sMat,
       tipMat: tMat,
       fletchMat: fMat,
+      nockMat: nMat,
     }
   }, [])
 
@@ -120,11 +132,11 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
     spawnArrow: (origin: THREE.Vector3, direction: THREE.Vector3, power: number) => {
       recordShot()
 
-      // High-velocity hunting speed: 42 m/s to 76 m/s based on draw tension
-      const speed = 42 + power * 34
+      // Hunting arrow ballistic speed: 45 m/s to 82 m/s
+      const speed = 45 + power * 37
       const vel = direction.clone().multiplyScalar(speed)
-      // Aerodynamic upward lift
-      vel.y += 0.6 * power
+      // Aerodynamic slight lift
+      vel.y += 0.5 * power
 
       // Initial rotation facing fire vector
       const rot = new THREE.Euler()
@@ -139,9 +151,8 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
         vel,
         rot,
         stuck: false,
-        stuckNormal: new THREE.Vector3(0, 1, 0),
         wobbleAmp: 0,
-        wobbleFreq: 24,
+        wobbleFreq: 26,
         wobbleTime: 0,
         life: 0,
       }
@@ -185,8 +196,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       a.vel.y += GRAVITY * dt
       a.pos.addScaledVector(a.vel, dt)
 
-      // Aerodynamic rotation (points into velocity vector)
-      // Note: Arrow mesh tip points toward -Z in local space, so lookAt target makes tip face forward!
+      // Aerodynamic rotation (tip faces into velocity vector)
       const lookTarget = a.pos.clone().add(a.vel)
       const dummy = new THREE.Object3D()
       dummy.position.copy(a.pos)
@@ -220,7 +230,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
           motionSegment.closestPointToPoint(targetPos, true, closestPt)
           const dist = closestPt.distanceTo(targetPos)
 
-          if (dist < 0.95) { // Bullseye hit radius
+          if (dist < 1.05) { // Bullseye hit radius
             hitTarget(shrine.id, tIdx)
 
             // Spawn radiant elemental sparks
@@ -261,7 +271,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       if (a.pos.y <= terrainY) {
         a.pos.y = terrainY
         a.stuck = true
-        a.wobbleAmp = 0.08
+        a.wobbleAmp = 0.07
         a.wobbleTime = 0
         sound.playArrowHitWood()
       }
@@ -302,16 +312,19 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
             position={[a.pos.x, a.pos.y, a.pos.z]}
             rotation={[a.rot.x + wobble, a.rot.y, a.rot.z + wobble]}
           >
-            {/* Cedar Shaft (pointing forward towards -Z) */}
-            <mesh geometry={shaftGeo} material={shaftMat} position={[0, 0, 0.38]} castShadow />
+            {/* Damascus Steel Broadhead Tip (at pivot (0, 0, 0), facing forward -Z) */}
+            <mesh geometry={tipGeo} material={tipMat} position={[0, 0, 0]} />
 
-            {/* Damascus Steel Broadhead Tip */}
-            <mesh geometry={tipGeo} material={tipMat} position={[0, 0, -0.04]} />
+            {/* Cedar Shaft (0.74m length, extending backward along +Z) */}
+            <mesh geometry={shaftGeo} material={shaftMat} position={[0, 0, 0.37]} castShadow />
 
-            {/* Fletching Feathers (3 vanes) */}
+            {/* Carved Bone Nock (at rear tail z = 0.74) */}
+            <mesh geometry={nockGeo} material={nockMat} position={[0, 0, 0.74]} />
+
+            {/* Fletching Feathers (3 vanes at rear tail) */}
             {[0, (Math.PI * 2) / 3, (Math.PI * 4) / 3].map((angle, i) => (
-              <group key={i} position={[0, 0, 0.74]} rotation={[0, 0, angle]}>
-                <mesh geometry={fletchGeo} material={fletchMat} position={[0, 0.006, 0]} />
+              <group key={i} position={[0, 0, 0.66]} rotation={[0, 0, angle]}>
+                <mesh geometry={fletchGeo} material={fletchMat} position={[0, 0.005, 0]} />
               </group>
             ))}
           </group>

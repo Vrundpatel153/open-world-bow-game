@@ -63,13 +63,15 @@ export default function ProductionFPSController({
   const MOUSE_SENSITIVITY = 0.0022
 
   useEffect(() => {
-    // 1. Initial Spawn Setup
-    const spawnY = getTerrainHeight(0, 0)
-    pos.current.set(0, spawnY, 0)
+    // 1. Initial Spawn Setup (clear meadow facing shrines)
+    const spawnX = 0
+    const spawnZ = 8.5
+    const spawnY = getTerrainHeight(spawnX, spawnZ)
+    pos.current.set(spawnX, spawnY, spawnZ)
     cameraElevation.current = spawnY
     camera.rotation.order = 'YXZ'
     camera.rotation.set(pitch.current, yaw.current, 0, 'YXZ')
-    camera.position.set(0, spawnY + EYE_HEIGHT, 0)
+    camera.position.set(spawnX, spawnY + EYE_HEIGHT, spawnZ)
 
     // 2. Click Window to Request Pointer Lock (Instant 360° Mouse Look)
     const canvas = gl.domElement
