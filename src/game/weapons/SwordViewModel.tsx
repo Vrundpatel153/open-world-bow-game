@@ -1,23 +1,28 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// SwordViewModel — AAA First-Person Martial Sword Physics & Kinematics Viewmodel
-// Open-Source Second-Order Spring-Damper Inertia & Authentic Melee Kinematics:
-// - Second-Order Damped Harmonic Oscillator (SpringDamper3D):
-//     F = -k * (x - target) - c * v + impulse
-//     Simulates realistic weapon mass, inertia, and spring rebound.
-// - Authentic Martial Ready Stance (Vom Tag / Low-Ready Guard):
-//     Framed naturally in lower-right viewport (Guard Y~-0.18, Pommel Y~-0.30, Tip Y~-0.05).
-//     Center crosshair (960, 540) and left 75% of viewport 100% unobstructed.
-//     Zero stiff vertical pole posture.
-// - Quaternion-Based Multi-Phase Martial Cleaving (Zero Gimbal Lock / Robotic Lerps):
-//     Combo 1: Descending Diagonal Oberhau (Right Shoulder -> Low Left)
-//     Combo 2: Ascending Diagonal Unterhau (Low Left -> High Right)
-//     Combo 3: Crushing Overhead Wrath Zornhau (High Right Temple -> Ground Impact)
-//     Heavy Attack: 270-degree Whirlwind Cleave with massive wind blast
-//     Guard / Parry: Braced Crown Guard (Kron) across chest with tactile spring resistance
-// - Dynamic Blade-Edge Slipstream Trail:
-//     Real-time vertex history tracking tip & base (zero cartoon static yellow rings).
-//     Translucent silver-white air-shearing vapor (#e6f0fa) with quadratic fade.
-// - Dedicated Viewmodel Lighting & Depth Buffer Clearing (Zero world clipping).
+// SwordViewModel — AAA Authentic Handcrafted Survival Wooden Sword Viewmodel
+// Wilderness Survival Melee Weapon:
+// - Traditional Hand-Whittled Hardwood Stave Blade (Mountain Ironwood / Dark Oak)
+//     * Asymmetric chisel-bevelled wedge cross-section with flat reinforced spine
+//     * Fire-hardened striking edge (char-tempered over coals for combat durability)
+//     * Angled survival kissaki / chisel point for deep penetrating thrusts
+//     * Hand-gouged central lightening fuller groove
+// - Wilderness Pegged Hardwood Crossguard & Hemp Twine Lashings:
+//     * Carved oval hardwood guard pegged with wooden locking dowels
+//     * Criss-cross hemp rope / waxed sinew lashings wrapped in authentic survival X-patterns
+// - Ergonomic Carved Grip with Spiral Cord / Weathered Leather Wrap:
+//     * Contoured oval handle core with dense friction cord wrapping
+//     * Tied knot accents and short cord ends
+// - Carved Wooden Pommel Counterweight & Hanging Leather Lanyard Loop
+// - Second-Order Spring-Damper Inertia Physics & Weighty Kinematics:
+//     * Combo 1: Descending Diagonal Oberhau (Right Shoulder -> Low Left)
+//     * Combo 2: Ascending Diagonal Unterhau (Low Left -> High Right)
+//     * Combo 3: Wrath Overhead Finisher Zornhau (Overhead -> Heavy Ground Slam)
+//     * Heavy Attack: 270-degree Whirlwind Cleave with massive wind gust
+//     * Guard / Parry: Braced Crown Guard across chest with spring resistance
+// - First-Person Arm Rig & Viewport Framing:
+//     * Held naturally in lower-right hand (Guard Y~-0.18m, Tip Y~-0.05m)
+//     * Center crosshair (960, 540) and upper/left 75% 100% unobstructed
+//     * Solid hardwood impact acoustics on rock collision
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useRef, useMemo, useEffect } from 'react'
@@ -37,7 +42,7 @@ interface SwordViewModelProps {
 type SwingType = 'none' | 'combo1' | 'combo2' | 'combo3' | 'heavy'
 
 // ── Open-Source Second-Order Spring-Damper Physics Class ─────────────────────
-export class SpringDamper3D {
+class SpringDamper3D {
   public current = new THREE.Vector3()
   public target = new THREE.Vector3()
   public velocity = new THREE.Vector3()
@@ -79,11 +84,104 @@ export class SpringDamper3D {
 // Number of historical blade slices for the dynamic aerodynamic trail
 const TRAIL_STEPS = 10
 
+// ── Procedural Procedural Texture Generators for Organic Survival Aesthetics ─
+function createProceduralWoodTexture(
+  baseColor: string,
+  grainColor: string,
+  darkGrainColor: string,
+  ringDensity = 1.0
+): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 512
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return new THREE.CanvasTexture(canvas)
+
+  ctx.fillStyle = baseColor
+  ctx.fillRect(0, 0, 512, 512)
+
+  // Longitudinal wood grain lines
+  for (let i = 0; i < 700; i++) {
+    const x = Math.random() * 512
+    const width = 1 + Math.random() * 2.5
+    ctx.fillStyle = Math.random() > 0.4 ? grainColor : darkGrainColor
+    ctx.globalAlpha = 0.08 + Math.random() * 0.16
+    ctx.fillRect(x, 0, width, 512)
+  }
+
+  // Organic wood growth rings and gentle wavy grain distortion
+  ctx.globalAlpha = 0.12
+  ctx.strokeStyle = darkGrainColor
+  ctx.lineWidth = 1.8
+  for (let y = 0; y < 512; y += 14 / ringDensity) {
+    ctx.beginPath()
+    for (let x = 0; x <= 512; x += 16) {
+      const wave = Math.sin(x * 0.02 + y * 0.05) * 4 + Math.sin(x * 0.06) * 2
+      if (x === 0) ctx.moveTo(x, y + wave)
+      else ctx.lineTo(x, y + wave)
+    }
+    ctx.stroke()
+  }
+
+  // Subtle natural wood knots
+  ctx.globalAlpha = 0.22
+  for (let k = 0; k < 3; k++) {
+    const kx = 100 + Math.random() * 312
+    const ky = 80 + Math.random() * 350
+    const grad = ctx.createRadialGradient(kx, ky, 2, kx, ky, 18)
+    grad.addColorStop(0, darkGrainColor)
+    grad.addColorStop(0.5, grainColor)
+    grad.addColorStop(1, 'transparent')
+    ctx.fillStyle = grad
+    ctx.beginPath()
+    ctx.ellipse(kx, ky, 8, 18, 0.2, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(1, 2)
+  return texture
+}
+
+function createProceduralHempTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas')
+  canvas.width = 256
+  canvas.height = 256
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return new THREE.CanvasTexture(canvas)
+
+  ctx.fillStyle = '#7a6240'
+  ctx.fillRect(0, 0, 256, 256)
+
+  // Braided fibrous strands
+  ctx.strokeStyle = '#5a462b'
+  ctx.lineWidth = 2.5
+  for (let i = -256; i < 512; i += 10) {
+    ctx.globalAlpha = 0.35
+    ctx.beginPath()
+    ctx.moveTo(i, 0)
+    ctx.lineTo(i + 256, 256)
+    ctx.stroke()
+
+    ctx.beginPath()
+    ctx.moveTo(i + 256, 0)
+    ctx.lineTo(i, 256)
+    ctx.stroke()
+  }
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(4, 4)
+  return texture
+}
+
 export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordViewModelProps) {
   const { camera } = useThree()
   const swordRootRef = useRef<THREE.Group>(null!)
   const trailMeshRef = useRef<THREE.Mesh>(null!)
-  const runeMatRef = useRef<THREE.MeshStandardMaterial>(null!)
 
   const activeItem = useQuestStore((s) => s.activeItem)
   const isSwordActive = activeItem === 'sword'
@@ -119,6 +217,8 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
   const hitStopTimer = useRef(0)
   const hasHitInCurrentSwing = useRef(false)
   const isFrozen = useRef(false)
+  const frozenType = useRef<SwingType>('none')
+  const frozenProgress = useRef(0)
 
   // Authentic First-Person Gauntleted Warrior's Right Arm
   const swordArmRig = useMemo(() => createRightSwordArm(), [])
@@ -129,8 +229,6 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       swordRootRef.current.add(swordArmRig.root)
     }
   }, [swordArmRig])
-  const frozenType = useRef<SwingType>('none')
-  const frozenProgress = useRef(0)
 
   // Dynamic Blade Tip & Base Trail History (Local Camera Coordinates)
   const trailHistory = useRef<{ tip: THREE.Vector3; base: THREE.Vector3 }[]>(
@@ -141,96 +239,169 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
   )
   const trailAlphaRef = useRef(0)
 
-  // ── Procedural Geometries for Ancient Silver-Steel Blade ───────────────────
+  // ── Procedural Textures ─────────────────────────────────────────────────────
+  const woodTexture = useMemo(
+    () => createProceduralWoodTexture('#5c3a1e', '#7b4f2c', '#382210', 1.2),
+    []
+  )
+  const edgeWoodTexture = useMemo(
+    () => createProceduralWoodTexture('#2b1a0e', '#3e2615', '#190e07', 1.8),
+    []
+  )
+  const guardWoodTexture = useMemo(
+    () => createProceduralWoodTexture('#4a2e16', '#663f20', '#2a180b', 0.9),
+    []
+  )
+  const hempTexture = useMemo(() => createProceduralHempTexture(), [])
+
+  // ── Procedural Geometries for Authentic Handcrafted Wooden Survival Sword ───
   const {
     bladeGeo,
-    fullerRuneGeo,
-    guardHubGeo,
-    quillonLeftGeo,
-    quillonRightGeo,
-    guardBossGeo,
-    gripGeo,
-    ringGeos,
-    pommelGeo,
-    finialGeo,
+    edgeBevelGeo,
+    fullerGrooveGeo,
+    guardPlateGeo,
+    guardPegLeftGeo,
+    guardPegRightGeo,
+    lashingHempGeos,
+    handleGripGeo,
+    handleWrapRingsGeos,
+    pommelKnobGeo,
+    lanyardRingGeo,
     dynamicTrailGeo,
   } = useMemo(() => {
-    // 1. Double-Beveled Silver Blade (Length ~0.46m, Width ~0.036m tapering to spear point)
+    // 1. Hand-Whittled Hardwood Blade Body (Total Length 0.46m)
+    // Asymmetric survival sword: flat thick back spine (X < 0) and tapered front cutting bevel (X > 0)
+    // Whittled kissaki/tanto chisel point at y = 0.38 to y = 0.46
     const bladeShape = new THREE.Shape()
-    bladeShape.moveTo(-0.018, 0)
-    bladeShape.lineTo(-0.013, 0.38)
-    bladeShape.lineTo(0.0, 0.46) // Razor spear tip
-    bladeShape.lineTo(0.013, 0.38)
-    bladeShape.lineTo(0.018, 0)
+    // Base heel
+    bladeShape.moveTo(-0.012, 0.0) // Flat spine base
+    bladeShape.lineTo(-0.010, 0.38) // Straight reinforced spine
+    bladeShape.lineTo(-0.002, 0.46) // Chisel piercing tip apex
+    bladeShape.lineTo(0.011, 0.38) // Angled tanto tip transition
+    bladeShape.lineTo(0.016, 0.0) // Tapered cutting edge base
     bladeShape.closePath()
 
-    const extrudeSettings = {
-      depth: 0.005,
+    const bladeExtrude = new THREE.ExtrudeGeometry(bladeShape, {
+      depth: 0.008,
       bevelEnabled: true,
       bevelSegments: 2,
       steps: 1,
       bevelSize: 0.003,
       bevelThickness: 0.003,
-    }
-    const blade = new THREE.ExtrudeGeometry(bladeShape, extrudeSettings)
-    blade.center()
-    blade.translate(0, 0.23, 0)
+    })
+    bladeExtrude.center()
+    bladeExtrude.translate(0, 0.23, 0)
 
-    // 2. Central Fuller Groove & Glowing Rune Channel
-    const fullerShape = new THREE.Shape()
-    fullerShape.moveTo(-0.0035, 0.03)
-    fullerShape.lineTo(-0.0025, 0.34)
-    fullerShape.lineTo(0.0, 0.36)
-    fullerShape.lineTo(0.0025, 0.34)
-    fullerShape.lineTo(0.0035, 0.03)
-    fullerShape.closePath()
+    // 2. Fire-Hardened Striking Edge Strip (Char-tempered wood bevel)
+    // Mounted along the leading cutting edge to create realistic heat-treated contrast
+    const edgeShape = new THREE.Shape()
+    edgeShape.moveTo(0.008, 0.0)
+    edgeShape.lineTo(0.006, 0.38)
+    edgeShape.lineTo(-0.002, 0.46) // Tip point
+    edgeShape.lineTo(0.013, 0.38)
+    edgeShape.lineTo(0.018, 0.0)
+    edgeShape.closePath()
 
-    const fullerRune = new THREE.ExtrudeGeometry(fullerShape, {
-      depth: 0.0075,
+    const edgeExtrude = new THREE.ExtrudeGeometry(edgeShape, {
+      depth: 0.0085,
       bevelEnabled: false,
     })
-    fullerRune.center()
-    fullerRune.translate(0, 0.195, 0)
+    edgeExtrude.center()
+    edgeExtrude.translate(0.004, 0.23, 0)
 
-    // 3. Antique Winged Crossguard
-    const hub = new THREE.BoxGeometry(0.038, 0.022, 0.026)
+    // 3. Hand-Gouged Central Lightening Fuller Groove
+    const fullerShape = new THREE.Shape()
+    fullerShape.moveTo(-0.002, 0.04)
+    fullerShape.lineTo(-0.0015, 0.34)
+    fullerShape.lineTo(0.0, 0.36)
+    fullerShape.lineTo(0.0015, 0.34)
+    fullerShape.lineTo(0.002, 0.04)
+    fullerShape.closePath()
 
-    const quillonLeft = new THREE.CylinderGeometry(0.008, 0.004, 0.065, 8)
-    quillonLeft.rotateZ(Math.PI / 2 + 0.16)
-    quillonLeft.rotateY(0.08)
-    quillonLeft.translate(-0.046, 0.006, 0.004)
+    const fullerGroove = new THREE.ExtrudeGeometry(fullerShape, {
+      depth: 0.0145,
+      bevelEnabled: false,
+    })
+    fullerGroove.center()
+    fullerGroove.translate(-0.001, 0.195, 0)
 
-    const quillonRight = new THREE.CylinderGeometry(0.008, 0.004, 0.065, 8)
-    quillonRight.rotateZ(-(Math.PI / 2 + 0.16))
-    quillonRight.rotateY(-0.08)
-    quillonRight.translate(0.046, 0.006, 0.004)
+    // 4. Pegged Hardwood Crossguard Plate (Oblong carved oak plate)
+    // Width 0.076m, Height 0.018m, Depth 0.026m
+    const guardPlate = new THREE.CylinderGeometry(0.013, 0.014, 0.076, 12)
+    guardPlate.rotateZ(Math.PI / 2)
+    guardPlate.scale(1.0, 1.0, 1.4) // Flatten into stout oblong oval
+    guardPlate.translate(0, 0.006, 0)
 
-    const guardBoss = new THREE.CylinderGeometry(0.0075, 0.0075, 0.008, 4)
-    guardBoss.rotateY(Math.PI / 4)
-    guardBoss.translate(0, 0, 0.014)
+    // Wooden locking dowel pins on left & right
+    const pegLeft = new THREE.CylinderGeometry(0.0035, 0.0035, 0.030, 8)
+    pegLeft.rotateX(Math.PI / 2)
+    pegLeft.translate(-0.024, 0.006, 0)
 
-    // 4. Ergonomic Braided Cord Two-Hand Grip
-    const grip = new THREE.CylinderGeometry(0.0125, 0.0115, 0.11, 12)
-    grip.translate(0, -0.055, 0)
+    const pegRight = new THREE.CylinderGeometry(0.0035, 0.0035, 0.030, 8)
+    pegRight.rotateX(Math.PI / 2)
+    pegRight.translate(0.024, 0.006, 0)
 
-    const rings: THREE.TorusGeometry[] = []
-    const ringYs = [-0.025, -0.05, -0.075, -0.10]
-    for (const ry of ringYs) {
-      const ring = new THREE.TorusGeometry(0.0125, 0.0016, 6, 16)
-      ring.rotateX(Math.PI / 2)
-      ring.translate(0, ry, 0)
-      rings.push(ring)
+    // 5. Wilderness Hemp Rope / Sinew Cross-Lashings
+    // Criss-cross diagonal binding cords securing the guard to the blade stave
+    const lashingGeos: THREE.BufferGeometry[] = []
+
+    // Diagonal wrap 1 (Lower left to upper right across face)
+    const lash1Curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-0.022, -0.010, 0.015),
+      new THREE.Vector3(0.0, 0.006, 0.017),
+      new THREE.Vector3(0.022, 0.022, 0.014),
+      new THREE.Vector3(0.022, 0.022, -0.014),
+      new THREE.Vector3(0.0, 0.006, -0.017),
+      new THREE.Vector3(-0.022, -0.010, -0.015),
+    ], true)
+    lashingGeos.push(new THREE.TubeGeometry(lash1Curve, 16, 0.0022, 6, true))
+
+    // Diagonal wrap 2 (Upper left to lower right across face, forming X)
+    const lash2Curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-0.022, 0.022, 0.014),
+      new THREE.Vector3(0.0, 0.006, 0.017),
+      new THREE.Vector3(0.022, -0.010, 0.015),
+      new THREE.Vector3(0.022, -0.010, -0.015),
+      new THREE.Vector3(0.0, 0.006, -0.017),
+      new THREE.Vector3(-0.022, 0.022, -0.014),
+    ], true)
+    lashingGeos.push(new THREE.TubeGeometry(lash2Curve, 16, 0.0022, 6, true))
+
+    // Horizontal collar wraps at blade collar and below guard
+    const collarTop = new THREE.TorusGeometry(0.017, 0.0020, 6, 16)
+    collarTop.rotateX(Math.PI / 2)
+    collarTop.translate(0, 0.022, 0)
+    lashingGeos.push(collarTop)
+
+    const collarBottom = new THREE.TorusGeometry(0.015, 0.0020, 6, 16)
+    collarBottom.rotateX(Math.PI / 2)
+    collarBottom.translate(0, -0.010, 0)
+    lashingGeos.push(collarBottom)
+
+    // 6. Contoured Wooden Handle Grip (Length 0.11m)
+    const handle = new THREE.CylinderGeometry(0.0135, 0.0125, 0.11, 14)
+    handle.scale(0.88, 1.0, 1.25) // Oval cross-section for ergonomic grip
+    handle.translate(0, -0.065, 0)
+
+    // Overlapping spiral grip cord rings
+    const wrapRings: THREE.TorusGeometry[] = []
+    const wrapYs = [-0.025, -0.045, -0.065, -0.085, -0.105]
+    for (let i = 0; i < wrapYs.length; i++) {
+      const ring = new THREE.TorusGeometry(0.0138, 0.0020, 6, 16)
+      ring.rotateX(Math.PI / 2 + 0.10) // Subtle spiral cant
+      ring.translate(0, wrapYs[i], 0)
+      wrapRings.push(ring)
     }
 
-    // 5. Faceted Octagonal Pommel & Teardrop Finial
-    const pommel = new THREE.CylinderGeometry(0.020, 0.015, 0.024, 8)
-    pommel.translate(0, -0.12, 0)
+    // 7. Carved Wooden Pommel Knob & Hanging Leather Lanyard Loop
+    const pommelKnob = new THREE.CylinderGeometry(0.021, 0.014, 0.026, 12)
+    pommelKnob.scale(0.9, 1.0, 1.15)
+    pommelKnob.translate(0, -0.128, 0)
 
-    const finial = new THREE.ConeGeometry(0.015, 0.014, 8)
-    finial.rotateX(Math.PI)
-    finial.translate(0, -0.138, 0)
+    const lanyardRing = new THREE.TorusGeometry(0.011, 0.0018, 6, 16)
+    lanyardRing.translate(0, -0.146, 0)
 
-    // 6. Dynamic Blade-Edge Trail Geometry (Quad Strip connecting Tip & Base over time)
+    // 8. Dynamic Blade-Edge Slipstream Trail Geometry
     const trailPositions = new Float32Array(TRAIL_STEPS * 2 * 3)
     const trailIndices: number[] = []
     const trailUvs = new Float32Array(TRAIL_STEPS * 2 * 2)
@@ -258,16 +429,17 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     dynTrail.setIndex(trailIndices)
 
     return {
-      bladeGeo: blade,
-      fullerRuneGeo: fullerRune,
-      guardHubGeo: hub,
-      quillonLeftGeo: quillonLeft,
-      quillonRightGeo: quillonRight,
-      guardBossGeo: guardBoss,
-      gripGeo: grip,
-      ringGeos: rings,
-      pommelGeo: pommel,
-      finialGeo: finial,
+      bladeGeo: bladeExtrude,
+      edgeBevelGeo: edgeExtrude,
+      fullerGrooveGeo: fullerGroove,
+      guardPlateGeo: guardPlate,
+      guardPegLeftGeo: pegLeft,
+      guardPegRightGeo: pegRight,
+      lashingHempGeos: lashingGeos,
+      handleGripGeo: handle,
+      handleWrapRingsGeos: wrapRings,
+      pommelKnobGeo: pommelKnob,
+      lanyardRingGeo: lanyardRing,
       dynamicTrailGeo: dynTrail,
     }
   }, [])
@@ -345,7 +517,6 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
 
   // ── Combo Execution Logic ─────────────────────────────────────────────────
   const executeComboClick = () => {
-    // If currently mid-strike, allow fluid chaining in recovery phase
     if (currentSwing.current !== 'none' && swingTimer.current < swingDuration.current * 0.40) {
       return
     }
@@ -369,7 +540,6 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       swingDuration.current = 0.44
       sound.playSwordChargeRelease()
       triggerGrassWind(2.2)
-      // Heavy kinetic recoil impulse into spring
       posSpring.current.addImpulse(new THREE.Vector3(-0.04, 0.01, 0.06))
       rotSpring.current.addImpulse(new THREE.Vector3(0.12, -0.25, 0.18))
     } else {
@@ -379,7 +549,6 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       comboWindowTimer.current = 0.65
       triggerGrassWind(comboIndex === 3 ? 1.6 : 1.1)
 
-      // Tactical spring recoil impulses based on strike direction
       if (comboIndex === 1) {
         posSpring.current.addImpulse(new THREE.Vector3(-0.025, -0.015, 0.035))
         rotSpring.current.addImpulse(new THREE.Vector3(0.08, -0.14, 0.12))
@@ -406,12 +575,15 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     const dt = Math.min(delta, 0.05)
 
     // Equip / Unequip transition
-    const targetEquip = isSwordActive ? 1.0 : 0.0
-    equipProgress.current = THREE.MathUtils.damp(equipProgress.current, targetEquip, 10, dt)
-
-    if (equipProgress.current < 0.015 && !isSwordActive) {
-      swordRootRef.current.visible = false
-      return
+    if (!isSwordActive) {
+      equipProgress.current = THREE.MathUtils.damp(equipProgress.current, 0.0, 16, dt)
+      if (equipProgress.current < 0.08) {
+        equipProgress.current = 0.0
+        swordRootRef.current.visible = false
+        return
+      }
+    } else {
+      equipProgress.current = THREE.MathUtils.damp(equipProgress.current, 1.0, 16, dt)
     }
     swordRootRef.current.visible = true
 
@@ -451,13 +623,12 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       const yawDelta = -deltaQuat.y * 2.2
       const pitchDelta = deltaQuat.x * 2.2
 
-      // Feed look velocity impulses into position and rotation springs
       posSpring.current.addImpulse(new THREE.Vector3(-yawDelta * 0.06, pitchDelta * 0.06, 0))
       rotSpring.current.addImpulse(new THREE.Vector3(-pitchDelta * 0.35, -yawDelta * 0.35, yawDelta * 0.55))
     }
     prevCamQuat.current.copy(camera.quaternion)
 
-    // 2. Locomotion Lissajous Bobbing & Idle Respiration
+    // 2. Locomotion Bobbing & Idle Respiration
     const isMoving =
       inputManager.isMovingForward() ||
       inputManager.isMovingBackward() ||
@@ -474,38 +645,37 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     const swayX = Math.cos(breathTimer.current * 1.2) * 0.0012
     const swayY = Math.sin(breathTimer.current * 2.4) * 0.0010
 
-    // Update second-order spring dynamics
     posSpring.current.target.set(bobX + swayX, bobY + swayY, 0)
     rotSpring.current.target.set(bobY * 2.0, bobX * 1.5, -bobX * 3.0)
     const springPosOffset = posSpring.current.update(dt)
     const springRotOffset = rotSpring.current.update(dt)
 
-    // 3. Authentic Martial Ready Stance (Bottom-right, blade canted forward-upward)
-    // Guard sits firmly at lower-right, tip points gracefully forward into lower-center
-    // Center crosshair (960, 540) and left 75% of viewport 100% unobstructed!
+    // 3. Authentic Martial Ready Stance (Framed naturally in lower-right viewport)
+    // Guard sits at lower-right, wooden blade points gracefully upward-forward across right quadrant
+    // Crosshair (960, 540) and left 75% wide open
     const unequipDrop = 1.0 - equipProgress.current
-    const pRest = new THREE.Vector3(0.24, -0.15 - unequipDrop * 0.45, -0.34)
+    const pRest = new THREE.Vector3(0.20, -0.14 - unequipDrop * 0.70, -0.36)
     const qRest = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(-0.32 - unequipDrop * 0.4, 0.20, -0.42 - unequipDrop * 0.3, 'YXZ')
+      new THREE.Euler(0.12 - unequipDrop * 0.55, -0.18, 0.48 - unequipDrop * 0.35, 'YXZ')
     )
 
     let finalPos = pRest.clone()
     let finalQuat = qRest.clone()
 
-    // 4. Guard / Parry Stance (RMB) — Braced diagonal crown guard (Kron) across chest
+    // 4. Guard / Parry Stance (RMB)
     if (guardProgress.current > 0.001) {
       const gp = guardProgress.current
-      const gEase = gp * (2 - gp) // Ease out quad
+      const gEase = gp * (2 - gp)
       const pGuard = new THREE.Vector3(0.10, -0.12, -0.34)
       const qGuard = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.62, 0.14, 0.82, 'YXZ'))
       finalPos.lerp(pGuard, gEase)
       finalQuat.slerp(qGuard, gEase)
     }
 
-    // 5. Heavy Charge Stance (Hold LMB) — Warrior draws blade back into coiled high tension
+    // 5. Heavy Charge Stance (Hold LMB)
     if (chargeProgress.current > 0.001 && currentSwing.current === 'none') {
       const cp = chargeProgress.current
-      const cEase = cp * cp // Ease in quadratic
+      const cEase = cp * cp
       const chargeVibe = isCharged.current ? Math.sin(state.clock.elapsedTime * 45) * 0.0025 : 0
       const pCharge = new THREE.Vector3(0.28 + chargeVibe, -0.14, -0.32)
       const qCharge = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35, 0.52, -0.68, 'YXZ'))
@@ -513,7 +683,7 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       finalQuat.slerp(qCharge, cEase)
     }
 
-    // 6. Active Multi-Phase Martial Cleaves (Combos & Attacks)
+    // 6. Active Multi-Phase Martial Cleaves
     let swingTrailAlpha = 0.0
 
     if (isFrozen.current) {
@@ -526,16 +696,12 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
         p = frozenProgress.current
       } else {
         swingTimer.current -= dt
-        p = Math.max(0, 1.0 - swingTimer.current / swingDuration.current) // 0 to 1
+        p = Math.max(0, 1.0 - swingTimer.current / swingDuration.current)
       }
 
       if (currentSwing.current === 'combo1') {
-        // ── Combo 1: Descending Diagonal Oberhau (Right-to-Left) ──
-        // Starts high right, slashes diagonally down-left across cutting plane
-        // Blade remains naturally canted along the cutting plane (never stiffly vertical)
         const pWindup = new THREE.Vector3(0.28, -0.06, -0.32)
         const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35, 0.35, -0.65, 'YXZ'))
-
         const pStrike = new THREE.Vector3(-0.22, -0.24, -0.34)
         const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.65, -0.45, -0.35, 'YXZ'))
 
@@ -546,10 +712,10 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
           finalQuat.slerpQuaternions(qRest, qWindup, ease)
         } else if (p < 0.65) {
           const u = (p - 0.20) / 0.45
-          const ease = 1.0 - Math.pow(1.0 - u, 3.0) // Explosive cubic whip
+          const ease = 1.0 - Math.pow(1.0 - u, 3.0)
           finalPos.lerpVectors(pWindup, pStrike, ease)
           finalQuat.slerpQuaternions(qWindup, qStrike, ease)
-          swingTrailAlpha = Math.sin(u * Math.PI) * 0.95
+          swingTrailAlpha = Math.sin(u * Math.PI) * 0.85
 
           if (!hasHitInCurrentSwing.current && u >= 0.35 && u <= 0.65) {
             checkRockCollision(1.0)
@@ -564,11 +730,8 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
           finalQuat.slerpQuaternions(qStrike, qRest, recover)
         }
       } else if (currentSwing.current === 'combo2') {
-        // ── Combo 2: Ascending Diagonal Unterhau (Left-to-Right) ──
-        // Sweeps diagonally upward from low left to high right
         const pWindup = new THREE.Vector3(-0.20, -0.22, -0.34)
         const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.55, -0.40, 0.55, 'YXZ'))
-
         const pStrike = new THREE.Vector3(0.26, -0.06, -0.32)
         const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.25, 0.40, 0.70, 'YXZ'))
 
@@ -582,7 +745,7 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
           const ease = 1.0 - Math.pow(1.0 - u, 3.0)
           finalPos.lerpVectors(pWindup, pStrike, ease)
           finalQuat.slerpQuaternions(qWindup, qStrike, ease)
-          swingTrailAlpha = Math.sin(u * Math.PI) * 0.95
+          swingTrailAlpha = Math.sin(u * Math.PI) * 0.85
 
           if (!hasHitInCurrentSwing.current && u >= 0.35 && u <= 0.65) {
             checkRockCollision(1.1)
@@ -593,16 +756,12 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
           const bounce = Math.sin(u * Math.PI * 2.0) * decay * 0.03
           const recover = 1.0 - decay
           finalPos.lerpVectors(pStrike, pRest, recover)
-          finalPos.y -= bounce
+          finalPos.y += bounce
           finalQuat.slerpQuaternions(qStrike, qRest, recover)
         }
       } else if (currentSwing.current === 'combo3') {
-        // ── Combo 3: Wrath Overhead Finisher Zornhau ──
-        // Right-temple overhead raise chopping downward into low-ready
-        // Stays on the right side of the screen, leaving center crosshair 100% unobstructed
         const pWindup = new THREE.Vector3(0.18, -0.02, -0.32)
         const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.30, 0.20, -0.50, 'YXZ'))
-
         const pStrike = new THREE.Vector3(0.14, -0.26, -0.36)
         const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.85, 0.15, -0.45, 'YXZ'))
 
@@ -613,10 +772,10 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
           finalQuat.slerpQuaternions(qRest, qWindup, ease)
         } else if (p < 0.65) {
           const u = (p - 0.22) / 0.43
-          const ease = 1.0 - Math.pow(1.0 - u, 3.2) // Heavy downward kinetic impact
+          const ease = 1.0 - Math.pow(1.0 - u, 3.2)
           finalPos.lerpVectors(pWindup, pStrike, ease)
           finalQuat.slerpQuaternions(qWindup, qStrike, ease)
-          swingTrailAlpha = Math.sin(u * Math.PI) * 1.0
+          swingTrailAlpha = Math.sin(u * Math.PI) * 0.95
 
           if (!hasHitInCurrentSwing.current && u >= 0.35 && u <= 0.65) {
             checkRockCollision(1.4)
@@ -631,10 +790,8 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
           finalQuat.slerpQuaternions(qStrike, qRest, recover)
         }
       } else if (currentSwing.current === 'heavy') {
-        // ── Heavy Attack: 270-degree Whirlwind Cleave ──
         const pWindup = new THREE.Vector3(0.30, -0.10, -0.30)
         const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.20, 0.60, -0.75, 'YXZ'))
-
         const pStrike = new THREE.Vector3(-0.26, -0.18, -0.34)
         const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35, -0.70, 0.25, 'YXZ'))
 
@@ -669,7 +826,7 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       }
     }
 
-    // Apply second-order spring dynamics on top of kinematic stance
+    // Apply second-order spring dynamics
     finalPos.add(springPosOffset)
 
     const qSway = new THREE.Quaternion().setFromEuler(
@@ -677,18 +834,15 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     )
     finalQuat.multiply(qSway)
 
-    // Apply viewmodel transform relative to camera
+    // Position viewmodel relative to camera
     const worldPos = finalPos.clone().applyQuaternion(camera.quaternion).add(camera.position)
     swordRootRef.current.position.copy(worldPos)
-
     swordRootRef.current.quaternion.copy(camera.quaternion).multiply(finalQuat)
 
-    // ── Update Dynamic Blade-Edge Aerodynamic Slipstream Trail ───────────────
-    // Tip is at (0, 0.46, 0) and base is at (0, 0.03, 0) in sword local coordinates
+    // ── Update Dynamic Aerodynamic Wind-Shear Trail ──────────────────────────
     const localTip = new THREE.Vector3(0, 0.46, 0).applyQuaternion(finalQuat).add(finalPos)
     const localBase = new THREE.Vector3(0, 0.03, 0).applyQuaternion(finalQuat).add(finalPos)
 
-    // Shift history buffer
     for (let i = TRAIL_STEPS - 1; i > 0; i--) {
       trailHistory.current[i].tip.copy(trailHistory.current[i - 1].tip)
       trailHistory.current[i].base.copy(trailHistory.current[i - 1].base)
@@ -696,7 +850,6 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     trailHistory.current[0].tip.copy(localTip)
     trailHistory.current[0].base.copy(localBase)
 
-    // Fade trail alpha smoothly
     trailAlphaRef.current = THREE.MathUtils.damp(trailAlphaRef.current, swingTrailAlpha, 14, dt)
 
     if (trailMeshRef.current) {
@@ -707,7 +860,6 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
 
         for (let i = 0; i < TRAIL_STEPS; i++) {
           const pt = trailHistory.current[i]
-          // Convert from camera local coords into world coords
           const wTip = pt.tip.clone().applyQuaternion(camera.quaternion).add(camera.position)
           const wBase = pt.base.clone().applyQuaternion(camera.quaternion).add(camera.position)
 
@@ -722,20 +874,8 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
         posAttr.needsUpdate = true
 
         const mat = trailMeshRef.current.material as THREE.MeshBasicMaterial
-        mat.opacity = trailAlphaRef.current * 0.45
+        mat.opacity = trailAlphaRef.current * 0.38
       }
-    }
-
-    // ── Update Runic Emissive Glow ───────────────────────────────────────────
-    const isChargeGlow = isCharged.current || (isHoldingLMB.current && chargeProgress.current > 0.5)
-    const targetGlow = isChargeGlow ? 2.4 : 0.85
-    if (runeMatRef.current) {
-      runeMatRef.current.emissiveIntensity = THREE.MathUtils.damp(
-        runeMatRef.current.emissiveIntensity,
-        targetGlow,
-        8,
-        dt
-      )
     }
   })
 
@@ -749,125 +889,136 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     if (hit && hit.collider.tag === 'rock') {
       hasHitInCurrentSwing.current = true
 
-      // Audio: hard steel on granite clack & ring
+      // Audio: solid hardwood on rock impact clack & thud
       sound.playRockStrike(hitPower)
 
-      // Hit-stop feedback: 45ms tactile freeze frame
+      // Hit-stop tactile freeze frame (45ms)
       hitStopTimer.current = 0.045
 
-      // Reverse impulse into spring for bounce off rock
+      // Reverse impulse into spring
       posSpring.current.addImpulse(new THREE.Vector3(0.04, 0.02, 0.06))
       rotSpring.current.addImpulse(new THREE.Vector3(-0.25, 0.20, -0.15))
 
-      // Visual scratch sparks & dust particles at impact normal
+      // Rock chip particles
       onHitRock?.(hit.hitPoint, hit.normal, hitPower)
     }
   }
 
   return (
     <>
-      {/* 1. First-Person Martial Silver-Steel Sword Viewmodel */}
+      {/* 1. First-Person Handcrafted Survival Wooden Sword Viewmodel */}
       <group
         ref={swordRootRef}
         visible={false}
         renderOrder={999}
         onBeforeRender={(renderer) => {
-          // Clear depth so viewmodel weapon NEVER clips through terrain, trees or rocks
           renderer.clearDepth()
         }}
       >
-        {/* Double-Beveled Ancient Silver-Steel Blade */}
+        {/* Main Heartwood Whittled Blade Body */}
         <mesh geometry={bladeGeo} castShadow receiveShadow>
           <meshStandardMaterial
-            color="#dfe5eb"
-            roughness={0.16}
-            metalness={0.92}
-            envMapIntensity={1.5}
+            color="#5c3a1e"
+            map={woodTexture}
+            roughness={0.72}
+            metalness={0.0}
+            bumpMap={woodTexture}
+            bumpScale={0.0018}
           />
         </mesh>
 
-        {/* Embedded Runic Fuller Inlay Channel */}
-        <mesh geometry={fullerRuneGeo}>
+        {/* Char-Hardened Striking Edge (Tempered over campfire coals) */}
+        <mesh geometry={edgeBevelGeo} castShadow>
           <meshStandardMaterial
-            ref={runeMatRef}
-            color="#3cd0ea"
-            emissive="#24b6d4"
-            emissiveIntensity={0.85}
-            roughness={0.25}
-            metalness={0.80}
+            color="#2a180c"
+            map={edgeWoodTexture}
+            roughness={0.54}
+            metalness={0.0}
           />
         </mesh>
 
-        {/* Antique Winged Brass Crossguard Central Hub */}
-        <mesh geometry={guardHubGeo} castShadow>
+        {/* Hand-Gouged Central Fuller Groove */}
+        <mesh geometry={fullerGrooveGeo}>
           <meshStandardMaterial
-            color="#d4aa32"
-            roughness={0.30}
-            metalness={0.88}
+            color="#3a2211"
+            roughness={0.85}
+            metalness={0.0}
           />
         </mesh>
 
-        {/* Swept Winged Quillons */}
-        <mesh geometry={quillonLeftGeo} castShadow>
+        {/* Pegged Hardwood Crossguard Plate */}
+        <mesh geometry={guardPlateGeo} castShadow>
           <meshStandardMaterial
-            color="#d4aa32"
-            roughness={0.30}
-            metalness={0.88}
-          />
-        </mesh>
-        <mesh geometry={quillonRightGeo} castShadow>
-          <meshStandardMaterial
-            color="#d4aa32"
-            roughness={0.30}
-            metalness={0.88}
+            color="#4a2e16"
+            map={guardWoodTexture}
+            roughness={0.68}
+            metalness={0.0}
+            bumpMap={guardWoodTexture}
+            bumpScale={0.0015}
           />
         </mesh>
 
-        {/* Diamond Relic Boss on Guard Face */}
-        <mesh geometry={guardBossGeo}>
-          <meshStandardMaterial
-            color="#f2c852"
-            roughness={0.20}
-            metalness={0.92}
-          />
+        {/* Wooden Retaining Dowel Pegs */}
+        <mesh geometry={guardPegLeftGeo}>
+          <meshStandardMaterial color="#6a4422" roughness={0.78} />
+        </mesh>
+        <mesh geometry={guardPegRightGeo}>
+          <meshStandardMaterial color="#6a4422" roughness={0.78} />
         </mesh>
 
-        {/* Braided Cord Two-Hand Grip */}
-        <mesh geometry={gripGeo}>
-          <meshStandardMaterial
-            color="#1e1814"
-            roughness={0.92}
-          />
-        </mesh>
-
-        {/* Cord wrap ring bands */}
-        {ringGeos.map((geo, idx) => (
-          <mesh key={idx} geometry={geo}>
+        {/* Wilderness Hemp Rope / Cord Cross-Lashings */}
+        {lashingHempGeos.map((geo, idx) => (
+          <mesh key={`lash-${idx}`} geometry={geo}>
             <meshStandardMaterial
-              color="#2e2520"
-              roughness={0.80}
+              color="#826845"
+              map={hempTexture}
+              roughness={0.94}
+              metalness={0.0}
             />
           </mesh>
         ))}
 
-        {/* Faceted Brass Pommel Counterweight & Teardrop Finial */}
-        <mesh geometry={pommelGeo} castShadow>
+        {/* Contoured Wooden Handle Grip Core */}
+        <mesh geometry={handleGripGeo}>
           <meshStandardMaterial
-            color="#d4aa32"
-            roughness={0.30}
-            metalness={0.88}
+            color="#342012"
+            roughness={0.88}
+            metalness={0.0}
           />
         </mesh>
-        <mesh geometry={finialGeo} castShadow>
+
+        {/* Overlapping Friction Cord / Weathered Leather Wrap Rings */}
+        {handleWrapRingsGeos.map((geo, idx) => (
+          <mesh key={`ring-${idx}`} geometry={geo}>
+            <meshStandardMaterial
+              color="#281a10"
+              roughness={0.82}
+              metalness={0.0}
+            />
+          </mesh>
+        ))}
+
+        {/* Carved Wooden Pommel Knob Counterweight */}
+        <mesh geometry={pommelKnobGeo} castShadow>
           <meshStandardMaterial
-            color="#d4aa32"
-            roughness={0.30}
-            metalness={0.88}
+            color="#462c16"
+            map={guardWoodTexture}
+            roughness={0.65}
+            metalness={0.0}
+          />
+        </mesh>
+
+        {/* Hanging Leather Lanyard Loop */}
+        <mesh geometry={lanyardRingGeo}>
+          <meshStandardMaterial
+            color="#523924"
+            roughness={0.85}
+            metalness={0.0}
           />
         </mesh>
       </group>
 
-      {/* 2. Dynamic Aerodynamic Blade-Edge Slipstream Trail (World-Space Ribbon) */}
+      {/* 2. Aerodynamic Wind-Shear Slipstream Trail */}
       <mesh
         ref={trailMeshRef}
         geometry={dynamicTrailGeo}
@@ -875,7 +1026,7 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
         renderOrder={998}
       >
         <meshBasicMaterial
-          color="#e6f0fa"
+          color="#f4eee2"
           transparent
           opacity={0}
           side={THREE.DoubleSide}
