@@ -685,6 +685,10 @@ interface SkyDomeProps {
   defaultMode?: string;
   /** Whether currently in night cycle */
   isNight?: boolean | React.MutableRefObject<boolean>;
+  /** Continuous synchronized atmospheric horizon color override */
+  skyLowOverride?: React.MutableRefObject<THREE.Color>;
+  /** Continuous synchronized atmospheric zenith color override */
+  skyHighOverride?: React.MutableRefObject<THREE.Color>;
 }
 
 export default function SkyDome({
@@ -699,6 +703,8 @@ export default function SkyDome({
   extraPresets,
   defaultMode,
   isNight = false,
+  skyLowOverride,
+  skyHighOverride,
 }: SkyDomeProps) {
   const meshRef = useRef<THREE.Mesh>(null!);
 
@@ -1632,12 +1638,12 @@ export default function SkyDome({
   }, [targetMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useFrame(({ camera, clock }) => {
-    // Dome follows camera XZ; Y offset lifts the sphere centre above the camera
-    // so horizontal rays hit the dome with dir.y < cloudFloor, hiding the cloud
-    // UV deformation that occurs when dir.y → 0 (dir.xz / safeY blows up).
+    // Dome follows camera; when skyLowOverride is present (dynamic open-world atmosphere),
+    // dome center is locked directly to camera eye-level so vDir.y == 0 matches true geometric horizon.
+    const effOffsetY = skyLowOverride ? 0 : domeOffsetY;
     meshRef.current.position.set(
       camera.position.x,
-      camera.position.y + domeOffsetY,
+      camera.position.y + effOffsetY,
       camera.position.z,
     );
     meshRef.current.scale.setScalar(domeRadius);
@@ -1659,11 +1665,18 @@ export default function SkyDome({
       ? { ...basePreset, ...modeOverrides }
       : basePreset;
 
-    // Sky gradient & atmospheric horizon colors (Driven by active preset or Leva fallback)
-    u.uSkyLow.value.set(preset.skyLow ?? (nightBool ? "#041026" : skyLow));
-    u.uSkyHigh.value.set(preset.skyHigh ?? (nightBool ? "#01030e" : skyHigh));
-    u.uHorizonLine.value = preset.horizonLine ?? horizonLine;
-    u.uHorizonSpread.value = preset.horizonSpread ?? horizonSpread;
+    // Sky gradient & atmospheric horizon colors (Driven by dynamic override or active preset)
+    if (skyLowOverride && skyHighOverride) {
+      u.uSkyLow.value.copy(skyLowOverride.current);
+      u.uSkyHigh.value.copy(skyHighOverride.current);
+      u.uHorizonLine.value = 0.0;
+      u.uHorizonSpread.value = 0.35;
+    } else {
+      u.uSkyLow.value.set(preset.skyLow ?? (nightBool ? "#041026" : skyLow));
+      u.uSkyHigh.value.set(preset.skyHigh ?? (nightBool ? "#01030e" : skyHigh));
+      u.uHorizonLine.value = preset.horizonLine ?? horizonLine;
+      u.uHorizonSpread.value = preset.horizonSpread ?? horizonSpread;
+    }
 
     const effElev =
       typeof moonElevOverride === "object" && moonElevOverride !== null
@@ -1808,23 +1821,25 @@ export default function SkyDome({
       const cA = _cA.current;
       const cB = _cB.current;
 
-      // Sky gradient
-      cA.set(from.skyLow ?? "#000b69");
-      cB.set(to.skyLow ?? "#000b69");
-      u.uSkyLow.value.lerpColors(cA, cB, t);
-      cA.set(from.skyHigh ?? "#00448f");
-      cB.set(to.skyHigh ?? "#00448f");
-      u.uSkyHigh.value.lerpColors(cA, cB, t);
-      u.uHorizonLine.value = lerp(
-        from.horizonLine ?? 0.52,
-        to.horizonLine ?? 0.52,
-        t,
-      );
-      u.uHorizonSpread.value = lerp(
-        from.horizonSpread ?? 0.05,
-        to.horizonSpread ?? 0.05,
-        t,
-      );
+      // Sky gradient (only when not continuously driven by dynamic skyLowOverride)
+      if (!skyLowOverride) {
+        cA.set(from.skyLow ?? "#000b69");
+        cB.set(to.skyLow ?? "#000b69");
+        u.uSkyLow.value.lerpColors(cA, cB, t);
+        cA.set(from.skyHigh ?? "#00448f");
+        cB.set(to.skyHigh ?? "#00448f");
+        u.uSkyHigh.value.lerpColors(cA, cB, t);
+        u.uHorizonLine.value = lerp(
+          from.horizonLine ?? 0.52,
+          to.horizonLine ?? 0.52,
+          t,
+        );
+        u.uHorizonSpread.value = lerp(
+          from.horizonSpread ?? 0.05,
+          to.horizonSpread ?? 0.05,
+          t,
+        );
+      }
 
       // Celestial direction follows real-time orbit during blend
       u.uMoonDir.value.set(

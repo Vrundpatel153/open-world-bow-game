@@ -54,15 +54,12 @@ export default function GrassCanvas() {
       setSkyMode(mode);
       setActivePreset(preset);
       setCurrentPhaseName(phaseName);
-      if (preset.skyLow) {
-        setFogColor(preset.skyLow);
-      }
     },
     []
   );
 
-  const handleFogColorChange = useCallback((color: string) => {
-    setFogColor(color);
+  const handleFogColorChange = useCallback((_color: string) => {
+    // Dynamic atmospheric fog color is directly synchronized in useFrame
   }, []);
 
   return (
@@ -80,8 +77,8 @@ export default function GrassCanvas() {
         dpr={[1, 1.0]}
         style={{ background: "#060c04" }}
       >
-        {/* Dynamic Atmospheric Fog synced with Day-Night Cycle */}
-        <fog attach="fog" args={[fogColor, 45, 120]} />
+        {/* Dynamic Atmospheric Fog seamlessly synced with Sky Horizon */}
+        <fog attach="fog" args={["#8ec3ee", 65, 220]} />
         <FpsSystem />
         <GrassSceneContent
           mode="Background"

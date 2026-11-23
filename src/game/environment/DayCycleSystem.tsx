@@ -2,7 +2,7 @@
 // DayCycleSystem — Autonomous Real-Time Day-Night & Orbital Celestial Engine
 // Smoothly arcs the Sun and Moon across the sky with continuous 360° celestial orbit,
 // casting dynamic real-time moving shadows, lighting foliage & blending atmospheres.
-// Zero teleporting: opposite-phase Sun & Moon with smooth horizon transitions.
+// Seamless unified sky and fog: zero color clashes, zero seams, zero fluctuations.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useRef, useEffect } from "react";
@@ -32,6 +32,8 @@ interface DayCycleSystemProps {
     moonAzim: number,
     isNight: boolean
   ) => void;
+  skyHorizonRef?: React.MutableRefObject<THREE.Color>;
+  skyZenithRef?: React.MutableRefObject<THREE.Color>;
 }
 
 export default function DayCycleSystem({
@@ -39,18 +41,35 @@ export default function DayCycleSystem({
   onPhaseChange,
   onFogColorChange,
   onSunMove,
+  skyHorizonRef,
+  skyZenithRef,
 }: DayCycleSystemProps) {
   // Start at pleasant mid-morning (~10:00 AM)
-  const cycleTimeRef = useRef(35);
+  const cycleTimeRef = useRef(140);
   const lastPhaseRef = useRef<SkyMode>("day");
   const lastPhaseNameRef = useRef<string>("DAYLIGHT");
 
   // Reusable Math objects for zero GC per frame
   const celestialDir = useRef(new THREE.Vector3());
   const lightColor = useRef(new THREE.Color());
-  const fogColor = useRef(new THREE.Color());
-  const fogColorA = useRef(new THREE.Color());
-  const fogColorB = useRef(new THREE.Color());
+  const skyHorizon = useRef(new THREE.Color("#8ec3ee"));
+  const skyZenith = useRef(new THREE.Color("#1e6ac4"));
+
+  // Continuous atmospheric color anchors (physically-calibrated palette)
+  const cDayHorizon = useRef(new THREE.Color("#8ec3ee")); // Clear atmospheric horizon blue
+  const cDayZenith = useRef(new THREE.Color("#1e6ac4"));  // Deep vibrant daytime azure
+
+  const cDawnHorizon = useRef(new THREE.Color("#e8ab80")); // Warm golden dawn peach
+  const cDawnZenith = useRef(new THREE.Color("#2e5288"));  // Morning indigo-blue
+
+  const cDuskHorizon = useRef(new THREE.Color("#e88654")); // Warm sunset amber-orange
+  const cDuskZenith = useRef(new THREE.Color("#283664"));  // Twilight indigo
+
+  const cTwilightHorizon = useRef(new THREE.Color("#1c263c")); // Deep twilight dusk blue-slate
+  const cTwilightZenith = useRef(new THREE.Color("#0a101e"));  // Twilight deep sky
+
+  const cNightHorizon = useRef(new THREE.Color("#070e1c")); // Deep nocturnal slate navy
+  const cNightZenith = useRef(new THREE.Color("#010206"));  // Pitch black midnight sky
 
   (window as any).__setCycleTime = (sec: number) => {
     cycleTimeRef.current = sec;
@@ -88,54 +107,83 @@ export default function DayCycleSystem({
     let phaseName = "DAYLIGHT";
     let lightIntensity = 2.4;
 
-    if (sunElevation >= -2.0) {
-      // ── DAYTIME & TWILIGHT TRANSITIONS ────────────────────────────────────
-      if (sunElevation < 14 && progress < 0.5) {
-        // Dawn / Sunrise (Sun rising from East)
+    // ── Continuous Unified Atmospheric Color Engine ──────────────────────────
+    // Seamless mathematical interpolation across all elevations: zero color pops, zero clashing seams
+    if (sunElevation >= 16) {
+      // 1. High Daylight (sun elevation 16° to 58°)
+      skyHorizon.current.copy(cDayHorizon.current);
+      skyZenith.current.copy(cDayZenith.current);
+      lightColor.current.set("#fffbf2");
+      lightIntensity = 2.4;
+      currentMode = "day";
+      phaseName = "DAYLIGHT";
+    } else if (sunElevation >= -2) {
+      // 2. Horizon Transitions (sun elevation -2° to 16°)
+      const tSun = THREE.MathUtils.smoothstep((sunElevation + 2) / 18, 0, 1);
+
+      if (progress < 0.5) {
+        // Morning / Dawn: from Twilight -> Dawn -> Day
+        const tMorning = (sunElevation + 2) / 18;
+        if (tMorning < 0.35) {
+          const u = tMorning / 0.35;
+          skyHorizon.current.lerpColors(cTwilightHorizon.current, cDawnHorizon.current, u);
+          skyZenith.current.lerpColors(cTwilightZenith.current, cDawnZenith.current, u);
+        } else {
+          const u = (tMorning - 0.35) / 0.65;
+          skyHorizon.current.lerpColors(cDawnHorizon.current, cDayHorizon.current, u);
+          skyZenith.current.lerpColors(cDawnZenith.current, cDayZenith.current, u);
+        }
+        lightColor.current.lerpColors(new THREE.Color("#ff8c40"), new THREE.Color("#fffbf2"), tSun);
+        lightIntensity = 0.9 + tSun * 1.5;
         currentMode = "sunrise";
-        phaseName = "DAWN";
-        const tDawn = Math.max(0, (sunElevation + 2.0) / 16.0);
-        lightColor.current.set("#ff9638");
-        lightIntensity = 0.8 + tDawn * 1.5;
-        fogColorA.current.set("#d99fa5"); // Morning rose-lavender
-        fogColorB.current.set("#b8ddf8"); // Sky blue
-        fogColor.current.lerpColors(fogColorA.current, fogColorB.current, tDawn);
-      } else if (sunElevation >= 14) {
-        // Daylight / Midday (Warm clear sun, lush green environment)
-        currentMode = "day";
-        phaseName = "DAYLIGHT";
-        lightColor.current.set("#fffbf2"); // Crisp, balanced warm sunlight
-        lightIntensity = 2.4;
-        fogColor.current.set("#b0ddff");
+        phaseName = sunElevation < 6 ? "DAWN" : "MORNING";
       } else {
-        // Dusk / Sunset (Sun sinking into West)
+        // Evening / Sunset: from Day -> Dusk -> Twilight
+        const tEvening = (sunElevation + 2) / 18;
+        if (tEvening > 0.40) {
+          const u = (tEvening - 0.40) / 0.60;
+          skyHorizon.current.lerpColors(cDuskHorizon.current, cDayHorizon.current, u);
+          skyZenith.current.lerpColors(cDuskZenith.current, cDayZenith.current, u);
+        } else {
+          const u = tEvening / 0.40;
+          skyHorizon.current.lerpColors(cTwilightHorizon.current, cDuskHorizon.current, u);
+          skyZenith.current.lerpColors(cTwilightZenith.current, cDuskZenith.current, u);
+        }
+        lightColor.current.lerpColors(new THREE.Color("#ff7030"), new THREE.Color("#fffbf2"), tSun);
+        lightIntensity = 0.9 + tSun * 1.5;
         currentMode = "sunset";
-        phaseName = "DUSK";
-        const tDusk = Math.max(0, Math.min(1, (14 - sunElevation) / 16.0));
-        lightColor.current.set("#ff7030");
-        lightIntensity = 2.4 - tDusk * 1.6;
-        fogColorA.current.set("#b0ddff");
-        fogColorB.current.set("#d87f54"); // Fiery sunset orange
-        fogColor.current.lerpColors(fogColorA.current, fogColorB.current, tDusk);
+        phaseName = sunElevation < 6 ? "DUSK" : "SUNSET";
       }
-    } else {
-      // ── NOCTURNAL HOURS ──────────────────────────────────────────────────
+    } else if (sunElevation >= -14) {
+      // 3. Post-Sunset Twilight (sun elevation -14° to -2°)
+      const tTwi = THREE.MathUtils.smoothstep((sunElevation + 14) / 12, 0, 1);
+      skyHorizon.current.lerpColors(cNightHorizon.current, cTwilightHorizon.current, tTwi);
+      skyZenith.current.lerpColors(cNightZenith.current, cTwilightZenith.current, tTwi);
+      lightColor.current.set("#6a8cc0");
+      lightIntensity = 0.35 + tTwi * 0.4;
       currentMode = "night";
+      phaseName = "TWILIGHT";
+    } else {
+      // 4. Pure Nocturnal Midnight (sun elevation < -14°)
       const moonProgress = Math.max(0, moonElevation / 58);
-      if (sunElevation > -12) {
-        phaseName = "TWILIGHT";
-      } else if (sunElevation < -42) {
+      skyHorizon.current.copy(cNightHorizon.current);
+      skyZenith.current.copy(cNightZenith.current);
+      lightColor.current.set("#8ab2ea");
+      lightIntensity = 0.32 + moonProgress * 0.12;
+      currentMode = "night";
+      if (sunElevation < -42) {
         phaseName = "MIDNIGHT";
       } else {
         phaseName = progress < 0.75 ? "NIGHT" : "PRE-DAWN";
       }
+    }
 
-      lightColor.current.set("#88b2ea"); // Gentle ethereal moonlight
-      lightIntensity = 0.35 + moonProgress * 0.15;
-
-      fogColorA.current.set("#152438");
-      fogColorB.current.set("#0b1626");
-      fogColor.current.lerpColors(fogColorA.current, fogColorB.current, moonProgress);
+    // Export colors to parent and synchronized overrides
+    if (skyHorizonRef) {
+      skyHorizonRef.current.copy(skyHorizon.current);
+    }
+    if (skyZenithRef) {
+      skyZenithRef.current.copy(skyZenith.current);
     }
 
     // Directional Light Tracking: Sun during day, Moon during night
@@ -162,33 +210,17 @@ export default function DayCycleSystem({
       isNight
     );
 
-    // Notify fog color
-    onFogColorChange?.("#" + fogColor.current.getHexString());
+    // Notify fog color string for any legacy listeners
+    onFogColorChange?.("#" + skyHorizon.current.getHexString());
 
     // Phase transition notification if mode or phase name changed
     const modeChanged = lastPhaseRef.current !== currentMode;
     const nameChanged = lastPhaseNameRef.current !== phaseName;
     if (modeChanged || nameChanged) {
-      const prevMode = lastPhaseRef.current;
       lastPhaseRef.current = currentMode;
       lastPhaseNameRef.current = phaseName;
       useQuestStore.getState().setDayPhaseName(phaseName);
-      if (modeChanged) {
-        blendStateRef.current = {
-          active: true,
-          t: 0,
-          from: SKY_PRESETS[prevMode] || SKY_PRESETS.day,
-          to: SKY_PRESETS[currentMode] || SKY_PRESETS.day,
-        };
-      }
       onPhaseChange?.(currentMode, SKY_PRESETS[currentMode], phaseName);
-    }
-
-    if (blendStateRef.current.active) {
-      blendStateRef.current.t = Math.min(1.0, blendStateRef.current.t + dt / 4.0);
-      if (blendStateRef.current.t >= 1.0) {
-        blendStateRef.current.active = false;
-      }
     }
   });
 

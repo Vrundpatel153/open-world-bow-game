@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Suspense, useCallback, useState, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import SceneCamera from "@/components/playground/SceneCamera";
 import SceneEnvironment from "@/components/playground/SceneEnvironment";
 import PostProcessing from "@/components/playground/PostProcessing";
@@ -69,6 +70,17 @@ export default function GrassSceneContent({
   const sunElevRef = useRef(55);
   const sunAzimRef = useRef(180);
   const isNightRef = useRef(false);
+
+  // Continuous Atmospheric Sky and Fog synchronization refs
+  const skyHorizonRef = useRef(new THREE.Color("#8ec3ee"));
+  const skyZenithRef = useRef(new THREE.Color("#1e6ac4"));
+
+  // Synchronize scene fog color with sky horizon on every GPU frame (zero React re-renders)
+  useFrame(({ scene }) => {
+    if (scene.fog) {
+      (scene.fog as THREE.Fog).color.copy(skyHorizonRef.current);
+    }
+  });
 
   // Blend State for Autonomous Day-Night Cycle
   const blendStateRef = useRef<BlendState>({
@@ -144,6 +156,8 @@ export default function GrassSceneContent({
       {/* ── Autonomous Celestial Day-Night Cycle & Orbital Sun Engine ───── */}
       <DayCycleSystem
         blendStateRef={blendStateRef}
+        skyHorizonRef={skyHorizonRef}
+        skyZenithRef={skyZenithRef}
         onSunMove={(dir, color, intensity, sunElev, sunAzim, moonElev, moonAzim, night) => {
           sunDirRef.current.copy(dir);
           sunColorRef.current.copy(color);
@@ -168,6 +182,8 @@ export default function GrassSceneContent({
         moonAzimOverride={sunAzimRef}
         isNight={isNightRef}
         onPresetChange={onPresetChange}
+        skyLowOverride={skyHorizonRef}
+        skyHighOverride={skyZenithRef}
       />
 
       {/* ── 3D Environments ──────────────────────────────────────────────── */}
