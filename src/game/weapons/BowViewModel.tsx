@@ -502,27 +502,28 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     aimProgress.current = THREE.MathUtils.damp(aimProgress.current, targetAim, 12, dt)
     const aFactor = aimProgress.current
 
-    // Idle stance: Bow held naturally in the lower-right quadrant (X=0.235m, Y=-0.165m, Z=-0.33m)
-    // Scale 0.76x fits completely inside the window: upper tip stays well below compass, lower tip above hotbar
-    // Aim stance: raises into right-canted sight window (X=0.038m, Y=-0.020m, Z=-0.23m)
+    // Idle stance: Bow held naturally in the lower-right quadrant (X=0.315m, Y=-0.200m, Z=-0.360m)
+    // Scale 0.72x fits completely inside the window: upper tip stays well below compass, lower tip above hotbar
+    // Leaving center crosshair (960, 540) and middle 75% of screen 100% wide open for exploration!
+    // Aim stance: raises into right-hand sight window (X=0.048m, Y=-0.036m, Z=-0.235m)
     const unequipDrop = (1.0 - equipProgress.current) * -0.5
-    const baseLocalX = THREE.MathUtils.lerp(0.235, 0.038, aFactor)
-    const baseLocalY = THREE.MathUtils.lerp(-0.165, -0.020, aFactor)
-    const baseLocalZ = THREE.MathUtils.lerp(-0.330, -0.230, aFactor)
+    const baseLocalX = THREE.MathUtils.lerp(0.315, 0.048, aFactor)
+    const baseLocalY = THREE.MathUtils.lerp(-0.200, -0.036, aFactor)
+    const baseLocalZ = THREE.MathUtils.lerp(-0.360, -0.235, aFactor)
 
     const localX = baseLocalX + swayOffset.current.x + bobX + shakeX
     const localY = baseLocalY + swayOffset.current.y + bobY + shakeY + unequipDrop
     const localZ = baseLocalZ + recoilOffset.current
 
     rigGroupRef.current.position.set(localX, localY, localZ)
-    rigGroupRef.current.scale.setScalar(0.76)
+    rigGroupRef.current.scale.setScalar(THREE.MathUtils.lerp(0.72, 0.76, aFactor))
 
     // Dynamic rotation:
-    // In idle: pitchX = 0.12 (natural forward-down carry angle), yawY = -0.08 (slight cant), rollZ = -0.25 (comfortable right cant)
-    // In aim: pitchX = 0.005, yawY = -0.005, rollZ = -0.12 (held canted to right of sightline, keeping eye-to-target path clear)
-    const pitchX = THREE.MathUtils.lerp(0.120, 0.005, aFactor) + recoilRotation.current + swayOffset.current.y * 0.15
-    const yawY = THREE.MathUtils.lerp(-0.080, -0.005, aFactor) + swayOffset.current.x * 0.15
-    const rollZ = THREE.MathUtils.lerp(-0.250, -0.120, aFactor) + swayRot.current.z
+    // In idle: pitchX = 0.06 (forward-down ready angle), yawY = 0.06 (turned slightly outward into right depth), rollZ = -0.42 (comfortable right cant framing lower-right corner)
+    // In aim: pitchX = 0.005, yawY = -0.008, rollZ = -0.16 (upright sight window framing crosshair)
+    const pitchX = THREE.MathUtils.lerp(0.060, 0.005, aFactor) + recoilRotation.current + swayOffset.current.y * 0.15
+    const yawY = THREE.MathUtils.lerp(0.060, -0.008, aFactor) + swayOffset.current.x * 0.15
+    const rollZ = THREE.MathUtils.lerp(-0.420, -0.160, aFactor) + swayRot.current.z
 
     rigGroupRef.current.rotation.set(pitchX, yawY, rollZ, 'YXZ')
     rigGroupRef.current.updateMatrixWorld(true)
@@ -559,11 +560,12 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     currentNock.z += pullDistance + vibZ
 
     // When aiming (aFactor = 1.0): arrow points straight through center crosshair (0, 0, -80m)
-    // When in idle (aFactor = 0.0): arrow rests along local forward axis (-Z), staying neatly in right quadrant
+    // When in idle (aFactor = 0.0): arrow rests along shelf angled naturally into the right-hand depth corridor,
+    // staying strictly in the right viewport third and keeping the entire screen center wide open
     const aimCamPoint = bowRootRef.current.localToWorld(new THREE.Vector3(0, 0, -80.0))
     const aimLocalPoint = rigGroupRef.current.worldToLocal(aimCamPoint)
     const aimArrowDir = aimLocalPoint.sub(currentNock).normalize()
-    const idleArrowDir = new THREE.Vector3(-0.015, 0.005, -1.0).normalize()
+    const idleArrowDir = new THREE.Vector3(0.25, -0.05, -0.96).normalize()
     const arrowDir = new THREE.Vector3().lerpVectors(idleArrowDir, aimArrowDir, aFactor).normalize()
 
     // ── 8B. Right Drawing Arm Kinematics & 3-Finger String Hook ─────────────
@@ -576,17 +578,19 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
       } else {
         rightArmRig.root.visible = isBowEquipped && equipProgress.current > 0.15
 
-        // Smoothly draw from lower-right hip to cheek string anchor point
-        // In full draw: 3 gloved fingers hook the string right at the cheek anchor point
-        // keeping the top and left sightline down the arrow shaft 100% crystal-clear to crosshair
-        const hipPos = new THREE.Vector3(0.26, -0.45, -0.26)
+        // Clamp right hand fingers directly to the string nock in camera space
+        const nockWorld = new THREE.Vector3()
+        rigGroupRef.current.localToWorld(nockWorld.copy(currentNock))
+        const nockCam = bowRootRef.current.worldToLocal(nockWorld)
+
+        const hipPos = new THREE.Vector3(0.32, -0.45, -0.26)
         const hipQuat = new THREE.Quaternion().setFromEuler(
           new THREE.Euler(-0.45, 0.20, -0.25, 'YXZ')
         )
 
-        const anchorPos = new THREE.Vector3(0.20, -0.16, -0.26)
+        const anchorPos = new THREE.Vector3(nockCam.x + 0.02, nockCam.y - 0.01, nockCam.z + 0.03)
         const anchorQuat = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(-0.20, -0.15, 0.20, 'YXZ')
+          new THREE.Euler(-0.12, -0.10, 0.15, 'YXZ')
         )
 
         const tDraw = THREE.MathUtils.smoothstep(drawFactor, 0, 1)
