@@ -298,22 +298,29 @@ export default function OpenWorldGrassField({
         const desiredBottom = groundY - 0.50 * scaleVal
         const deltaY = desiredBottom - box.min.y
         applyWorldYShift(rock, deltaY)
+        rock.updateMatrixWorld(true)
 
-        const bs = rock.geometry.boundingSphere!
-        const center = bs.center.clone().applyMatrix4(rock.matrixWorld)
-        const scale = new THREE.Vector3().setFromMatrixScale(rock.matrixWorld)
-        // Accurate rock boundary without artificial 1.25x ballooning
-        const r = Math.max(0.20, bs.radius * Math.min(scale.x, scale.z) * 0.72)
+        // Exact world bounds of the grounded boulder
+        const worldBox = new THREE.Box3().setFromObject(rock)
+        const centerX = (worldBox.min.x + worldBox.max.x) * 0.5
+        const centerY = (worldBox.min.y + worldBox.max.y) * 0.5
+        const centerZ = (worldBox.min.z + worldBox.max.z) * 0.5
+        const sizeX = worldBox.max.x - worldBox.min.x
+        const sizeY = worldBox.max.y - worldBox.min.y
+        const sizeZ = worldBox.max.z - worldBox.min.z
+        const r = Math.max(0.24, Math.min(sizeX, sizeZ) * 0.46)
 
         if (r > 0.22) {
           colliders.push({
             id: `rock_${posX.toFixed(1)}_${posZ.toFixed(1)}_${rock.id}`,
             tag: 'rock',
-            x: center.x,
-            z: center.z,
-            y: center.y,
+            x: centerX,
+            y: centerY,
+            z: centerZ,
             radius: r,
-            height: Math.max(2.5, bs.radius * scale.y * 2.0),
+            height: sizeY,
+            minY: worldBox.min.y,
+            maxY: worldBox.max.y,
           })
         }
       }
@@ -335,8 +342,6 @@ export default function OpenWorldGrassField({
         }
         tree.updateMatrixWorld(true)
 
-        const bs = tree.geometry.boundingSphere!
-        const center = bs.center.clone().applyMatrix4(tree.matrixWorld)
         const scale = new THREE.Vector3().setFromMatrixScale(tree.matrixWorld)
         // Authentic physical pine trunk wood radius (0.24m to 0.35m) so the player can weave between trees
         const trunkRadius = Math.max(0.22, Math.min(0.36, 0.28 * Math.min(scale.x, scale.z)))
@@ -348,7 +353,9 @@ export default function OpenWorldGrassField({
           z: tcZ,
           y: groundY,
           radius: trunkRadius,
-          height: 24.0 * scaleVal,
+          height: 14.0 * scaleVal,
+          minY: groundY - 0.2,
+          maxY: groundY + 14.0 * scaleVal,
         })
       }
 

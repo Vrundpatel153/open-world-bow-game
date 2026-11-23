@@ -146,7 +146,50 @@ class WorldCollisionSystem {
       const maxZ = Math.max(p0.z, p1.z) + c.radius + rayRadius
       if (c.z < minZ || c.z > maxZ) continue
 
-      // Ray against cylinder in 2D (X/Z plane)
+      // ── Tag: Rock Boulder — True 3D Sphere Ray Intersection ────────────────
+      // Avoids tall invisible vertical columns in the air above rocks
+      if (c.tag === 'rock') {
+        const cx = c.x
+        const cy = c.y
+        const cz = c.z
+        const cr = c.radius + rayRadius
+
+        const ox = p0.x - cx
+        const oy = p0.y - cy
+        const oz = p0.z - cz
+
+        // Dot product with normalized rayDir: a = 1
+        const b = 2 * (ox * rayDir.x + oy * rayDir.y + oz * rayDir.z)
+        const d = ox * ox + oy * oy + oz * oz - cr * cr
+
+        const discr = b * b - 4 * d
+        if (discr < 0) continue
+
+        const sqrtD = Math.sqrt(discr)
+        let t = (-b - sqrtD) * 0.5
+        if (t < 0) t = (-b + sqrtD) * 0.5
+
+        if (t >= 0 && t <= closestDist) {
+          const hitPt = p0.clone().addScaledVector(rayDir, t)
+          // Ensure hit point is within vertical limits of rock
+          const cyMin = c.minY !== undefined ? c.minY - 0.1 : cy - cr
+          const cyMax = c.maxY !== undefined ? c.maxY + 0.1 : cy + cr
+          if (hitPt.y >= cyMin && hitPt.y <= cyMax) {
+            const normal = new THREE.Vector3(hitPt.x - cx, hitPt.y - cy, hitPt.z - cz).normalize()
+            closestDist = t
+            closestHit = {
+              hit: true,
+              hitPoint: hitPt,
+              normal,
+              distance: t,
+              collider: c,
+            }
+          }
+        }
+        continue
+      }
+
+      // ── Tag: Tree Trunk / Shrine Pillar — Vertical Cylinder Intersection ────
       const cx = c.x
       const cz = c.z
       const cr = c.radius + rayRadius
@@ -173,7 +216,7 @@ class WorldCollisionSystem {
         const hitPt = p0.clone().addScaledVector(rayDir, t)
 
         // Vertical height check
-        const cyMin = c.minY !== undefined ? c.minY : c.y - 0.5
+        const cyMin = c.minY !== undefined ? c.minY : c.y - 0.2
         const cyMax = c.maxY !== undefined ? c.maxY : c.y + c.height
         if (hitPt.y >= cyMin && hitPt.y <= cyMax) {
           const normal = new THREE.Vector3(hitPt.x - cx, 0, hitPt.z - cz).normalize()

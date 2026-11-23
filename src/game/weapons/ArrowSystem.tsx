@@ -28,6 +28,8 @@ interface FlyingArrow {
   wobbleTime: number
   life: number
   trail: THREE.Vector3[]
+  bounces?: number
+  flightDist?: number
 }
 
 interface SparkParticle {
@@ -40,7 +42,7 @@ interface SparkParticle {
   size: number
 }
 
-const GRAVITY = -9.8 // Realistic ballistic drop (m/s^2)
+const GRAVITY = -13.5 // Realistic ballistic drop (m/s^2) with aerodynamic archery physics
 const MAX_ARROWS = 32
 const MAX_TRAIL_POINTS = 26
 
@@ -234,8 +236,10 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
     spawnArrow: (origin: THREE.Vector3, direction: THREE.Vector3, power: number) => {
       recordShot()
 
-      // Ballistic velocity: directly along crosshair sightline (35 to 47 m/s)
-      const speed = 35 + power * 12
+      // Authentic survival recurve bow ballistics:
+      // power range: 0.35 (snap tap) to 1.0 (full measured draw)
+      // Initial velocity: 22 m/s up to 44 m/s
+      const speed = 22 + power * 22
       const vel = direction.clone().multiplyScalar(speed)
 
       // Initial orientation: align local +Z (broadhead razor blade) strictly with direction of flight
@@ -254,6 +258,8 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
         wobbleTime: 0,
         life: 0,
         trail: [tailPos],
+        bounces: 0,
+        flightDist: 0,
       }
 
       arrowsRef.current.push(newArrow)
@@ -272,8 +278,8 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       const a = activeArrows[i]
       a.life += dt
 
-      // Despawn arrows after 8 seconds
-      if (a.life > 8.0) {
+      // Despawn arrows after 10 seconds
+      if (a.life > 10.0) {
         activeArrows.splice(i, 1)
         arrowsUpdated = true
         continue
@@ -291,15 +297,37 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
 
       const prevPos = a.pos.clone()
 
-      // Integrate ballistic physics
-      a.vel.y += GRAVITY * dt
+      // ── Ballistic Trajectory, Aerodynamic Drag & Natural Range Stall ────────
+      // 1. Aerodynamic drag on turkey fletchings and cedar wood shaft
+      const dragFactor = Math.pow(0.993, dt * 60)
+      a.vel.x *= dragFactor
+      a.vel.z *= dragFactor
+
+      // 2. Realistic Ballistic Gravity + Range Stall Curve:
+      // "make the lenth limited then it will fall down if its far"
+      let currentGravity = GRAVITY
+      if (a.life > 1.2) {
+        // Natural aerodynamic stall at extended ranges (beyond 50-60m):
+        // Downward pitch curves arrow down naturally so it plunges into the earth
+        const stall = Math.min(2.8, (a.life - 1.2) * 2.2)
+        currentGravity += -14.0 * stall
+        a.vel.x *= Math.pow(0.985, dt * 60)
+        a.vel.z *= Math.pow(0.985, dt * 60)
+      }
+
+      a.vel.y += currentGravity * dt
       a.pos.addScaledVector(a.vel, dt)
+      a.flightDist = (a.flightDist || 0) + prevPos.distanceTo(a.pos)
 
       // Aerodynamic rotation: local +Z (broadhead razor blade) strictly tracks velocity vector
-      const fwd = a.vel.clone().normalize()
-      a.quat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fwd)
+      const speed = a.vel.length()
+      if (speed > 0.1) {
+        const fwd = a.vel.clone().normalize()
+        a.quat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fwd)
+      }
 
       // Append trail point at the tail of the arrow (0.52m behind tip)
+      const fwd = speed > 0.1 ? a.vel.clone().normalize() : new THREE.Vector3(0, 0, 1)
       const tailPos = a.pos.clone().addScaledVector(fwd, -0.52)
       a.trail.push(tailPos)
       if (a.trail.length > MAX_TRAIL_POINTS) {
@@ -309,42 +337,69 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       arrowsUpdated = true
 
       // ── Collision Check 0: Environment Colliders (Trees, Rocks, Shrines) ────
-      const envHit = worldCollisionSystem.checkRay(prevPos, a.pos, 0.06)
+      const envHit = worldCollisionSystem.checkRay(prevPos, a.pos, 0.05)
       if (envHit) {
-        a.pos.copy(envHit.hitPoint)
-        a.stuck = true
-        a.trail = []
-        a.wobbleAmp = 0.09
-        a.wobbleFreq = envHit.collider.tag === 'tree' ? 24 : 36
-        a.wobbleTime = 0
-        a.vel.set(0, 0, 0)
-
         if (envHit.collider.tag === 'tree') {
+          // EMBED FIRMLY INTO WOODEN TREE TRUNK
+          const fwdNorm = a.vel.length() > 0.1 ? a.vel.clone().normalize() : envHit.normal.clone().negate()
+          // Penetrate broadhead tip 8cm into the wood bark
+          a.pos.copy(envHit.hitPoint).addScaledVector(fwdNorm, 0.08)
+          a.stuck = true
+          a.trail = []
+          a.wobbleAmp = 0.12
+          a.wobbleFreq = 26
+          a.wobbleTime = 0
+          a.vel.set(0, 0, 0)
           sound.playArrowThud(true)
+          arrowsUpdated = true
+          continue
         } else {
+          // HIT HARD STONE (BOULDER OR MEGALITH)
+          // Arrows cannot pierce rock! They spark and deflect downwards to the ground!
           sound.playArrowThud(false)
-          // Sparks from stone strike
+
+          // Emit stone sparks
           const stoneSparks: SparkParticle[] = []
-          for (let s = 0; s < 10; s++) {
+          for (let s = 0; s < 12; s++) {
             stoneSparks.push({
               id: Math.random(),
               pos: envHit.hitPoint.clone(),
               vel: new THREE.Vector3(
-                (Math.random() - 0.5) * 5,
-                Math.random() * 4 + 1,
-                (Math.random() - 0.5) * 5
+                (Math.random() - 0.5) * 4 + envHit.normal.x * 2.5,
+                Math.random() * 3 + 1.2,
+                (Math.random() - 0.5) * 4 + envHit.normal.z * 2.5
               ),
-              color: '#dcd8cf',
+              color: Math.random() > 0.35 ? '#ffe082' : '#ffffff',
               life: 0,
-              maxLife: 0.3 + Math.random() * 0.2,
+              maxLife: 0.25 + Math.random() * 0.2,
               size: 0.035,
             })
           }
           sparksRef.current = [...sparksRef.current, ...stoneSparks]
-        }
 
-        arrowsUpdated = true
-        continue
+          a.bounces = (a.bounces || 0) + 1
+          if (a.bounces >= 2 || a.vel.length() < 5.0) {
+            // Drop directly to ground at the base of the rock
+            const groundY = getOpenWorldHeight(envHit.hitPoint.x, envHit.hitPoint.z)
+            a.pos.copy(envHit.hitPoint)
+            a.pos.y = groundY + 0.02
+            a.stuck = true
+            a.vel.set(0, 0, 0)
+            a.trail = []
+            a.wobbleAmp = 0
+          } else {
+            // Deflect off rock face
+            a.pos.copy(envHit.hitPoint).addScaledVector(envHit.normal, 0.08)
+            a.vel.reflect(envHit.normal).multiplyScalar(0.25)
+            a.vel.y -= 4.0 // Strong gravity pull to drop to earth
+            a.trail = []
+            a.wobbleAmp = 0.04
+            a.wobbleFreq = 32
+            a.wobbleTime = 0
+          }
+          arrowsUpdated = true
+          continue
+        }
       }
 
       // ── Collision Check 1: Guardian Shield Targets on Ancient Shrines ──────
@@ -410,14 +465,18 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       const terrainY = getOpenWorldHeight(a.pos.x, a.pos.z)
       if (a.pos.y <= terrainY) {
         // Sink the broadhead razor point 8cm into the ground for authentic embedded arrowhead
-        const fwd = a.vel.clone().normalize()
+        const fwdNorm = a.vel.length() > 0.1 ? a.vel.clone().normalize() : new THREE.Vector3(0, -1, 0)
         a.pos.y = terrainY
-        a.pos.addScaledVector(fwd, 0.08)
+        a.pos.addScaledVector(fwdNorm, 0.08)
         a.stuck = true
         a.trail = []
-        a.wobbleAmp = 0.07
+        a.wobbleAmp = 0.08
+        a.wobbleFreq = 22
         a.wobbleTime = 0
+        a.vel.set(0, 0, 0)
         sound.playArrowHitWood()
+        arrowsUpdated = true
+        continue
       }
     }
 
