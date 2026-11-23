@@ -59,7 +59,26 @@ export default function GameHUD({
   const arrowsShot = useQuestStore((s) => s.arrowsShot)
   const arrowsHit = useQuestStore((s) => s.arrowsHit)
   const dayPhaseName = useQuestStore((s) => s.dayPhaseName)
+  const isQuestLogCollapsed = useQuestStore((s) => s.isQuestLogCollapsed)
+  const toggleQuestLog = useQuestStore((s) => s.toggleQuestLog)
   const resetGame = useQuestStore((s) => s.resetGame)
+
+  const nearestShrine = useMemo(() => {
+    if (!playerPosRef?.current) return null
+    let minDist = Infinity
+    let closest: { id: string; name: string; dist: number } | null = null
+    const px = playerPosRef.current.x
+    const pz = playerPosRef.current.z
+    for (const s of shrines) {
+      if (s.isRuneCollected) continue
+      const dist = Math.hypot(s.position[0] - px, s.position[2] - pz)
+      if (dist < minDist) {
+        minDist = dist
+        closest = { id: s.id, name: s.name, dist: Math.round(dist) }
+      }
+    }
+    return closest
+  }, [playerPosRef?.current?.x, playerPosRef?.current?.z, shrines])
 
   const [showHitMarker, setShowHitMarker] = useState(false)
   const [playerHeading, setPlayerHeading] = useState(0)
@@ -163,39 +182,45 @@ export default function GameHUD({
           pointerEvents: 'none',
         }}
       >
-        {/* Subtle Celestial Phase Header */}
+        {/* Subtle Celestial Phase Header Capsule */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
+            gap: 7,
             marginBottom: 4,
-            fontSize: 9.5,
-            letterSpacing: '0.22em',
+            padding: '2px 10px',
+            borderRadius: 12,
+            background: 'rgba(10, 16, 12, 0.45)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(214, 184, 120, 0.20)',
+            fontSize: 9,
+            letterSpacing: '0.18em',
             textTransform: 'uppercase',
-            color: '#c8b89a',
-            textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+            color: '#d4af37',
+            textShadow: '0 1px 3px rgba(0,0,0,0.8)',
           }}
         >
-          <span style={{ opacity: 0.6 }}>◆</span>
-          <span>{dayPhaseName || currentPhaseName}</span>
+          <span style={{ fontSize: 7, opacity: 0.7 }}>◆</span>
+          <span style={{ fontWeight: 600 }}>{dayPhaseName || currentPhaseName}</span>
           <span style={{ opacity: 0.35 }}>|</span>
-          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9 }}>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8.5, color: '#f0ede6' }}>
             {String(Math.round(playerHeading)).padStart(3, '0')}°
           </span>
-          <span style={{ opacity: 0.6 }}>◆</span>
+          <span style={{ fontSize: 7, opacity: 0.7 }}>◆</span>
         </div>
 
-        {/* Compass Ribbon Housing */}
+        {/* Compass Ribbon Housing - Streamlined & Translucent Frosted Glass */}
         <div
           style={{
             position: 'relative',
-            width: 440,
-            height: 38,
-            background: 'linear-gradient(180deg, rgba(14, 20, 15, 0.85) 0%, rgba(8, 12, 9, 0.92) 100%)',
-            borderTop: '1px solid rgba(214, 184, 120, 0.45)',
-            borderBottom: '1px solid rgba(214, 184, 120, 0.2)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.08)',
+            width: 420,
+            height: 32,
+            background: 'linear-gradient(180deg, rgba(14, 20, 15, 0.42) 0%, rgba(8, 12, 9, 0.55) 100%)',
+            backdropFilter: 'blur(12px)',
+            borderTop: '1px solid rgba(214, 184, 120, 0.25)',
+            borderBottom: '1px solid rgba(214, 184, 120, 0.15)',
+            boxShadow: '0 6px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
             maskImage:
               'linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%)',
             WebkitMaskImage:
@@ -351,7 +376,7 @@ export default function GameHUD({
         <div
           style={{
             position: 'absolute',
-            top: 18,
+            top: 16,
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex',
@@ -368,7 +393,7 @@ export default function GameHUD({
               height: 0,
               borderLeft: '4px solid transparent',
               borderRight: '4px solid transparent',
-              borderTop: '6px solid #f5d77f',
+              borderTop: '5px solid #f5d77f',
               filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
             }}
           />
@@ -376,7 +401,7 @@ export default function GameHUD({
           <div
             style={{
               width: 1,
-              height: 26,
+              height: 22,
               background: 'linear-gradient(180deg, #f5d77f 0%, rgba(245, 215, 127, 0.2) 100%)',
             }}
           />
@@ -384,194 +409,336 @@ export default function GameHUD({
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────────
-          2. AUTHENTIC RPG QUEST DOSSIER (TOP-LEFT)
+          2. DYNAMIC COLLAPSIBLE RPG QUEST TRACKER (TOP-LEFT)
       ───────────────────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 24,
-          left: 24,
-          width: 320,
-          background: 'linear-gradient(145deg, rgba(14, 18, 14, 0.9) 0%, rgba(8, 12, 9, 0.94) 100%)',
-          border: '1px solid rgba(214, 184, 120, 0.35)',
-          borderRadius: 4,
-          padding: '14px 18px',
-          boxShadow: '0 12px 36px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)',
-          backdropFilter: 'blur(16px)',
-          pointerEvents: 'none',
-        }}
-      >
-        {/* Subtle Decorative Corner Accent Prisms */}
+      {isQuestLogCollapsed ? (
+        /* Collapsed / Hidden State: Minimal Frosted Pill Badge */
         <div
+          onClick={toggleQuestLog}
+          title="Click or press [J] to expand Quest Tracker"
           style={{
             position: 'absolute',
-            top: -1,
-            left: -1,
-            width: 8,
-            height: 8,
-            borderTop: '2px solid #d4af37',
-            borderLeft: '2px solid #d4af37',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            bottom: -1,
-            right: -1,
-            width: 8,
-            height: 8,
-            borderBottom: '2px solid #d4af37',
-            borderRight: '2px solid #d4af37',
-          }}
-        />
-
-        {/* Small Caps Category */}
-        <div
-          style={{
+            top: 20,
+            left: 20,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 4,
+            gap: 8,
+            background: 'rgba(10, 16, 12, 0.58)',
+            border: '1px solid rgba(214, 184, 120, 0.30)',
+            borderRadius: 4,
+            padding: '4px 10px',
+            backdropFilter: 'blur(14px)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.45)',
+            cursor: 'pointer',
+            pointerEvents: 'auto',
+            transition: 'all 0.2s ease',
           }}
         >
           <span
             style={{
-              fontSize: 9,
-              letterSpacing: '0.22em',
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: 8.5,
               fontWeight: 700,
+              background: 'rgba(214, 184, 120, 0.22)',
               color: '#d4af37',
-              textTransform: 'uppercase',
+              padding: '1px 5px',
+              borderRadius: 2,
+              border: '1px solid rgba(214, 184, 120, 0.4)',
             }}
           >
-            ACTIVE QUEST
+            J
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              color: '#f5f0e6',
+            }}
+          >
+            SANCTIFY MONOLITHS
           </span>
           <span
             style={{
               fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: 10,
-              color: totalCollected === 4 ? '#74ee15' : 'rgba(255,255,255,0.6)',
-              fontWeight: 600,
-              letterSpacing: '0.05em',
+              fontSize: 9.5,
+              fontWeight: 700,
+              color: totalCollected === 4 ? '#74ee15' : '#d4af37',
             }}
           >
-            {totalCollected} / 4 HARMONIZED
+            [{totalCollected}/4]
           </span>
+          {nearestShrine && (
+            <span
+              style={{
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 8.5,
+                color: 'rgba(214, 184, 120, 0.75)',
+              }}
+            >
+              · {nearestShrine.dist}m
+            </span>
+          )}
+          <span style={{ fontSize: 8.5, color: 'rgba(214, 184, 120, 0.7)', marginLeft: 2 }}>▼</span>
         </div>
-
-        {/* Main Quest Title */}
+      ) : (
+        /* Expanded State: Translucent Frosted Glass Card with Dynamic Progress */
         <div
           style={{
-            fontSize: 13.5,
-            fontWeight: 800,
-            letterSpacing: '0.06em',
-            color: '#f5f0e6',
-            marginBottom: 8,
-            textShadow: '0 2px 6px rgba(0,0,0,0.7)',
+            position: 'absolute',
+            top: 20,
+            left: 20,
+            width: 285,
+            background: 'linear-gradient(150deg, rgba(14, 20, 16, 0.62) 0%, rgba(8, 12, 10, 0.72) 100%)',
+            border: '1px solid rgba(214, 184, 120, 0.28)',
+            borderRadius: 4,
+            padding: '10px 14px',
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
+            backdropFilter: 'blur(16px)',
+            pointerEvents: 'auto',
+            transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
-          SANCTIFY THE ANCIENT MONOLITHS
-        </div>
+          {/* Subtle Decorative Corner Accent Prisms */}
+          <div
+            style={{
+              position: 'absolute',
+              top: -1,
+              left: -1,
+              width: 7,
+              height: 7,
+              borderTop: '2px solid rgba(214, 184, 120, 0.7)',
+              borderLeft: '2px solid rgba(214, 184, 120, 0.7)',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              bottom: -1,
+              right: -1,
+              width: 7,
+              height: 7,
+              borderBottom: '2px solid rgba(214, 184, 120, 0.7)',
+              borderRight: '2px solid rgba(214, 184, 120, 0.7)',
+            }}
+          />
 
-        {/* Golden Hairline Divider */}
-        <div
-          style={{
-            width: '100%',
-            height: 1,
-            background:
-              'linear-gradient(to right, rgba(214, 184, 120, 0.6) 0%, rgba(214, 184, 120, 0.1) 100%)',
-            marginBottom: 10,
-          }}
-        />
-
-        {/* 4 Shrines Matrix Status */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
-          {shrines.map((s) => {
-            const hits = s.targetsHit.filter(Boolean).length
-            return (
-              <div
-                key={s.id}
+          {/* Header Row: Category Badge + Progress Ratio + Hide Toggle Button */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 6,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  fontSize: 10.5,
-                  padding: '2px 0',
+                  fontSize: 8.5,
+                  letterSpacing: '0.18em',
+                  fontWeight: 700,
+                  color: '#d4af37',
+                  textTransform: 'uppercase',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  {/* Status Diamond Indicator */}
-                  <div
+                ACTIVE QUEST
+              </span>
+              <span
+                style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 9,
+                  color: totalCollected === 4 ? '#74ee15' : '#e6d8b5',
+                  fontWeight: 600,
+                }}
+              >
+                {totalCollected}/4
+              </span>
+            </div>
+
+            {/* Interactive Hide/Fold Button */}
+            <button
+              onClick={toggleQuestLog}
+              title="Hide quest log [J]"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                background: 'rgba(214, 184, 120, 0.12)',
+                border: '1px solid rgba(214, 184, 120, 0.35)',
+                borderRadius: 2,
+                padding: '1px 6px',
+                color: 'rgba(230, 225, 215, 0.85)',
+                fontSize: 8.5,
+                fontFamily: "'IBM Plex Mono', monospace",
+                cursor: 'pointer',
+                lineHeight: 1.2,
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span>[J]</span>
+              <span style={{ fontSize: 8 }}>HIDE ▲</span>
+            </button>
+          </div>
+
+          {/* Dynamic Progress Bar */}
+          <div
+            style={{
+              width: '100%',
+              height: 3,
+              background: 'rgba(255, 255, 255, 0.08)',
+              borderRadius: 2,
+              overflow: 'hidden',
+              marginBottom: 7,
+            }}
+          >
+            <div
+              style={{
+                width: `${(totalCollected / 4) * 100}%`,
+                height: '100%',
+                background:
+                  totalCollected === 4
+                    ? 'linear-gradient(90deg, #38ef7d, #74ee15)'
+                    : 'linear-gradient(90deg, #d4af37, #ffcc00)',
+                boxShadow: '0 0 8px rgba(212, 175, 55, 0.6)',
+                transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+              }}
+            />
+          </div>
+
+          {/* Main Quest Title */}
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: '0.05em',
+              color: '#f5f0e6',
+              marginBottom: 6,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <span>SANCTIFY THE ANCIENT MONOLITHS</span>
+            {nearestShrine && (
+              <span
+                style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: 8.5,
+                  fontWeight: 600,
+                  color: '#d4af37',
+                  background: 'rgba(214, 184, 120, 0.15)',
+                  padding: '1px 4px',
+                  borderRadius: 2,
+                }}
+              >
+                {nearestShrine.dist}m
+              </span>
+            )}
+          </div>
+
+          {/* 4 Shrines Matrix Status */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 7 }}>
+            {shrines.map((s) => {
+              const hits = s.targetsHit.filter(Boolean).length
+              const isNearest = nearestShrine?.id === s.id && !s.isRuneCollected
+
+              return (
+                <div
+                  key={s.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: 9.5,
+                    padding: '2px 4px',
+                    borderRadius: 2,
+                    background: isNearest ? 'rgba(214, 184, 120, 0.08)' : 'transparent',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {/* Status Indicator Diamond */}
+                    <div
+                      style={{
+                        width: 5.5,
+                        height: 5.5,
+                        transform: 'rotate(45deg)',
+                        background: s.isRuneCollected
+                          ? s.color
+                          : s.isAwakened
+                          ? '#ffd700'
+                          : isNearest
+                          ? '#d4af37'
+                          : 'rgba(255,255,255,0.25)',
+                        boxShadow: s.isRuneCollected
+                          ? `0 0 5px ${s.color}`
+                          : s.isAwakened
+                          ? '0 0 8px #ffd700'
+                          : isNearest
+                          ? '0 0 5px rgba(212, 175, 55, 0.5)'
+                          : 'none',
+                      }}
+                    />
+                    <span
+                      style={{
+                        color: s.isRuneCollected
+                          ? '#e5e0d8'
+                          : s.isAwakened
+                          ? '#ffd700'
+                          : isNearest
+                          ? '#fff0d0'
+                          : 'rgba(255,255,255,0.72)',
+                        letterSpacing: '0.02em',
+                        fontWeight: s.isAwakened || isNearest ? 700 : 500,
+                      }}
+                    >
+                      {s.name}
+                    </span>
+                  </div>
+
+                  <span
                     style={{
-                      width: 6,
-                      height: 6,
-                      transform: 'rotate(45deg)',
-                      background: s.isRuneCollected
+                      fontFamily: "'IBM Plex Mono', monospace",
+                      fontSize: 8.5,
+                      color: s.isRuneCollected
                         ? s.color
                         : s.isAwakened
                         ? '#ffd700'
-                        : 'rgba(255,255,255,0.2)',
-                      boxShadow: s.isRuneCollected
-                        ? `0 0 6px ${s.color}`
-                        : s.isAwakened
-                        ? '0 0 8px #ffd700'
-                        : 'none',
-                    }}
-                  />
-                  <span
-                    style={{
-                      color: s.isRuneCollected
-                        ? '#e5e0d8'
-                        : s.isAwakened
-                        ? '#ffd700'
-                        : 'rgba(255,255,255,0.7)',
-                      letterSpacing: '0.03em',
-                      fontWeight: s.isAwakened ? 700 : 500,
+                        : isNearest
+                        ? '#d4af37'
+                        : 'rgba(255,255,255,0.45)',
+                      fontWeight: 600,
                     }}
                   >
-                    {s.name}
+                    {s.isRuneCollected
+                      ? 'SANCTIFIED'
+                      : s.isAwakened
+                      ? 'HARMONIZE'
+                      : `${hits}/3`}
                   </span>
                 </div>
+              )
+            })}
+          </div>
 
-                <span
-                  style={{
-                    fontFamily: "'IBM Plex Mono', monospace",
-                    fontSize: 9.5,
-                    color: s.isRuneCollected
-                      ? s.color
-                      : s.isAwakened
-                      ? '#ffd700'
-                      : 'rgba(255,255,255,0.4)',
-                    fontWeight: 600,
-                  }}
-                >
-                  {s.isRuneCollected
-                    ? 'SANCTIFIED'
-                    : s.isAwakened
-                    ? 'HARMONIZE [E]'
-                    : `${hits}/3 EMBERS`}
-                </span>
-              </div>
-            )
-          })}
+          {/* Objective Narrative Prompt */}
+          <div
+            style={{
+              fontSize: 9.5,
+              color: 'rgba(220, 215, 205, 0.75)',
+              lineHeight: 1.35,
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              paddingTop: 5,
+            }}
+          >
+            {totalCollected === 4
+              ? 'All monoliths sanctified. The celestial balance of the grove is restored.'
+              : totalAwakened > totalCollected
+              ? 'Approach the unsealed monolith to harmonize its elemental core.'
+              : 'Draw your recurve bow and dispel the 3 orbiting guardian embers around each monolith.'}
+          </div>
         </div>
-
-        {/* Objective Narrative Prompt */}
-        <div
-          style={{
-            fontSize: 10.5,
-            color: 'rgba(220, 215, 205, 0.85)',
-            lineHeight: 1.45,
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-            paddingTop: 8,
-          }}
-        >
-          {totalCollected === 4
-            ? 'All monoliths sanctified. The celestial balance of the grove is restored.'
-            : totalAwakened > totalCollected
-            ? 'Approach the unsealed monolith and press [E] to harmonize its elemental core.'
-            : 'Draw your recurve bow and dispel the 3 orbiting guardian embers around each monolith.'}
-        </div>
-      </div>
+      )}
 
       {/* ─────────────────────────────────────────────────────────────────────
           3. CINEMATIC NOTIFICATION BANNER (TOP-CENTER)

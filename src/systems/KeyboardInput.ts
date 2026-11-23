@@ -78,6 +78,8 @@ class InputManager {
       useQuestStore.setState({ notification: 'Field Pouch: Herbal Bandages (3 available)' })
     } else if (code === 'Digit5' || key === '5') {
       useQuestStore.setState({ notification: 'Field Tools: Flint & Kindling' })
+    } else if (code === 'KeyJ' || key === 'j') {
+      useQuestStore.getState().toggleQuestLog()
     }
   }
 

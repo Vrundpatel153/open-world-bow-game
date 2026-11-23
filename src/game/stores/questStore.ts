@@ -80,8 +80,11 @@ interface QuestState {
   hitMarkerId: number
   notification: string | null
   dayPhaseName: string
+  isQuestLogCollapsed: boolean
 
   // Actions
+  toggleQuestLog: () => void
+  setQuestLogCollapsed: (collapsed: boolean) => void
   hitTarget: (shrineId: string, targetIdx: number) => void
   collectRune: (shrineId: string) => void
   recordShot: () => void
@@ -109,6 +112,9 @@ export const useQuestStore = create<QuestState>((set, get) => ({
   hitMarkerId: 0,
   notification: 'Dispel the guardian embers around the four ancient monoliths.',
   dayPhaseName: 'DAYLIGHT',
+  isQuestLogCollapsed: false,
+  toggleQuestLog: () => set((state) => ({ isQuestLogCollapsed: !state.isQuestLogCollapsed })),
+  setQuestLogCollapsed: (isQuestLogCollapsed) => set({ isQuestLogCollapsed }),
   setDayPhaseName: (dayPhaseName) => set({ dayPhaseName }),
 
   hitTarget: (shrineId: string, targetIdx: number) => {
