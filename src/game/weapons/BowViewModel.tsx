@@ -479,28 +479,28 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     aimProgress.current = THREE.MathUtils.damp(aimProgress.current, targetAim, 12, dt)
     const aFactor = aimProgress.current
 
-    // Idle stance: Bow held naturally in the lower-right quadrant (X=0.315m, Y=-0.200m, Z=-0.360m)
-    // Scale 0.72x fits completely inside the window: upper tip stays well below compass, lower tip above hotbar
-    // Leaving center crosshair (960, 540) and middle 75% of screen 100% wide open for exploration!
-    // Aim stance: raises into right-hand sight window (X=0.048m, Y=-0.036m, Z=-0.235m)
+    // Idle stance: Bow held gracefully in the lower-right foreground (X=0.205m, Y=-0.115m, Z=-0.320m)
+    // Scale 0.85x gives a heroic recurve bow presence with elegant upper limb sweep framing the right third,
+    // keeping the entire center crosshair and 80% of exploration view unobstructed.
+    // Aim stance: raises into archer's sight window (X=0.048m, Y=-0.038m, Z=-0.220m)
     const unequipDrop = (1.0 - equipProgress.current) * -0.5
-    const baseLocalX = THREE.MathUtils.lerp(0.315, 0.048, aFactor)
-    const baseLocalY = THREE.MathUtils.lerp(-0.200, -0.036, aFactor)
-    const baseLocalZ = THREE.MathUtils.lerp(-0.360, -0.235, aFactor)
+    const baseLocalX = THREE.MathUtils.lerp(0.205, 0.048, aFactor)
+    const baseLocalY = THREE.MathUtils.lerp(-0.115, -0.038, aFactor)
+    const baseLocalZ = THREE.MathUtils.lerp(-0.320, -0.220, aFactor)
 
     const localX = baseLocalX + swayOffset.current.x + bobX + shakeX
     const localY = baseLocalY + swayOffset.current.y + bobY + shakeY + unequipDrop
     const localZ = baseLocalZ + recoilOffset.current
 
     rigGroupRef.current.position.set(localX, localY, localZ)
-    rigGroupRef.current.scale.setScalar(THREE.MathUtils.lerp(0.72, 0.76, aFactor))
+    rigGroupRef.current.scale.setScalar(THREE.MathUtils.lerp(0.85, 0.90, aFactor))
 
     // Dynamic rotation:
-    // In idle: pitchX = 0.06 (forward-down ready angle), yawY = 0.06 (turned slightly outward into right depth), rollZ = -0.42 (comfortable right cant framing lower-right corner)
-    // In aim: pitchX = 0.005, yawY = -0.008, rollZ = -0.16 (upright sight window framing crosshair)
-    const pitchX = THREE.MathUtils.lerp(0.060, 0.005, aFactor) + recoilRotation.current + swayOffset.current.y * 0.15
-    const yawY = THREE.MathUtils.lerp(0.060, -0.008, aFactor) + swayOffset.current.x * 0.15
-    const rollZ = THREE.MathUtils.lerp(-0.420, -0.160, aFactor) + swayRot.current.z
+    // In idle: pitchX = 0.02, yawY = 0.02, rollZ = -0.18 (comfortable, natural archer low-ready cant)
+    // In aim: pitchX = 0.002, yawY = -0.005, rollZ = -0.06 (precise vertical alignment with sight picture)
+    const pitchX = THREE.MathUtils.lerp(0.020, 0.002, aFactor) + recoilRotation.current + swayOffset.current.y * 0.15
+    const yawY = THREE.MathUtils.lerp(0.020, -0.005, aFactor) + swayOffset.current.x * 0.15
+    const rollZ = THREE.MathUtils.lerp(-0.180, -0.060, aFactor) + swayRot.current.z
 
     rigGroupRef.current.rotation.set(pitchX, yawY, rollZ, 'YXZ')
     rigGroupRef.current.updateMatrixWorld(true)
@@ -537,12 +537,15 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     currentNock.z += pullDistance + vibZ
 
     // When aiming (aFactor = 1.0): arrow points straight through center crosshair (0, 0, -80m)
-    // When in idle (aFactor = 0.0): arrow rests along shelf angled naturally into the right-hand depth corridor,
-    // staying strictly in the right viewport third and keeping the entire screen center wide open
+    // When in idle (aFactor = 0.0): arrow points naturally along archer's right-hand depth corridor
     const aimCamPoint = bowRootRef.current.localToWorld(new THREE.Vector3(0, 0, -80.0))
     const aimLocalPoint = rigGroupRef.current.worldToLocal(aimCamPoint)
     const aimArrowDir = aimLocalPoint.sub(currentNock).normalize()
-    const idleArrowDir = new THREE.Vector3(0.25, -0.05, -0.96).normalize()
+
+    const idleCamPoint = bowRootRef.current.localToWorld(new THREE.Vector3(0.18, -0.09, -50.0))
+    const idleLocalPoint = rigGroupRef.current.worldToLocal(idleCamPoint)
+    const idleArrowDir = idleLocalPoint.sub(currentNock).normalize()
+
     const arrowDir = new THREE.Vector3().lerpVectors(idleArrowDir, aimArrowDir, aFactor).normalize()
 
     if (arrowGroupRef.current) {
