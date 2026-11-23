@@ -25,15 +25,15 @@ import { DEBUG_FRAGMENT_UNIFORMS, DEBUG_VIEW_FRAGMENT } from "../shaders/debug";
 // ─────────────────────────────────────────────────────────────────────────────
 
 function bladeHalfWidth(t: number): number {
-  return 0.026 * Math.pow(Math.max(0.0, 1.0 - t), 0.70);
+  return 0.036 * Math.pow(Math.max(0.0, 1.0 - t), 0.65);
 }
 
 /**
- * Organic 5-Blade Broad Natural Meadow Grass Sod Geometry.
- * Each instance generates a multi-tiered circular sod of 5 slender, graceful blades:
- *   - Spread across a 36cm circular footprint with independent blade offsets
- *   - Slender 5.2cm base width tapering to needle points (zero cartoon cardboard triangles)
- *   - Natural outward arching angles and organic yaw distribution
+ * Organic 8-Blade Broad Natural Meadow Grass Sod Geometry.
+ * Each instance generates an interlocking circular sod of 8 slender, graceful blades:
+ *   - Spread across a 60cm circular footprint with independent blade radial offsets
+ *   - Slender 7.2cm base width tapering smoothly to needle points
+ *   - Natural outward arching angles, organic yaw distribution, and tiered heights
  *
  * Sods continuously interleave and overlap across the landscape, completely
  * eliminating bare ground gaps, clump clustering, and teepee cone artifacts
@@ -45,15 +45,18 @@ export function makeBladeGeometry(segments = 2): THREE.BufferGeometry {
 
   const bladeConfigs = [
     // 1. Central core upright blade
-    { yaw: 0.20, tilt: 0.11, hScale: 0.52, wScale: 1.00, xOff: 0.00, zOff: 0.02 },
+    { yaw: 0.15, tilt: 0.12, hScale: 0.68, wScale: 1.05, xOff: 0.00, zOff: 0.00 },
 
-    // 2-3. Mid-tier spreading blades
-    { yaw: 1.20, tilt: 0.16, hScale: 0.48, wScale: 0.95, xOff: 0.13, zOff: 0.06 },
-    { yaw: -1.10, tilt: 0.17, hScale: 0.50, wScale: 0.95, xOff: -0.12, zOff: 0.05 },
+    // 2-5. Mid-tier spreading blades (Radius ~0.16m to 0.22m)
+    { yaw: 0.85, tilt: 0.22, hScale: 0.58, wScale: 1.00, xOff: 0.15, zOff: 0.14 },
+    { yaw: 2.25, tilt: 0.20, hScale: 0.60, wScale: 0.95, xOff: -0.16, zOff: 0.12 },
+    { yaw: -2.35, tilt: 0.24, hScale: 0.56, wScale: 1.00, xOff: -0.14, zOff: -0.16 },
+    { yaw: -0.85, tilt: 0.21, hScale: 0.62, wScale: 0.95, xOff: 0.16, zOff: -0.13 },
 
-    // 4-5. North & South interlocking blades
-    { yaw: 2.15, tilt: 0.19, hScale: 0.46, wScale: 0.90, xOff: 0.05, zOff: -0.14 },
-    { yaw: -2.30, tilt: 0.18, hScale: 0.47, wScale: 0.90, xOff: -0.06, zOff: -0.13 },
+    // 6-8. Outer low-arching interlocking blades (Radius ~0.26m to 0.32m)
+    { yaw: 0.35, tilt: 0.32, hScale: 0.50, wScale: 0.92, xOff: 0.25, zOff: 0.04 },
+    { yaw: 3.10, tilt: 0.30, hScale: 0.48, wScale: 0.92, xOff: -0.26, zOff: -0.05 },
+    { yaw: -1.55, tilt: 0.34, hScale: 0.47, wScale: 0.90, xOff: 0.02, zOff: -0.26 },
   ];
   const numBlades = bladeConfigs.length;
   const totalVerts = vertsPerBlade * numBlades;

@@ -22,6 +22,12 @@ import * as THREE from 'three'
 import { useQuestStore } from '../stores/questStore'
 import { sound } from '../audio/SoundSynthesizer'
 import { inputManager } from '@/systems/KeyboardInput'
+import {
+  createLeftBowArm,
+  createRightDrawArm,
+  type LeftBowArmRig,
+  type RightDrawArmRig,
+} from './FirstPersonArmModel'
 
 interface BowViewModelProps {
   onFireArrow: (origin: THREE.Vector3, direction: THREE.Vector3, power: number) => void
@@ -60,10 +66,41 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
   const vUpperLocal = useRef(new THREE.Vector3())
   const vLowerLocal = useRef(new THREE.Vector3())
 
+  // Authentic First-Person Character Arms & Articulated Hands Rig
+  const leftArmRig = useMemo(() => createLeftBowArm(), [])
+  const rightArmRig = useMemo(() => createRightDrawArm(), [])
+
+  useEffect(() => {
+    if (rigGroupRef.current) {
+      // Left arm firmly holds the bow handle grip; fingers wrapped circumference-wise around stave
+      leftArmRig.root.position.set(0, 0, 0)
+      leftArmRig.root.rotation.set(0, 0, 0)
+      rigGroupRef.current.add(leftArmRig.root)
+    }
+    if (bowRootRef.current) {
+      // Right arm performs Mediterranean 3-finger draw and string anchor in camera space
+      bowRootRef.current.add(rightArmRig.root)
+    }
+  }, [leftArmRig, rightArmRig])
+
   const setDrawProgress = useQuestStore((s) => s.setDrawProgress)
   const setAiming = useQuestStore((s) => s.setAiming)
   const isBowEquipped = useQuestStore((s) => s.isBowEquipped)
   const toggleBowEquipped = useQuestStore((s) => s.toggleBowEquipped)
+
+  // Debug window hooks for verification
+  useEffect(() => {
+    ;(window as any).__testBowDraw = (draw: boolean) => {
+      isDrawing.current = draw
+      if (draw) {
+        drawTension.current = 1.0
+        setDrawProgress(1.0)
+      } else {
+        drawTension.current = 0.0
+        setDrawProgress(0.0)
+      }
+    }
+  }, [setDrawProgress])
 
   useEffect(() => {
     ;(window as any).__bowDebug = {
@@ -481,23 +518,23 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     rigGroupRef.current.scale.setScalar(0.76)
 
     // Dynamic rotation:
-    // In idle: pitchX = 0.06 (natural forward-down carry angle), yawY = -0.05 (slight cant), rollZ = -0.12 (right cant)
-    // In aim: pitchX = 0.005, yawY = -0.005, rollZ = -0.14 (held canted to right of sightline, keeping eye-to-target path clear)
-    const pitchX = THREE.MathUtils.lerp(0.060, 0.005, aFactor) + recoilRotation.current + swayOffset.current.y * 0.15
-    const yawY = THREE.MathUtils.lerp(-0.050, -0.005, aFactor) + swayOffset.current.x * 0.15
-    const rollZ = THREE.MathUtils.lerp(-0.120, -0.140, aFactor) + swayRot.current.z
+    // In idle: pitchX = 0.12 (natural forward-down carry angle), yawY = -0.08 (slight cant), rollZ = -0.25 (comfortable right cant)
+    // In aim: pitchX = 0.005, yawY = -0.005, rollZ = -0.12 (held canted to right of sightline, keeping eye-to-target path clear)
+    const pitchX = THREE.MathUtils.lerp(0.120, 0.005, aFactor) + recoilRotation.current + swayOffset.current.y * 0.15
+    const yawY = THREE.MathUtils.lerp(-0.080, -0.005, aFactor) + swayOffset.current.x * 0.15
+    const rollZ = THREE.MathUtils.lerp(-0.250, -0.120, aFactor) + swayRot.current.z
 
     rigGroupRef.current.rotation.set(pitchX, yawY, rollZ, 'YXZ')
     rigGroupRef.current.updateMatrixWorld(true)
 
     // ── 6. Dynamic Bow Limb Flexing ──────────────────────────────────────────
     const tension = drawTension.current
-    const pullDistance = 0.088 * tension
+    const pullDistance = 0.095 * tension
 
     stringVibration.current = THREE.MathUtils.damp(stringVibration.current, 0, 14, dt)
     const vibZ = Math.sin(state.clock.elapsedTime * 125) * 0.004 * stringVibration.current
 
-    const limbFlex = tension * 0.042
+    const limbFlex = tension * 0.052
     if (upperLimbRef.current && lowerLimbRef.current) {
       upperLimbRef.current.rotation.x = limbFlex
       lowerLimbRef.current.rotation.x = -limbFlex
@@ -526,8 +563,48 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const aimCamPoint = bowRootRef.current.localToWorld(new THREE.Vector3(0, 0, -80.0))
     const aimLocalPoint = rigGroupRef.current.worldToLocal(aimCamPoint)
     const aimArrowDir = aimLocalPoint.sub(currentNock).normalize()
-    const idleArrowDir = new THREE.Vector3(0.0, 0.0, -1.0)
+    const idleArrowDir = new THREE.Vector3(-0.015, 0.005, -1.0).normalize()
     const arrowDir = new THREE.Vector3().lerpVectors(idleArrowDir, aimArrowDir, aFactor).normalize()
+
+    // ── 8B. Right Drawing Arm Kinematics & 3-Finger String Hook ─────────────
+    if (rightArmRig?.root) {
+      const drawFactor = Math.max(aFactor, tension)
+
+      if (drawFactor < 0.04 && !isReloading.current) {
+        // In idle, right hand rests naturally at hip quiver offscreen
+        rightArmRig.root.visible = false
+      } else {
+        rightArmRig.root.visible = isBowEquipped && equipProgress.current > 0.15
+
+        // Smoothly draw from lower-right hip to cheek string anchor point
+        // In full draw: 3 gloved fingers hook the string right at the cheek anchor point
+        // keeping the top and left sightline down the arrow shaft 100% crystal-clear to crosshair
+        const hipPos = new THREE.Vector3(0.26, -0.45, -0.26)
+        const hipQuat = new THREE.Quaternion().setFromEuler(
+          new THREE.Euler(-0.45, 0.20, -0.25, 'YXZ')
+        )
+
+        const anchorPos = new THREE.Vector3(0.20, -0.16, -0.26)
+        const anchorQuat = new THREE.Quaternion().setFromEuler(
+          new THREE.Euler(-0.20, -0.15, 0.20, 'YXZ')
+        )
+
+        const tDraw = THREE.MathUtils.smoothstep(drawFactor, 0, 1)
+        const handPos = new THREE.Vector3().lerpVectors(hipPos, anchorPos, tDraw)
+        const handQuat = new THREE.Quaternion().slerpQuaternions(hipQuat, anchorQuat, tDraw)
+
+        if (isReloading.current && reloadProgress < 0.58) {
+          // Hand drops down to hip quiver to retrieve next arrow
+          const dip = Math.sin((reloadProgress / 0.58) * Math.PI) * 0.12
+          handPos.y -= dip
+          handPos.x += dip * 0.3
+        }
+
+        rightArmRig.root.position.copy(handPos)
+        rightArmRig.root.quaternion.copy(handQuat)
+        rightArmRig.root.scale.setScalar(0.76)
+      }
+    }
 
     if (arrowGroupRef.current) {
       // 0.00s to 0.62s (reloadProgress < 0.58): Bow is completely empty so player tracks shot arrow

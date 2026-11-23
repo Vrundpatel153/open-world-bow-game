@@ -27,6 +27,7 @@ import { useQuestStore } from '../stores/questStore'
 import { sound } from '../audio/SoundSynthesizer'
 import { inputManager } from '@/systems/KeyboardInput'
 import { worldCollisionSystem } from '@/game/physics/WorldCollisionSystem'
+import { createRightSwordArm } from './FirstPersonArmModel'
 
 interface SwordViewModelProps {
   onHitRock?: (hitPoint: THREE.Vector3, normal: THREE.Vector3, power: number) => void
@@ -118,6 +119,16 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
   const hitStopTimer = useRef(0)
   const hasHitInCurrentSwing = useRef(false)
   const isFrozen = useRef(false)
+
+  // Authentic First-Person Gauntleted Warrior's Right Arm
+  const swordArmRig = useMemo(() => createRightSwordArm(), [])
+  useEffect(() => {
+    if (swordRootRef.current) {
+      swordArmRig.root.position.set(0, 0, 0)
+      swordArmRig.root.rotation.set(0, 0, 0)
+      swordRootRef.current.add(swordArmRig.root)
+    }
+  }, [swordArmRig])
   const frozenType = useRef<SwingType>('none')
   const frozenProgress = useRef(0)
 
@@ -473,9 +484,9 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     // Guard sits firmly at lower-right, tip points gracefully forward into lower-center
     // Center crosshair (960, 540) and left 75% of viewport 100% unobstructed!
     const unequipDrop = 1.0 - equipProgress.current
-    const pRest = new THREE.Vector3(0.27, -0.20 - unequipDrop * 0.45, -0.38)
+    const pRest = new THREE.Vector3(0.24, -0.15 - unequipDrop * 0.45, -0.34)
     const qRest = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(-0.38 - unequipDrop * 0.4, 0.24, -0.52 - unequipDrop * 0.3, 'YXZ')
+      new THREE.Euler(-0.32 - unequipDrop * 0.4, 0.20, -0.42 - unequipDrop * 0.3, 'YXZ')
     )
 
     let finalPos = pRest.clone()

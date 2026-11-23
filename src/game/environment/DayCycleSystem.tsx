@@ -16,7 +16,7 @@ import {
 } from "@/components/skyDome/constants";
 import { useQuestStore } from "@/game/stores/questStore";
 
-export const FULL_CYCLE_SECONDS = 720; // Realistic 12 minutes per full day-night cycle
+export const FULL_CYCLE_SECONDS = 1440; // Realistic 24 minutes per full day-night cycle (1 real second = 1 in-game minute)
 
 interface DayCycleSystemProps {
   blendStateRef: React.MutableRefObject<BlendState>;

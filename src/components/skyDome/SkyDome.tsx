@@ -1718,14 +1718,14 @@ export default function SkyDome({
       // Luminous Golden Sun Disc with warm atmospheric solar corona
       u.uMoonColor.value.set("#fffdf0");
       u.uMoonGlowColor.value.set("#ffa834");
-      u.uMoonSize.value = 0.026 * Math.max(0.001, horizonFade);
-      u.uMoonGlowFalloff.value = 30.0; // Wide glorious golden atmospheric corona
-      u.uMoonGlowIntensity.value = 0.52 * horizonFade;
+      u.uMoonSize.value = 0.028 * Math.max(0.001, horizonFade);
+      u.uMoonGlowFalloff.value = 22.0; // Wide glorious golden atmospheric corona
+      u.uMoonGlowIntensity.value = 0.58 * horizonFade;
       u.uMoonEdgeSoftness.value = 0.02;
-      u.uMoonPhasePos.value = 2.0; // Fully lit spherical solar disc
+      u.uMoonPhasePos.value = -1.5; // Fully lit spherical solar disc (-1.5 = completely lit disc)
       u.uMoonPhaseSoftness.value = 0.1;
       u.uMoonPhaseAngle.value = 0;
-      u.uMoonEmission.value = 0.75 * horizonFade;
+      u.uMoonEmission.value = 0.85 * horizonFade;
       u.uMoonCloudBleed.value = 0.85;
       u.uMoonSpotColor.value.set("#ffffff");
       u.uMoonSpotStrength.value = 0.0;
@@ -1735,12 +1735,12 @@ export default function SkyDome({
       u.uMoonSpotOctaves.value = 1;
     }
 
-    // Stars — minimal needle points (~150-200 stars), sparse and peaceful
-    u.uStarDensity.value = 75.0;
-    u.uStarSize.value = 0.0022;
+    // Stars — minimal needle points, sparse and peaceful
+    u.uStarDensity.value = 34.0;
+    u.uStarSize.value = 0.0020;
     u.uStarBrightness.value =
       (nightBool && starFade > 0 && preset.starsEnabled !== false)
-        ? (preset.starBrightness ?? 1.1) * starFade
+        ? (preset.starBrightness ?? 0.65) * starFade * 0.55
         : 0.0;
     u.uStarFloor.value = 0.08;
     u.uStarDriftY.value = 0.0012;
@@ -1842,23 +1842,24 @@ export default function SkyDome({
       cB.set(to.moonGlowColor ?? (nightBool ? "#b0cce8" : "#ffa834"));
       u.uMoonGlowColor.value.lerpColors(cA, cB, t);
       // Calibrated celestial disk size & falloff (never balloon during blend transitions)
-      const baseCelestialSize = nightBool ? 0.024 : 0.026;
+      const baseCelestialSize = nightBool ? 0.024 : 0.028;
       u.uMoonSize.value = baseCelestialSize * Math.max(0.001, horizonFade);
-      u.uMoonEmission.value = (nightBool ? 0.70 : 0.75) * horizonFade;
-      u.uMoonGlowFalloff.value = nightBool ? 80.0 : 30.0;
-      u.uMoonGlowIntensity.value = (nightBool ? 0.26 : 0.52) * horizonFade;
+      u.uMoonEmission.value = (nightBool ? 0.65 : 0.85) * horizonFade;
+      u.uMoonGlowFalloff.value = nightBool ? 60.0 : 22.0;
+      u.uMoonGlowIntensity.value = (nightBool ? 0.28 : 0.58) * horizonFade;
       u.uMoonCloudBleed.value = nightBool ? 0.65 : 0.85;
-      u.uMoonPhasePos.value = nightBool ? 0.18 : 2.0; // Day: 100% spherical sun; Night: crescent
+      u.uMoonPhasePos.value = nightBool ? -0.15 : -1.5; // Day: 100% spherical brilliant sun; Night: elegant crescent-gibbous moon
       u.uMoonPhaseSoftness.value = nightBool ? 0.08 : 0.10;
 
-      // Stars — strictly 0 during daylight, only fade in when nocturnal darkness is true
+      // Minimal, elegant, realistic stars — strictly 0 during daylight, subtle twinkle at night
+      u.uStarDensity.value = 34.0;
       u.uStarBrightness.value =
         nightBool && starFade > 0 && (from.starsEnabled || to.starsEnabled)
           ? lerp(
-            from.starsEnabled ? (from.starBrightness ?? 1.2) : 0,
-            to.starsEnabled ? (to.starBrightness ?? 1.2) : 0,
+            from.starsEnabled ? (from.starBrightness ?? 0.65) : 0,
+            to.starsEnabled ? (to.starBrightness ?? 0.65) : 0,
             t,
-          ) * starFade
+          ) * starFade * 0.55
           : 0.0;
 
       // Cloud colors

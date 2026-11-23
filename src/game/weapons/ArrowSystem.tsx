@@ -5,7 +5,7 @@
 // quiver wobble, and celebratory elemental impact sparks.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useRef, useImperativeHandle, forwardRef, useMemo } from 'react'
+import { useState, useRef, useEffect, useImperativeHandle, forwardRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useQuestStore } from '../stores/questStore'
@@ -43,6 +43,67 @@ interface SparkParticle {
 const GRAVITY = -9.8 // Realistic ballistic drop (m/s^2)
 const MAX_ARROWS = 32
 const MAX_TRAIL_POINTS = 26
+
+// ── Zero-Allocation GPU Streamed Aerodynamic Ribbon Trail ───────────────────
+function ArrowTrailRenderer({
+  points,
+  material,
+}: {
+  points: THREE.Vector3[]
+  material: THREE.Material
+}) {
+  const geo = useMemo(() => {
+    const pos = new Float32Array(MAX_TRAIL_POINTS * 4 * 3)
+    const indices: number[] = []
+    for (let pi = 0; pi < MAX_TRAIL_POINTS - 1; pi++) {
+      const b = pi * 4
+      indices.push(b, b + 1, b + 4)
+      indices.push(b + 1, b + 5, b + 4)
+      indices.push(b + 2, b + 3, b + 6)
+      indices.push(b + 3, b + 7, b + 6)
+    }
+    const g = new THREE.BufferGeometry()
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+    g.setIndex(indices)
+    return g
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      geo.dispose()
+    }
+  }, [geo])
+
+  useFrame(() => {
+    if (!geo) return
+    const posAttr = geo.getAttribute('position') as THREE.BufferAttribute
+    const pos = posAttr.array as Float32Array
+    const n = points.length
+    if (n < 2) return
+
+    for (let pi = 0; pi < n; pi++) {
+      const p = points[pi]
+      const t = pi / (n - 1)
+      const halfW = 0.003 + 0.016 * t
+      pos[pi * 12 + 0] = p.x
+      pos[pi * 12 + 1] = p.y + halfW
+      pos[pi * 12 + 2] = p.z
+      pos[pi * 12 + 3] = p.x
+      pos[pi * 12 + 4] = p.y - halfW
+      pos[pi * 12 + 5] = p.z
+      pos[pi * 12 + 6] = p.x + halfW
+      pos[pi * 12 + 7] = p.y
+      pos[pi * 12 + 8] = p.z
+      pos[pi * 12 + 9] = p.x - halfW
+      pos[pi * 12 + 10] = p.y
+      pos[pi * 12 + 11] = p.z
+    }
+    posAttr.needsUpdate = true
+    geo.setDrawRange(0, (n - 1) * 12)
+  })
+
+  return <mesh geometry={geo} material={material} />
+}
 
 export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
   const [arrows, setArrows] = useState<FlyingArrow[]>([])
@@ -395,53 +456,15 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
           renderQuat.multiply(wobbleQ)
         }
 
-        // Create aerodynamic ribbon mesh trail if flying (cross-plane ribbon for 360° visibility)
+        // Efficient pre-allocated ribbon trail mesh
         const hasTrail = !a.stuck && a.trail.length > 1
-        let ribbonMesh: THREE.Mesh | null = null
-        if (hasTrail) {
-          const pts = a.trail
-          const n = pts.length
-          const pos = new Float32Array(n * 4 * 3) // 4 vertices per step (cross plane)
-          const indices: number[] = []
-          for (let pi = 0; pi < n; pi++) {
-            const p = pts[pi]
-            const t = pi / (n - 1)
-            const halfW = 0.003 + 0.016 * t
-            // Vertical plane
-            pos[pi * 12 + 0] = p.x
-            pos[pi * 12 + 1] = p.y + halfW
-            pos[pi * 12 + 2] = p.z
-            pos[pi * 12 + 3] = p.x
-            pos[pi * 12 + 4] = p.y - halfW
-            pos[pi * 12 + 5] = p.z
-            // Horizontal plane
-            pos[pi * 12 + 6] = p.x + halfW
-            pos[pi * 12 + 7] = p.y
-            pos[pi * 12 + 8] = p.z
-            pos[pi * 12 + 9] = p.x - halfW
-            pos[pi * 12 + 10] = p.y
-            pos[pi * 12 + 11] = p.z
-
-            if (pi < n - 1) {
-              const b = pi * 4
-              // Vertical quads
-              indices.push(b, b + 1, b + 4)
-              indices.push(b + 1, b + 5, b + 4)
-              // Horizontal quads
-              indices.push(b + 2, b + 3, b + 6)
-              indices.push(b + 3, b + 7, b + 6)
-            }
-          }
-          const geo = new THREE.BufferGeometry()
-          geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-          geo.setIndex(indices)
-          ribbonMesh = new THREE.Mesh(geo, trailMat)
-        }
 
         return (
           <group key={a.id}>
             {/* Aerodynamic luminous slipstream trail */}
-            {ribbonMesh && <primitive object={ribbonMesh} />}
+            {hasTrail && (
+              <ArrowTrailRenderer points={a.trail} material={trailMat} />
+            )}
 
             {/* The Arrow Mesh: pivot at broadhead tip (0,0,0), +Z is flight forward */}
             <group

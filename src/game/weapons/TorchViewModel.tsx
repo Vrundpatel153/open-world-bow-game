@@ -26,6 +26,7 @@ import { useQuestStore } from '../stores/questStore'
 import { sound } from '../audio/SoundSynthesizer'
 import { inputManager } from '@/systems/KeyboardInput'
 import { createTeardropFlameMaterial } from './TeardropFlameMaterial'
+import { createRightTorchArm } from './FirstPersonArmModel'
 
 const MAX_TORCH_EMBERS = 60
 
@@ -98,6 +99,16 @@ export default function TorchViewModel() {
     const rad = 45 * (Math.PI / 180)
     return new THREE.Vector3(Math.cos(rad), 0, Math.sin(rad))
   }, [])
+
+  // Authentic First-Person Gloved Adventurer's Right Arm
+  const torchArmRig = useMemo(() => createRightTorchArm(), [])
+  useEffect(() => {
+    if (torchRootRef.current) {
+      torchArmRig.root.position.set(0, 0, 0)
+      torchArmRig.root.rotation.set(0, 0, 0)
+      torchRootRef.current.add(torchArmRig.root)
+    }
+  }, [torchArmRig])
 
   // ── Procedural Geometries for Medieval Iron-Sconce Adventurer's Torch ───────
   const {
@@ -302,23 +313,23 @@ export default function TorchViewModel() {
     const springRotOffset = rotSpring.current.update(dt)
 
     // 3. Perfect Viewmodel Framing (Held lower-right, flame apex stays well below crosshair)
-    // Base hold position: X=0.29m, Y=-0.25m, Z=-0.42m
-    // Torch head is at Y~-0.12m, flame apex reaches Y~+0.06m in camera space
+    // Base hold position: X=0.26m, Y=-0.19m, Z=-0.38m
+    // Torch head is at Y~-0.06m, flame apex reaches Y~+0.12m in camera space
     // Crosshair at (960, 540) and left 75% of viewport 100% unobstructed!
     const unequipDrop = 1.0 - equipProgress.current
     const holdPos = new THREE.Vector3(
-      0.29 + springPosOffset.x,
-      -0.25 + springPosOffset.y - unequipDrop * 0.45,
-      -0.42 + waveThrust + springPosOffset.z
+      0.26 + springPosOffset.x,
+      -0.19 + springPosOffset.y - unequipDrop * 0.45,
+      -0.38 + waveThrust + springPosOffset.z
     )
     const worldPos = holdPos.applyQuaternion(camera.quaternion).add(camera.position)
     torchRootRef.current.position.copy(worldPos)
 
     torchRootRef.current.quaternion.copy(camera.quaternion)
     const baseEuler = new THREE.Euler(
-      -0.34 - waveThrust * 0.4 - unequipDrop * 0.35 + springRotOffset.x,
-      -0.16 + springRotOffset.y,
-      0.10 + springRotOffset.z - unequipDrop * 0.25,
+      -0.26 - waveThrust * 0.4 - unequipDrop * 0.35 + springRotOffset.x,
+      -0.12 + springRotOffset.y,
+      0.08 + springRotOffset.z - unequipDrop * 0.25,
       'YXZ'
     )
     torchRootRef.current.quaternion.multiply(new THREE.Quaternion().setFromEuler(baseEuler))
