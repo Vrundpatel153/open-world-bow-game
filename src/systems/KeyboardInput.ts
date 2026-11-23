@@ -67,13 +67,17 @@ class InputManager {
     this.keys.add(code)
     this.keys.add(key)
 
-    // Hotbar Item Toggles: [1] Bow, [2] Torch, [3] Wooden Sword
+    // Hotbar Item Toggles: [1] Bow, [2] Torch, [3] Wooden Sword, [4] Herbal Bandages, [5] Field Tools
     if (code === 'Digit1' || key === '1') {
       useQuestStore.getState().toggleItem('bow')
     } else if (code === 'Digit2' || key === '2') {
       useQuestStore.getState().toggleItem('torch')
     } else if (code === 'Digit3' || key === '3') {
       useQuestStore.getState().toggleItem('sword')
+    } else if (code === 'Digit4' || key === '4') {
+      useQuestStore.setState({ notification: 'Field Pouch: Herbal Bandages (3 available)' })
+    } else if (code === 'Digit5' || key === '5') {
+      useQuestStore.setState({ notification: 'Field Tools: Flint & Kindling' })
     }
   }
 
