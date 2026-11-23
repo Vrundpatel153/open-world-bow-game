@@ -62,16 +62,25 @@ class WorldCollisionSystem {
    * Resolves horizontal player capsule movement against all world colliders.
    * Performs continuous projection and tangent sliding so the player never
    * penetrates rocks or tree trunks, and slides smoothly around obstacles.
+   * Features:
+   * - Step Height: Ankle/knee obstacles (<= 0.42m) are stepped over smoothly.
+   * - Vertical Bounding: Obstacles below feet or above head do not impede horizontal motion.
+   * - Frictionless Crevice Sliding: Never gets stuck or pinned between multiple rocks.
    */
   public resolvePlayerCollision(
     pos: THREE.Vector3,
     vel: THREE.Vector3,
-    playerRadius: number = 0.44
+    playerRadius: number = 0.25,
+    stepHeight: number = 0.42
   ): boolean {
     let collided = false
-    const ITERATIONS = 2 // 2 passes solve narrow corner wedges between rocks
+    const ITERATIONS = 3 // 3 passes resolve multi-rock corner crevices smoothly
 
     for (let iter = 0; iter < ITERATIONS; iter++) {
+      let contactCount = 0
+      let avgNx = 0
+      let avgNz = 0
+
       for (let i = 0; i < this.colliders.length; i++) {
         const c = this.colliders[i]
 
@@ -82,8 +91,18 @@ class WorldCollisionSystem {
         // Fast bounding box rejection
         if (Math.abs(dx) > maxDist || Math.abs(dz) > maxDist) continue
 
-        // Vertical overlap check with generous vertical tolerance (only ignore if flying high above)
-        if (c.y !== undefined && Math.abs(pos.y - c.y) > 6.5) continue
+        // Vertical overlap check:
+        // 1. Rock top is below or at player's step height (player steps over easily)
+        if (c.maxY !== undefined && (c.maxY - pos.y) <= stepHeight) continue
+
+        // 2. Obstacle is below player's feet (e.g. standing on rock or jumping over)
+        if (c.maxY !== undefined && pos.y >= c.maxY - 0.06) continue
+
+        // 3. Obstacle is high above player's head (e.g. high tree canopy or arch)
+        if (c.minY !== undefined && (pos.y + 1.80) <= c.minY) continue
+
+        // 4. Fallback vertical distance guard
+        if (c.y !== undefined && Math.abs(pos.y - c.y) > 4.5) continue
 
         const distSq = dx * dx + dz * dz
         if (distSq < maxDist * maxDist) {
@@ -102,14 +121,29 @@ class WorldCollisionSystem {
           pos.x += nx * penetration
           pos.z += nz * penetration
 
-          // Slide velocity along collision surface tangent (removes normal component)
+          // Slide velocity along collision surface tangent (removes only normal component)
           const vDot = vel.x * nx + vel.z * nz
           if (vDot < 0) {
             vel.x -= vDot * nx
             vel.z -= vDot * nz
           }
 
+          avgNx += nx
+          avgNz += nz
+          contactCount++
           collided = true
+        }
+      }
+
+      // If caught in a multi-collider pinch/wedge, deflect velocity along the combined outward tangent
+      if (contactCount >= 2) {
+        const avgLen = Math.hypot(avgNx, avgNz)
+        if (avgLen > 0.001) {
+          avgNx /= avgLen
+          avgNz /= avgLen
+          // Gentle outward nudge so the player never gets trapped or locked in place
+          pos.x += avgNx * 0.015
+          pos.z += avgNz * 0.015
         }
       }
     }

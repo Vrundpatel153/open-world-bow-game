@@ -75,6 +75,10 @@ export const GRASS_BLADE_UNIFORMS = /* glsl */ `
   uniform float uRockFlatten;    // 1 = blades under a rock are pressed flat
   uniform float uRockBend;       // how far the tips splay away from the centre
 
+  // Dynamic player interaction — xyz = player pos, w = interaction radius
+  uniform vec4  uPlayerPos;
+  uniform vec3  uPlayerVelocity;
+
   // Localized sword slash wind & directional parting
   uniform vec4  uSwordSlash;     // xyz = position, w = radius * intensity
   uniform vec3  uSwordDir;       // world slash direction
@@ -170,21 +174,40 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
     transformed += awayLocal * (uRockBend * rockInfl * hMask);
   }
 
-  // ── Localized Sword Slash Directional Wind & Parting ────────────────────
-  // Only displaces blades in immediate vicinity of the blade (radius ~1.8m)
-  // pushing them in the direction of the sword slash with natural lateral parting.
+  // ── Dynamic Player Walking Interaction (Elastic Jiggle & Organic Parting) ──
+  if (uPlayerPos.w > 0.001) {
+    vec2 toPlayer = baseXZ - uPlayerPos.xz;
+    float playerDist = length(toPlayer);
+    float playerRadius = uPlayerPos.w;
+    if (playerDist < playerRadius) {
+      float pPush = 1.0 - smoothstep(0.0, playerRadius, playerDist);
+      vec2 pAway = playerDist > 0.001 ? toPlayer / playerDist : vec2(0.0, 1.0);
+      // Natural elastic spring jiggle as grass blades brush past the player
+      float pJiggle = sin(uTime * 14.0 + playerDist * 10.0) * 0.12 * pPush;
+      vec2 pDir = pAway * (pPush * 0.50 + pJiggle);
+      vec3 pLocal = transpose(instRot) * vec3(pDir.x, 0.0, pDir.y);
+      transformed += pLocal * hMask;
+      // Subtle organic blade tilt, NEVER crushing or flattening
+      transformed.y -= pPush * 0.05 * hMask;
+    }
+  }
+
+  // ── Localized Sword Slash Directional Wind, Wavy Ripple & Parting ─────────
   if (uSwordSlash.w > 0.001) {
     vec2 toSlash = baseXZ - uSwordSlash.xz;
     float distToSlash = length(toSlash);
     float slashRadius = uSwordSlash.w;
     if (distToSlash < slashRadius) {
-      float falloff = 1.0 - smoothstep(slashRadius * 0.25, slashRadius, distToSlash);
-      // Directional push along sword slash vector plus slight lateral fan
-      vec2 slashForce = normalize(uSwordDir.xz * 1.5 + toSlash * 0.5) * falloff * 0.70;
-      vec3 slashForceLocal = transpose(instRot) * vec3(slashForce.x, 0.0, slashForce.y);
+      float falloff = 1.0 - smoothstep(0.0, slashRadius, distToSlash);
+      // Directional push along sword slash vector plus lateral aerodynamic parting
+      vec2 slashDir = normalize(uSwordDir.xz * 1.8 + toSlash * 0.7);
+      // Beautiful resonant wavy jiggle ripple through grass as sword cuts the air
+      float slashJiggle = sin(uTime * 22.0 - distToSlash * 8.0) * 0.20 * falloff;
+      vec2 totalSlash = (slashDir * (falloff * 0.65) + toSlash * slashJiggle);
+      vec3 slashForceLocal = transpose(instRot) * vec3(totalSlash.x, 0.0, totalSlash.y);
       transformed += slashForceLocal * hMask;
-      // Slight aerodynamic air-cushion compression
-      transformed.y *= (1.0 - falloff * 0.22);
+      // Graceful tip deflection, ZERO height flattening
+      transformed.y -= falloff * 0.04 * hMask;
     }
   }
 

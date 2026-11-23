@@ -462,19 +462,17 @@ export default function OpenWorldGrassField({
       s.uSunColor.value.copy(sunLightRef.current.color).multiplyScalar(sunLightRef.current.intensity)
     }
 
-    // Real-Time Grass Trampling under player's feet
+    // Real-Time Grass Interactive Elastic Jiggle & Bending under player's feet
     if (playerPosRef?.current) {
       const p = playerPosRef.current
-      const playerSlot = MAX_ROCKS - 1
-      s.uRocks.value[playerSlot].set(p.x, p.y, p.z, 1.4)
-      s.uRockCount.value = MAX_ROCKS
+      if (s.uPlayerPos) {
+        s.uPlayerPos.value.set(p.x, p.y, p.z, 1.30)
+      }
     }
 
-    // ── Localized Sword Swing Directional Grass Wind & Parting ───────────────
+    // ── Localized Sword Swing Directional Grass Wind, Ripple & Parting ───────
     // Modulates ONLY blades in the immediate 1.8-2.2m slice arc in front of the blade.
     // Leaves global forest wind 100% serene and calm (zero global meadow shaking).
-    const swordSlot = MAX_ROCKS - 2
-
     if (grassWindImpulse.active && grassWindImpulse.timer > 0) {
       grassWindImpulse.timer -= delta
       const progress = 1.0 - Math.max(0, grassWindImpulse.timer / grassWindImpulse.maxDuration)
@@ -492,17 +490,8 @@ export default function OpenWorldGrassField({
       if (s.uSwordDir) {
         s.uSwordDir.value.copy(grassWindImpulse.dir)
       }
-
-      // Also set rock trampling slot for tactile local parting
-      s.uRocks.value[swordSlot].set(
-        grassWindImpulse.origin.x,
-        grassWindImpulse.origin.y,
-        grassWindImpulse.origin.z,
-        radius * 0.65
-      )
     } else {
       if (s.uSwordSlash) s.uSwordSlash.value.set(0, -9999, 0, 0)
-      s.uRocks.value[swordSlot].set(0, -9999, 0, 0)
       grassWindImpulse.active = false
     }
 
@@ -549,8 +538,8 @@ export default function OpenWorldGrassField({
     s.uShadowRadius.value = 0.3
 
     // Trampling settings
-    s.uRockFlatten.value = 0.85
-    s.uRockBend.value = 0.25
+    s.uRockFlatten.value = 0.20
+    s.uRockBend.value = 0.35
     s.uRockRadiusMul.value = 1.0
     s.uRockFalloff.value = 0.35
 

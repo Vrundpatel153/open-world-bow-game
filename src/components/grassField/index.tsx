@@ -411,13 +411,11 @@ export default function GrassField({
     s.uRockRadiusMul.value = grass.grRockRadiusMul;
     s.uRockFalloff.value = grass.grRockFalloff;
 
-    // Trample grass under player's feet
+    // Interactive elastic jiggle & organic parting under player's feet
     if (playerPosRef?.current) {
       const p = playerPosRef.current;
-      const slot = MAX_ROCKS - 1;
-      s.uRocks.value[slot].set(p.x, p.y, p.z, 0.95);
-      if (s.uRockCount.value < MAX_ROCKS) {
-        s.uRockCount.value = Math.max(s.uRockCount.value, slot + 1);
+      if (s.uPlayerPos) {
+        s.uPlayerPos.value.set(p.x, p.y, p.z, 1.25);
       }
     }
 

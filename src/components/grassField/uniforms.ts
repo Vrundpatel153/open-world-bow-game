@@ -73,6 +73,10 @@ export type BladeUniforms = {
   uRockFlatten: THREE.IUniform<number>;
   uRockBend: THREE.IUniform<number>;
 
+  // Dynamic player interaction — xyz = player pos, w = interaction radius
+  uPlayerPos: THREE.IUniform<THREE.Vector4>;
+  uPlayerVelocity: THREE.IUniform<THREE.Vector3>;
+
   // Localized sword slash wind & directional parting
   uSwordSlash: THREE.IUniform<THREE.Vector4>; // xyz = position, w = radius * intensity
   uSwordDir: THREE.IUniform<THREE.Vector3>;   // world slash direction
@@ -238,8 +242,11 @@ export function createGrassFieldUniforms(): GrassFieldUniforms {
       uRockCount: { value: 0 },
       uRockRadiusMul: { value: 1.0 },
       uRockFalloff: { value: 0.35 },
-      uRockFlatten: { value: 0.85 },
-      uRockBend: { value: 0.25 },
+      uRockFlatten: { value: 0.25 },
+      uRockBend: { value: 0.35 },
+
+      uPlayerPos: { value: new THREE.Vector4(0, -9999, 0, 0) },
+      uPlayerVelocity: { value: new THREE.Vector3(0, 0, 0) },
 
       uSwordSlash: { value: new THREE.Vector4(0, -9999, 0, 0) },
       uSwordDir: { value: new THREE.Vector3(0, 0, -1) },
