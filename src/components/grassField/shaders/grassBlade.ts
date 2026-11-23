@@ -74,6 +74,10 @@ export const GRASS_BLADE_UNIFORMS = /* glsl */ `
   uniform float uRockFalloff;    // world units of soft edge outside the disc
   uniform float uRockFlatten;    // 1 = blades under a rock are pressed flat
   uniform float uRockBend;       // how far the tips splay away from the centre
+
+  // Localized sword slash wind & directional parting
+  uniform vec4  uSwordSlash;     // xyz = position, w = radius * intensity
+  uniform vec3  uSwordDir;       // world slash direction
 `;
 
 export const GRASS_BLADE_VERTEX = /* glsl */ `
@@ -164,6 +168,24 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
   if (rockInfl > 0.001) {
     vec3 awayLocal = transpose(instRot) * vec3(rockAway.x, 0.0, rockAway.y);
     transformed += awayLocal * (uRockBend * rockInfl * hMask);
+  }
+
+  // ── Localized Sword Slash Directional Wind & Parting ────────────────────
+  // Only displaces blades in immediate vicinity of the blade (radius ~1.8m)
+  // pushing them in the direction of the sword slash with natural lateral parting.
+  if (uSwordSlash.w > 0.001) {
+    vec2 toSlash = baseXZ - uSwordSlash.xz;
+    float distToSlash = length(toSlash);
+    float slashRadius = uSwordSlash.w;
+    if (distToSlash < slashRadius) {
+      float falloff = 1.0 - smoothstep(slashRadius * 0.25, slashRadius, distToSlash);
+      // Directional push along sword slash vector plus slight lateral fan
+      vec2 slashForce = normalize(uSwordDir.xz * 1.5 + toSlash * 0.5) * falloff * 0.70;
+      vec3 slashForceLocal = transpose(instRot) * vec3(slashForce.x, 0.0, slashForce.y);
+      transformed += slashForceLocal * hMask;
+      // Slight aerodynamic air-cushion compression
+      transformed.y *= (1.0 - falloff * 0.22);
+    }
   }
 
   // instRot carries rotation only, so it is safe on a normal without an

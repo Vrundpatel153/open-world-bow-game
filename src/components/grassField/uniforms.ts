@@ -73,6 +73,10 @@ export type BladeUniforms = {
   uRockFlatten: THREE.IUniform<number>;
   uRockBend: THREE.IUniform<number>;
 
+  // Localized sword slash wind & directional parting
+  uSwordSlash: THREE.IUniform<THREE.Vector4>; // xyz = position, w = radius * intensity
+  uSwordDir: THREE.IUniform<THREE.Vector3>;   // world slash direction
+
   // Translucency (subsurface back-light). uSunDir/uSunColor mirror the scene's
   // directional light — GrassField writes them every frame.
   uSunDir: THREE.IUniform<THREE.Vector3>; // world, blade → sun
@@ -236,6 +240,9 @@ export function createGrassFieldUniforms(): GrassFieldUniforms {
       uRockFalloff: { value: 0.35 },
       uRockFlatten: { value: 0.85 },
       uRockBend: { value: 0.25 },
+
+      uSwordSlash: { value: new THREE.Vector4(0, -9999, 0, 0) },
+      uSwordDir: { value: new THREE.Vector3(0, 0, -1) },
 
       uSunDir: { value: new THREE.Vector3(0, 1, 0) },
       uSunColor: { value: new THREE.Color(1, 1, 1) },

@@ -29,15 +29,19 @@ export const grassWindImpulse = {
   origin: new THREE.Vector3(),
   dir: new THREE.Vector3(),
   radius: 0,
+  maxRadius: 2.2,
   strength: 0,
   timer: 0,
+  maxDuration: 0.38,
   trigger(origin: THREE.Vector3, dir: THREE.Vector3, power: number = 1.0) {
     this.active = true
-    this.origin.copy(origin).addScaledVector(dir, 1.2)
-    this.dir.copy(dir)
+    this.origin.copy(origin).addScaledVector(dir, 1.4)
+    this.dir.copy(dir).normalize()
     this.strength = power
-    this.timer = 0.28
-    this.radius = 0.6
+    this.timer = 0.38
+    this.maxDuration = 0.38
+    this.radius = 0.8
+    this.maxRadius = Math.min(2.4, 1.4 + power * 0.5)
   },
 }
 
@@ -458,32 +462,47 @@ export default function OpenWorldGrassField({
       s.uRockCount.value = MAX_ROCKS
     }
 
-    // Sword Swing Air Pressure Wave (Parts and ripples grass dynamically)
-    let extraWindStrength = 0
-    let extraWindSpeed = 0
+    // ── Localized Sword Swing Directional Grass Wind & Parting ───────────────
+    // Modulates ONLY blades in the immediate 1.8-2.2m slice arc in front of the blade.
+    // Leaves global forest wind 100% serene and calm (zero global meadow shaking).
     const swordSlot = MAX_ROCKS - 2
 
     if (grassWindImpulse.active && grassWindImpulse.timer > 0) {
       grassWindImpulse.timer -= delta
-      grassWindImpulse.radius += delta * 4.2
+      const progress = 1.0 - Math.max(0, grassWindImpulse.timer / grassWindImpulse.maxDuration)
+      const radius = THREE.MathUtils.lerp(0.8, grassWindImpulse.maxRadius, Math.sin(progress * Math.PI * 0.5))
+      const intensity = Math.sin((1.0 - progress) * Math.PI * 0.5) * grassWindImpulse.strength
+
+      if (s.uSwordSlash) {
+        s.uSwordSlash.value.set(
+          grassWindImpulse.origin.x,
+          grassWindImpulse.origin.y,
+          grassWindImpulse.origin.z,
+          radius * Math.min(1.0, intensity)
+        )
+      }
+      if (s.uSwordDir) {
+        s.uSwordDir.value.copy(grassWindImpulse.dir)
+      }
+
+      // Also set rock trampling slot for tactile local parting
       s.uRocks.value[swordSlot].set(
         grassWindImpulse.origin.x,
         grassWindImpulse.origin.y,
         grassWindImpulse.origin.z,
-        Math.min(2.2, grassWindImpulse.radius)
+        radius * 0.65
       )
-      extraWindStrength = grassWindImpulse.timer * 0.45 * grassWindImpulse.strength
-      extraWindSpeed = grassWindImpulse.timer * 3.2
     } else {
+      if (s.uSwordSlash) s.uSwordSlash.value.set(0, -9999, 0, 0)
       s.uRocks.value[swordSlot].set(0, -9999, 0, 0)
       grassWindImpulse.active = false
     }
 
-    // Wind parameters (Dynamic waving meadow ripples + sword swing air pulse)
+    // Wind parameters (Calm, natural forest meadow breeze - ZERO global shaking on sword swing)
     const rad = 45 * (Math.PI / 180)
     s.uWindDir.value.set(Math.cos(rad), Math.sin(rad))
-    s.uWindStrength.value = 0.22 + extraWindStrength
-    s.uWindSpeed.value = 1.30 + extraWindSpeed
+    s.uWindStrength.value = 0.22
+    s.uWindSpeed.value = 1.30
     s.uWindFreq.value = 0.36
     s.uWindTurb.value = 0.25
     s.uWindLean.value = 0.45

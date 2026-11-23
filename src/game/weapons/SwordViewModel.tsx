@@ -82,7 +82,7 @@ class SpringDamper3D {
 }
 
 // Number of historical blade slices for the dynamic aerodynamic trail
-const TRAIL_STEPS = 10
+const TRAIL_STEPS = 16
 
 // ── Procedural Procedural Texture Generators for Organic Survival Aesthetics ─
 function createProceduralWoodTexture(
@@ -403,6 +403,7 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
 
     // 8. Dynamic Blade-Edge Slipstream Trail Geometry
     const trailPositions = new Float32Array(TRAIL_STEPS * 2 * 3)
+    const trailColors = new Float32Array(TRAIL_STEPS * 2 * 3)
     const trailIndices: number[] = []
     const trailUvs = new Float32Array(TRAIL_STEPS * 2 * 2)
 
@@ -412,6 +413,22 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       trailUvs[i * 4 + 1] = 0.0
       trailUvs[i * 4 + 2] = u
       trailUvs[i * 4 + 3] = 1.0
+
+      // Smooth cubic exponential fade along trail tail so edge is never sharp/blocky
+      const fade = Math.pow(1.0 - u, 2.0)
+      const r = 0.95 * fade
+      const g = 0.92 * fade
+      const b = 0.85 * fade
+
+      // Tip vertex
+      trailColors[i * 6 + 0] = r
+      trailColors[i * 6 + 1] = g
+      trailColors[i * 6 + 2] = b
+
+      // Base vertex (subtly softer)
+      trailColors[i * 6 + 3] = r * 0.65
+      trailColors[i * 6 + 4] = g * 0.65
+      trailColors[i * 6 + 5] = b * 0.60
 
       if (i < TRAIL_STEPS - 1) {
         const i0 = i * 2
@@ -425,6 +442,7 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
 
     const dynTrail = new THREE.BufferGeometry()
     dynTrail.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3))
+    dynTrail.setAttribute('color', new THREE.BufferAttribute(trailColors, 3))
     dynTrail.setAttribute('uv', new THREE.BufferAttribute(trailUvs, 2))
     dynTrail.setIndex(trailIndices)
 
@@ -537,36 +555,42 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     hasHitInCurrentSwing.current = false
 
     if (type === 'heavy') {
-      swingDuration.current = 0.44
+      swingDuration.current = 0.56
       sound.playSwordChargeRelease()
-      triggerGrassWind(2.2)
-      posSpring.current.addImpulse(new THREE.Vector3(-0.04, 0.01, 0.06))
-      rotSpring.current.addImpulse(new THREE.Vector3(0.12, -0.25, 0.18))
+      posSpring.current.addImpulse(new THREE.Vector3(-0.025, 0.010, 0.045))
+      rotSpring.current.addImpulse(new THREE.Vector3(0.10, -0.20, 0.15))
     } else {
-      swingDuration.current = comboIndex === 3 ? 0.38 : comboIndex === 2 ? 0.26 : 0.28
+      swingDuration.current = comboIndex === 3 ? 0.48 : comboIndex === 2 ? 0.42 : 0.44
       sound.playSwordSwing(comboIndex)
       lastComboIndex.current = comboIndex
-      comboWindowTimer.current = 0.65
-      triggerGrassWind(comboIndex === 3 ? 1.6 : 1.1)
+      comboWindowTimer.current = 0.72
 
       if (comboIndex === 1) {
-        posSpring.current.addImpulse(new THREE.Vector3(-0.025, -0.015, 0.035))
-        rotSpring.current.addImpulse(new THREE.Vector3(0.08, -0.14, 0.12))
+        posSpring.current.addImpulse(new THREE.Vector3(-0.018, -0.010, 0.028))
+        rotSpring.current.addImpulse(new THREE.Vector3(0.06, -0.12, 0.10))
       } else if (comboIndex === 2) {
-        posSpring.current.addImpulse(new THREE.Vector3(0.025, 0.012, 0.035))
-        rotSpring.current.addImpulse(new THREE.Vector3(-0.06, 0.14, -0.12))
+        posSpring.current.addImpulse(new THREE.Vector3(0.018, 0.008, 0.028))
+        rotSpring.current.addImpulse(new THREE.Vector3(-0.05, 0.12, -0.10))
       } else {
-        posSpring.current.addImpulse(new THREE.Vector3(0.0, -0.045, 0.05))
-        rotSpring.current.addImpulse(new THREE.Vector3(-0.18, 0.02, -0.05))
+        posSpring.current.addImpulse(new THREE.Vector3(0.0, -0.035, 0.038))
+        rotSpring.current.addImpulse(new THREE.Vector3(-0.14, 0.02, -0.04))
       }
     }
 
     swingTimer.current = swingDuration.current
   }
 
-  const triggerGrassWind = (power: number) => {
+  const triggerGrassWind = (power: number, sliceOffset: THREE.Vector3 = new THREE.Vector3(0, 0, 0)) => {
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
-    onSwordSwingWind?.(camera.position, fwd, power)
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion)
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion)
+
+    const sliceDir = fwd.clone()
+      .addScaledVector(right, sliceOffset.x)
+      .addScaledVector(up, sliceOffset.y)
+      .normalize()
+
+    onSwordSwingWind?.(camera.position, sliceDir, power)
   }
 
   // ── Per-Frame Viewmodel Rig, Multi-Phase Kinematics & Depth Rendering ─────
@@ -628,7 +652,7 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     }
     prevCamQuat.current.copy(camera.quaternion)
 
-    // 2. Locomotion Bobbing & Idle Respiration
+    // 2. Locomotion Bobbing & Multi-Harmonic Respiration
     const isMoving =
       inputManager.isMovingForward() ||
       inputManager.isMovingBackward() ||
@@ -636,17 +660,19 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       inputManager.isMovingRight()
     const isSprinting = isMoving && inputManager.isSprinting()
 
-    walkBobTimer.current += dt * (isMoving ? (isSprinting ? 13.5 : 8.5) : 1.4)
-    breathTimer.current += dt * 1.6
+    walkBobTimer.current += dt * (isMoving ? (isSprinting ? 13.0 : 8.5) : 1.3)
+    breathTimer.current += dt * 1.5
 
-    const bobScale = isMoving ? (isSprinting ? 0.016 : 0.009) : 0.0015
+    const bobScale = isMoving ? (isSprinting ? 0.013 : 0.007) : 0.0012
     const bobX = Math.cos(walkBobTimer.current * 0.5) * bobScale
-    const bobY = -Math.abs(Math.sin(walkBobTimer.current)) * (bobScale * 1.3)
-    const swayX = Math.cos(breathTimer.current * 1.2) * 0.0012
-    const swayY = Math.sin(breathTimer.current * 2.4) * 0.0010
+    const bobY = -Math.abs(Math.sin(walkBobTimer.current)) * (bobScale * 1.25)
+    const swayX = Math.cos(breathTimer.current * 1.3) * 0.0010 + Math.sin(breathTimer.current * 2.8) * 0.0004
+    const swayY = Math.sin(breathTimer.current * 2.1) * 0.0012 + Math.cos(breathTimer.current * 4.2) * 0.0003
+    const bobRotZ = isMoving ? -Math.sin(walkBobTimer.current * 0.5) * (bobScale * 2.6) : Math.cos(breathTimer.current * 1.6) * 0.002
+    const bobPitch = isMoving ? Math.cos(walkBobTimer.current) * (bobScale * 1.6) : 0
 
     posSpring.current.target.set(bobX + swayX, bobY + swayY, 0)
-    rotSpring.current.target.set(bobY * 2.0, bobX * 1.5, -bobX * 3.0)
+    rotSpring.current.target.set(bobY * 1.6 + bobPitch, bobX * 1.2, bobRotZ)
     const springPosOffset = posSpring.current.update(dt)
     const springRotOffset = rotSpring.current.update(dt)
 
@@ -677,13 +703,13 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       const cp = chargeProgress.current
       const cEase = cp * cp
       const chargeVibe = isCharged.current ? Math.sin(state.clock.elapsedTime * 45) * 0.0025 : 0
-      const pCharge = new THREE.Vector3(0.28 + chargeVibe, -0.14, -0.32)
-      const qCharge = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35, 0.52, -0.68, 'YXZ'))
+      const pCharge = new THREE.Vector3(0.26 + chargeVibe, -0.12, -0.34)
+      const qCharge = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.25, 0.42, -0.55, 'YXZ'))
       finalPos.lerp(pCharge, cEase)
       finalQuat.slerp(qCharge, cEase)
     }
 
-    // 6. Active Multi-Phase Martial Cleaves
+    // 6. Active Multi-Phase Martial Cleaves (Smooth, Minimal, Continuous Physics)
     let swingTrailAlpha = 0.0
 
     if (isFrozen.current) {
@@ -699,121 +725,139 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
         p = Math.max(0, 1.0 - swingTimer.current / swingDuration.current)
       }
 
-      if (currentSwing.current === 'combo1') {
-        const pWindup = new THREE.Vector3(0.28, -0.06, -0.32)
-        const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35, 0.35, -0.65, 'YXZ'))
-        const pStrike = new THREE.Vector3(-0.22, -0.24, -0.34)
-        const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.65, -0.45, -0.35, 'YXZ'))
+      // Continuous C2 smooth quintic curve for zero jerk
+      const quinticEase = (t: number) => t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
+      const hermiteEase = (t: number) => t * t * (3.0 - 2.0 * t)
 
-        if (p < 0.20) {
-          const u = p / 0.20
-          const ease = u * u * (3 - 2 * u)
+      if (currentSwing.current === 'combo1') {
+        // Combo 1: Minimal Diagonal Oberhau (Right Shoulder -> Center-Left)
+        const pWindup = new THREE.Vector3(0.24, -0.06, -0.34)
+        const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.16, 0.22, -0.26, 'YXZ'))
+        const pStrike = new THREE.Vector3(-0.14, -0.22, -0.36)
+        const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.46, -0.32, -0.14, 'YXZ'))
+
+        if (p < 0.22) {
+          const u = p / 0.22
+          const ease = hermiteEase(u)
           finalPos.lerpVectors(pRest, pWindup, ease)
           finalQuat.slerpQuaternions(qRest, qWindup, ease)
         } else if (p < 0.65) {
-          const u = (p - 0.20) / 0.45
-          const ease = 1.0 - Math.pow(1.0 - u, 3.0)
+          const u = (p - 0.22) / 0.43
+          const ease = quinticEase(u)
           finalPos.lerpVectors(pWindup, pStrike, ease)
+          finalPos.z -= Math.sin(u * Math.PI) * 0.045
+          finalPos.y += Math.sin(u * Math.PI) * 0.018
           finalQuat.slerpQuaternions(qWindup, qStrike, ease)
           swingTrailAlpha = Math.sin(u * Math.PI) * 0.85
 
           if (!hasHitInCurrentSwing.current && u >= 0.35 && u <= 0.65) {
             checkRockCollision(1.0)
+            triggerGrassWind(1.1, new THREE.Vector3(-0.35, -0.1, 0))
           }
         } else {
           const u = (p - 0.65) / 0.35
-          const decay = Math.exp(-u * 4.5)
-          const bounce = Math.sin(u * Math.PI * 2.0) * decay * 0.03
+          const decay = Math.exp(-u * 4.6)
+          const bounce = Math.sin(u * Math.PI * 2.0) * decay * 0.020
           const recover = 1.0 - decay
           finalPos.lerpVectors(pStrike, pRest, recover)
           finalPos.y += bounce
           finalQuat.slerpQuaternions(qStrike, qRest, recover)
         }
       } else if (currentSwing.current === 'combo2') {
-        const pWindup = new THREE.Vector3(-0.20, -0.22, -0.34)
-        const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.55, -0.40, 0.55, 'YXZ'))
-        const pStrike = new THREE.Vector3(0.26, -0.06, -0.32)
-        const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.25, 0.40, 0.70, 'YXZ'))
+        // Combo 2: Minimal Diagonal Unterhau (Low-Left -> High-Right return)
+        const pWindup = new THREE.Vector3(-0.14, -0.22, -0.36)
+        const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.42, -0.28, 0.32, 'YXZ'))
+        const pStrike = new THREE.Vector3(0.22, -0.08, -0.34)
+        const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.16, 0.26, 0.52, 'YXZ'))
 
-        if (p < 0.18) {
-          const u = p / 0.18
-          const ease = u * u * (3 - 2 * u)
+        if (p < 0.20) {
+          const u = p / 0.20
+          const ease = hermiteEase(u)
           finalPos.lerpVectors(pRest, pWindup, ease)
           finalQuat.slerpQuaternions(qRest, qWindup, ease)
-        } else if (p < 0.62) {
-          const u = (p - 0.18) / 0.44
-          const ease = 1.0 - Math.pow(1.0 - u, 3.0)
+        } else if (p < 0.64) {
+          const u = (p - 0.20) / 0.44
+          const ease = quinticEase(u)
           finalPos.lerpVectors(pWindup, pStrike, ease)
+          finalPos.z -= Math.sin(u * Math.PI) * 0.042
+          finalPos.y -= Math.sin(u * Math.PI) * 0.015
           finalQuat.slerpQuaternions(qWindup, qStrike, ease)
           swingTrailAlpha = Math.sin(u * Math.PI) * 0.85
 
           if (!hasHitInCurrentSwing.current && u >= 0.35 && u <= 0.65) {
-            checkRockCollision(1.1)
+            checkRockCollision(1.15)
+            triggerGrassWind(1.2, new THREE.Vector3(0.35, 0.1, 0))
           }
         } else {
-          const u = (p - 0.62) / 0.38
-          const decay = Math.exp(-u * 4.5)
-          const bounce = Math.sin(u * Math.PI * 2.0) * decay * 0.03
+          const u = (p - 0.64) / 0.36
+          const decay = Math.exp(-u * 4.6)
+          const bounce = Math.sin(u * Math.PI * 2.0) * decay * 0.020
           const recover = 1.0 - decay
           finalPos.lerpVectors(pStrike, pRest, recover)
           finalPos.y += bounce
           finalQuat.slerpQuaternions(qStrike, qRest, recover)
         }
       } else if (currentSwing.current === 'combo3') {
-        const pWindup = new THREE.Vector3(0.18, -0.02, -0.32)
-        const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.30, 0.20, -0.50, 'YXZ'))
-        const pStrike = new THREE.Vector3(0.14, -0.26, -0.36)
-        const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.85, 0.15, -0.45, 'YXZ'))
+        // Combo 3: Disciplined Downward Finisher Zornhau (High Guard -> Ground Chop)
+        const pWindup = new THREE.Vector3(0.16, -0.02, -0.34)
+        const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.24, 0.14, -0.32, 'YXZ'))
+        const pStrike = new THREE.Vector3(0.12, -0.24, -0.36)
+        const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.68, 0.08, -0.28, 'YXZ'))
 
-        if (p < 0.22) {
-          const u = p / 0.22
-          const ease = u * u * (3 - 2 * u)
+        if (p < 0.24) {
+          const u = p / 0.24
+          const ease = hermiteEase(u)
           finalPos.lerpVectors(pRest, pWindup, ease)
           finalQuat.slerpQuaternions(qRest, qWindup, ease)
-        } else if (p < 0.65) {
-          const u = (p - 0.22) / 0.43
-          const ease = 1.0 - Math.pow(1.0 - u, 3.2)
+        } else if (p < 0.66) {
+          const u = (p - 0.24) / 0.42
+          const ease = quinticEase(u)
           finalPos.lerpVectors(pWindup, pStrike, ease)
+          finalPos.z -= Math.sin(u * Math.PI) * 0.038
           finalQuat.slerpQuaternions(qWindup, qStrike, ease)
           swingTrailAlpha = Math.sin(u * Math.PI) * 0.95
 
           if (!hasHitInCurrentSwing.current && u >= 0.35 && u <= 0.65) {
             checkRockCollision(1.4)
+            triggerGrassWind(1.5, new THREE.Vector3(0.0, -0.2, 0))
           }
         } else {
-          const u = (p - 0.65) / 0.35
+          const u = (p - 0.66) / 0.34
           const decay = Math.exp(-u * 5.0)
-          const bounce = Math.sin(u * Math.PI * 2.5) * decay * 0.04
+          const bounce = Math.sin(u * Math.PI * 2.5) * decay * 0.028
           const recover = 1.0 - decay
           finalPos.lerpVectors(pStrike, pRest, recover)
           finalPos.y += bounce
           finalQuat.slerpQuaternions(qStrike, qRest, recover)
         }
       } else if (currentSwing.current === 'heavy') {
-        const pWindup = new THREE.Vector3(0.30, -0.10, -0.30)
-        const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.20, 0.60, -0.75, 'YXZ'))
-        const pStrike = new THREE.Vector3(-0.26, -0.18, -0.34)
-        const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35, -0.70, 0.25, 'YXZ'))
+        // Heavy Whirlwind Attack
+        const pWindup = new THREE.Vector3(0.26, -0.10, -0.32)
+        const qWindup = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.15, 0.45, -0.55, 'YXZ'))
+        const pStrike = new THREE.Vector3(-0.20, -0.18, -0.36)
+        const qStrike = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.30, -0.55, 0.20, 'YXZ'))
 
-        if (p < 0.14) {
-          const u = p / 0.14
+        if (p < 0.16) {
+          const u = p / 0.16
           finalPos.lerpVectors(pRest, pWindup, u)
           finalQuat.slerpQuaternions(qRest, qWindup, u)
-        } else if (p < 0.65) {
-          const u = (p - 0.14) / 0.51
-          const ease = 1.0 - Math.pow(1.0 - u, 2.5)
+        } else if (p < 0.66) {
+          const u = (p - 0.16) / 0.50
+          const ease = quinticEase(u)
           finalPos.lerpVectors(pWindup, pStrike, ease)
-          finalPos.y -= Math.sin(u * Math.PI) * 0.04
+          finalPos.z -= Math.sin(u * Math.PI) * 0.055
+          finalPos.y -= Math.sin(u * Math.PI) * 0.030
           finalQuat.slerpQuaternions(qWindup, qStrike, ease)
           swingTrailAlpha = Math.sin(u * Math.PI) * 1.0
 
           if (!hasHitInCurrentSwing.current && u >= 0.30 && u <= 0.70) {
             checkRockCollision(1.6)
+            triggerGrassWind(2.0, new THREE.Vector3(-0.2, 0, 0))
           }
         } else {
-          const u = (p - 0.65) / 0.35
-          const decay = Math.exp(-u * 4.5)
-          const bounce = Math.sin(u * Math.PI * 2.0) * decay * 0.03
+          const u = (p - 0.66) / 0.34
+          const decay = Math.exp(-u * 4.6)
+          const bounce = Math.sin(u * Math.PI * 2.0) * decay * 0.025
           const recover = 1.0 - decay
           finalPos.lerpVectors(pStrike, pRest, recover)
           finalPos.y += bounce
@@ -842,6 +886,15 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     // ── Update Dynamic Aerodynamic Wind-Shear Trail ──────────────────────────
     const localTip = new THREE.Vector3(0, 0.46, 0).applyQuaternion(finalQuat).add(finalPos)
     const localBase = new THREE.Vector3(0, 0.03, 0).applyQuaternion(finalQuat).add(finalPos)
+
+    // When swing just begins, snap all historical trail positions to current blade
+    // so no stale polygon quad gets stretched from the previous stance.
+    if (trailAlphaRef.current < 0.02 && swingTrailAlpha > 0.05) {
+      for (let i = 0; i < TRAIL_STEPS; i++) {
+        trailHistory.current[i].tip.copy(localTip)
+        trailHistory.current[i].base.copy(localBase)
+      }
+    }
 
     for (let i = TRAIL_STEPS - 1; i > 0; i--) {
       trailHistory.current[i].tip.copy(trailHistory.current[i - 1].tip)
@@ -1026,7 +1079,7 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
         renderOrder={998}
       >
         <meshBasicMaterial
-          color="#f4eee2"
+          vertexColors
           transparent
           opacity={0}
           side={THREE.DoubleSide}
