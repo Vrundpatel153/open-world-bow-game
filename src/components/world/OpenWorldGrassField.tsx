@@ -152,34 +152,35 @@ export default function OpenWorldGrassField({
 
   // ── Build Open World Foliage, Terrain & Trails ─────────────────────────────
   const { terrainMesh, coreBladesMesh, outerBladesMesh, flowerMeshes, foliageClusters, pathMarkers, colliders } = useMemo(() => {
-    // 1. High-Density Core Sanctuary Meadow Plane (68m x 68m centered on exploration zone)
-    const coreMeadowGeo = new THREE.PlaneGeometry(68, 68, 64, 64)
-    coreMeadowGeo.rotateX(-Math.PI / 2)
-    const cPosAttr = coreMeadowGeo.attributes.position
+    // 1. High-Density Unified Full-World Forest Lawn Plane (108m x 108m)
+    // Completely encompasses the entire 52m exploration boundary, all 18 forest groves & all 4 ancient shrines.
+    const forestLawnGeo = new THREE.PlaneGeometry(108, 108, 96, 96)
+    forestLawnGeo.rotateX(-Math.PI / 2)
+    const cPosAttr = forestLawnGeo.attributes.position
     for (let i = 0; i < cPosAttr.count; i++) {
       const x = cPosAttr.getX(i)
       const z = cPosAttr.getZ(i)
       cPosAttr.setY(i, getOpenWorldHeight(x, z))
     }
-    coreMeadowGeo.computeVertexNormals()
+    forestLawnGeo.computeVertexNormals()
 
-    // 24,000 8-blade natural interlocking sods (192,000 slender blades, 60cm circular footprint) across sanctuary:
-    // Sods interlace with 60% radial overlap, completely eliminating gaps, bare patches, and cone artifacts.
-    const coreBlades = scatterBlades(new THREE.Mesh(coreMeadowGeo), {
+    // 44,000 14-blade natural interlocking sods (616,000 broad forest lawn blades across the entire world):
+    // Multi-tier sods interlace with radial overlap, completely eliminating gaps, bare patches, and plain areas.
+    const coreBlades = scatterBlades(new THREE.Mesh(forestLawnGeo), {
       uniforms: u.surface,
-      density: 5.5,
-      maxCount: 24_000,
-      minWidth: 1.05,
-      maxWidth: 1.25,
-      minLength: 0.95,
-      maxLength: 1.20,
-      tiltMax: 0.22,
+      density: 4.8,
+      maxCount: 44_000,
+      minWidth: 1.15,
+      maxWidth: 1.35,
+      minLength: 1.05,
+      maxLength: 1.30,
+      tiltMax: 0.20,
       segments: 2,
     })
 
-    // 2. Perimeter Foothills Meadow Ring (Radius 26m to 82m)
-    // 7,500 8-blade interlocking sods providing continuous, lush, gapless coverage across all hills & boundary ridges
-    const outerMeadowGeo = new THREE.RingGeometry(26, 82, 48, 12)
+    // 2. Perimeter Boundary Hills Turf Ring (Radius 48m to 82m)
+    // 12,000 sods providing continuous green coverage up into the boundary hills
+    const outerMeadowGeo = new THREE.RingGeometry(48, 82, 48, 12)
     outerMeadowGeo.rotateX(-Math.PI / 2)
     const oPosAttr = outerMeadowGeo.attributes.position
     for (let i = 0; i < oPosAttr.count; i++) {
@@ -191,13 +192,13 @@ export default function OpenWorldGrassField({
 
     const outerBlades = scatterBlades(new THREE.Mesh(outerMeadowGeo), {
       uniforms: u.surface,
-      density: 0.9,
-      maxCount: 7_500,
-      minWidth: 1.05,
-      maxWidth: 1.25,
-      minLength: 0.95,
-      maxLength: 1.20,
-      tiltMax: 0.24,
+      density: 1.8,
+      maxCount: 12_000,
+      minWidth: 1.15,
+      maxWidth: 1.35,
+      minLength: 1.05,
+      maxLength: 1.30,
+      tiltMax: 0.22,
       segments: 1, // outer blades use 1 segment (1 triangle per blade) for massive distance LOD optimization
     })
 
@@ -218,20 +219,20 @@ export default function OpenWorldGrassField({
     terrainGeo.computeVertexNormals()
 
     // Vibrant forest meadow moss ground material perfectly matching grass blade bases
-    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#264714'))
+    const groundMat = makeGroundMaterial(u.surface, new THREE.Color('#1a3c10'))
     const groundMesh = new THREE.Mesh(terrainGeo, groundMat)
     groundMesh.receiveShadow = true
     groundMesh.castShadow = false
     groundMesh.updateMatrixWorld(true)
 
     // 4. Scatter Wildflowers across active meadows
-    const flowerInstances = scatterFlowers(new THREE.Mesh(coreMeadowGeo), {
+    const flowerInstances = scatterFlowers(new THREE.Mesh(forestLawnGeo), {
       uniforms: u.flower,
       texA: u.flowerTexA,
       texB: u.flowerTexB,
       dirt: u.surface,
       density: 0.35,
-      maxCount: 2200,
+      maxCount: 2600,
       size: 0.32,
       mixA: 0.5,
     })
@@ -490,19 +491,19 @@ export default function OpenWorldGrassField({
 
     // Colors (Authentic Studio Ghibli stylized meadow matching cloned model)
     const c = colorsRef.current
-    c.grassBottom.set('#264714')
-    c.grassTop.set('#729e20')
+    c.grassBottom.set('#1a3c10')
+    c.grassTop.set('#6da824')
     s.uGrassBottom.value.copy(c.grassBottom)
     s.uGrassTop.value.copy(c.grassTop)
-    s.uGradStart.value = 0.18
+    s.uGradStart.value = 0.15
     s.uGradEnd.value = 0.92
-    s.uGradPower.value = 1.25
-    s.uBrightness.value = 0.98
+    s.uGradPower.value = 1.15
+    s.uBrightness.value = 1.02
 
     // Lush vs Dry environmental patches
-    s.uPatchLush.value.set('#1e3e0e')
-    s.uPatchDry.value.set('#7aa222')
-    s.uPatchStrength.value = 0.10
+    s.uPatchLush.value.set('#16360c')
+    s.uPatchDry.value.set('#78a420')
+    s.uPatchStrength.value = 0.12
     s.uPatchScale.value = 0.08
     s.uPatchBias.value = 1.2
 
@@ -529,14 +530,14 @@ export default function OpenWorldGrassField({
     // Ground Dirt & Moss Variation - Natural organic tonal depth and micro grain
     s.uTintFloor.value = 1
     s.uFlatFloorNormal.value = 1
-    s.uGndVarColor.value.set('#32551a')
-    s.uGndVarScale.value = 0.40
-    s.uGndVarStrength.value = 0.35
-    s.uGndGrainScale.value = 4.8
-    s.uGndGrainStrength.value = 0.28
+    s.uGndVarColor.value.set('#1e3c12')
+    s.uGndVarScale.value = 0.35
+    s.uGndVarStrength.value = 0.50
+    s.uGndGrainScale.value = 5.2
+    s.uGndGrainStrength.value = 0.38
     s.uGndReliefScale.value = 0.6
     s.uGndReliefStrength.value = 0.25
-    c.dirtColor.set('#264714')
+    c.dirtColor.set('#1a3c10')
     s.uDirtColor.value.copy(c.dirtColor)
     s.uDirtCoverage.value = 0.0
     s.uDirtScale.value = 0.25
