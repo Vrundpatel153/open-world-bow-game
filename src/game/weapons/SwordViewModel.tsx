@@ -32,7 +32,6 @@ import { useQuestStore } from '../stores/questStore'
 import { sound } from '../audio/SoundSynthesizer'
 import { inputManager } from '@/systems/KeyboardInput'
 import { worldCollisionSystem } from '@/game/physics/WorldCollisionSystem'
-import { createRightSwordArm } from './FirstPersonArmModel'
 
 interface SwordViewModelProps {
   onHitRock?: (hitPoint: THREE.Vector3, normal: THREE.Vector3, power: number) => void
@@ -219,16 +218,6 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
   const isFrozen = useRef(false)
   const frozenType = useRef<SwingType>('none')
   const frozenProgress = useRef(0)
-
-  // Authentic First-Person Gauntleted Warrior's Right Arm
-  const swordArmRig = useMemo(() => createRightSwordArm(), [])
-  useEffect(() => {
-    if (swordRootRef.current) {
-      swordArmRig.root.position.set(0, 0, 0)
-      swordArmRig.root.rotation.set(0, 0, 0)
-      swordRootRef.current.add(swordArmRig.root)
-    }
-  }, [swordArmRig])
 
   // Dynamic Blade Tip & Base Trail History (Local Camera Coordinates)
   const trailHistory = useRef<{ tip: THREE.Vector3; base: THREE.Vector3 }[]>(

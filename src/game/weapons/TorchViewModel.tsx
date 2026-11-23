@@ -27,7 +27,6 @@ import { useQuestStore } from '../stores/questStore'
 import { sound } from '../audio/SoundSynthesizer'
 import { inputManager } from '@/systems/KeyboardInput'
 import { createTeardropFlameMaterial } from './TeardropFlameMaterial'
-import { createRightTorchArm } from './FirstPersonArmModel'
 
 const MAX_TORCH_EMBERS = 60
 
@@ -218,16 +217,6 @@ export default function TorchViewModel() {
     const rad = 45 * (Math.PI / 180)
     return new THREE.Vector3(Math.cos(rad), 0, Math.sin(rad))
   }, [])
-
-  // Authentic First-Person Gloved Adventurer's Right Arm
-  const torchArmRig = useMemo(() => createRightTorchArm(), [])
-  useEffect(() => {
-    if (torchRootRef.current) {
-      torchArmRig.root.position.set(0, 0, 0)
-      torchArmRig.root.rotation.set(0, 0, 0)
-      torchRootRef.current.add(torchArmRig.root)
-    }
-  }, [torchArmRig])
 
   // ── Procedural Textures ─────────────────────────────────────────────────────
   const barkTexture = useMemo(() => createBarkTexture(), [])

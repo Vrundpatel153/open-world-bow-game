@@ -22,12 +22,6 @@ import * as THREE from 'three'
 import { useQuestStore } from '../stores/questStore'
 import { sound } from '../audio/SoundSynthesizer'
 import { inputManager } from '@/systems/KeyboardInput'
-import {
-  createLeftBowArm,
-  createRightDrawArm,
-  type LeftBowArmRig,
-  type RightDrawArmRig,
-} from './FirstPersonArmModel'
 
 interface BowViewModelProps {
   onFireArrow: (origin: THREE.Vector3, direction: THREE.Vector3, power: number) => void
@@ -65,23 +59,6 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
   const vLowerWorld = useRef(new THREE.Vector3())
   const vUpperLocal = useRef(new THREE.Vector3())
   const vLowerLocal = useRef(new THREE.Vector3())
-
-  // Authentic First-Person Character Arms & Articulated Hands Rig
-  const leftArmRig = useMemo(() => createLeftBowArm(), [])
-  const rightArmRig = useMemo(() => createRightDrawArm(), [])
-
-  useEffect(() => {
-    if (rigGroupRef.current) {
-      // Left arm firmly holds the bow handle grip; fingers wrapped circumference-wise around stave
-      leftArmRig.root.position.set(0, 0, 0)
-      leftArmRig.root.rotation.set(0, 0, 0)
-      rigGroupRef.current.add(leftArmRig.root)
-    }
-    if (bowRootRef.current) {
-      // Right arm performs Mediterranean 3-finger draw and string anchor in camera space
-      bowRootRef.current.add(rightArmRig.root)
-    }
-  }, [leftArmRig, rightArmRig])
 
   const setDrawProgress = useQuestStore((s) => s.setDrawProgress)
   const setAiming = useQuestStore((s) => s.setAiming)
@@ -567,48 +544,6 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const aimArrowDir = aimLocalPoint.sub(currentNock).normalize()
     const idleArrowDir = new THREE.Vector3(0.25, -0.05, -0.96).normalize()
     const arrowDir = new THREE.Vector3().lerpVectors(idleArrowDir, aimArrowDir, aFactor).normalize()
-
-    // ── 8B. Right Drawing Arm Kinematics & 3-Finger String Hook ─────────────
-    if (rightArmRig?.root) {
-      const drawFactor = Math.max(aFactor, tension)
-
-      if (drawFactor < 0.04 && !isReloading.current) {
-        // In idle, right hand rests naturally at hip quiver offscreen
-        rightArmRig.root.visible = false
-      } else {
-        rightArmRig.root.visible = isBowEquipped && equipProgress.current > 0.15
-
-        // Clamp right hand fingers directly to the string nock in camera space
-        const nockWorld = new THREE.Vector3()
-        rigGroupRef.current.localToWorld(nockWorld.copy(currentNock))
-        const nockCam = bowRootRef.current.worldToLocal(nockWorld)
-
-        const hipPos = new THREE.Vector3(0.32, -0.45, -0.26)
-        const hipQuat = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(-0.45, 0.20, -0.25, 'YXZ')
-        )
-
-        const anchorPos = new THREE.Vector3(nockCam.x + 0.02, nockCam.y - 0.01, nockCam.z + 0.03)
-        const anchorQuat = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(-0.12, -0.10, 0.15, 'YXZ')
-        )
-
-        const tDraw = THREE.MathUtils.smoothstep(drawFactor, 0, 1)
-        const handPos = new THREE.Vector3().lerpVectors(hipPos, anchorPos, tDraw)
-        const handQuat = new THREE.Quaternion().slerpQuaternions(hipQuat, anchorQuat, tDraw)
-
-        if (isReloading.current && reloadProgress < 0.58) {
-          // Hand drops down to hip quiver to retrieve next arrow
-          const dip = Math.sin((reloadProgress / 0.58) * Math.PI) * 0.12
-          handPos.y -= dip
-          handPos.x += dip * 0.3
-        }
-
-        rightArmRig.root.position.copy(handPos)
-        rightArmRig.root.quaternion.copy(handQuat)
-        rightArmRig.root.scale.setScalar(0.76)
-      }
-    }
 
     if (arrowGroupRef.current) {
       // 0.00s to 0.62s (reloadProgress < 0.58): Bow is completely empty so player tracks shot arrow
