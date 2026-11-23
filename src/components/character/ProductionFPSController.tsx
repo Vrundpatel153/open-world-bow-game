@@ -87,6 +87,14 @@ export default function ProductionFPSController({
     camera.rotation.set(pitch.current, yaw.current, 0, 'YXZ')
     camera.position.set(spawnX, spawnY + EYE_HEIGHT, spawnZ)
 
+    ;(window as any).__playerPos = pos.current
+    ;(window as any).__camera = camera
+    ;(window as any).__setPlayerPos = (x: number, z: number) => {
+      pos.current.x = x
+      pos.current.z = z
+      pos.current.y = getTerrainHeight(x, z)
+    }
+
     // 2. Click Window to Request Pointer Lock (Instant 360° Mouse Look)
     const canvas = gl.domElement
     const handleCanvasClick = (e: MouseEvent) => {
@@ -187,8 +195,9 @@ export default function ProductionFPSController({
       pos.current.x += vel.current.x * FIXED_DT
       pos.current.z += vel.current.z * FIXED_DT
 
-      // World Collision Resolution against Rocks, Trees, Pillars & Shrines (0.65m buffer prevents camera clipping)
-      worldCollisionSystem.resolvePlayerCollision(pos.current, vel.current, 0.65)
+      // World Collision Resolution against Rocks, Trees, Pillars & Shrines
+      // Realistic human explorer radius (0.30m) enables natural navigation and gap squeezing through forest trees
+      worldCollisionSystem.resolvePlayerCollision(pos.current, vel.current, 0.30)
 
       // World boundary constraint
       const currentRadius = Math.hypot(pos.current.x, pos.current.z)

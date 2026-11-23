@@ -302,10 +302,10 @@ export default function OpenWorldGrassField({
         const bs = rock.geometry.boundingSphere!
         const center = bs.center.clone().applyMatrix4(rock.matrixWorld)
         const scale = new THREE.Vector3().setFromMatrixScale(rock.matrixWorld)
-        const maxS = Math.max(scale.x, scale.z)
-        const r = bs.radius * maxS * 1.25
+        // Accurate rock boundary without artificial 1.25x ballooning
+        const r = Math.max(0.20, bs.radius * Math.min(scale.x, scale.z) * 0.72)
 
-        if (r > 0.28) {
+        if (r > 0.22) {
           colliders.push({
             id: `rock_${posX.toFixed(1)}_${posZ.toFixed(1)}_${rock.id}`,
             tag: 'rock',
@@ -313,7 +313,7 @@ export default function OpenWorldGrassField({
             z: center.z,
             y: center.y,
             radius: r,
-            height: Math.max(2.5, bs.radius * scale.y * 3.0),
+            height: Math.max(2.5, bs.radius * scale.y * 2.0),
           })
         }
       }
@@ -338,13 +338,14 @@ export default function OpenWorldGrassField({
         const bs = tree.geometry.boundingSphere!
         const center = bs.center.clone().applyMatrix4(tree.matrixWorld)
         const scale = new THREE.Vector3().setFromMatrixScale(tree.matrixWorld)
-        const trunkRadius = Math.max(0.55, bs.radius * Math.min(scale.x, scale.z) * 0.65)
+        // Authentic physical pine trunk wood radius (0.24m to 0.35m) so the player can weave between trees
+        const trunkRadius = Math.max(0.22, Math.min(0.36, 0.28 * Math.min(scale.x, scale.z)))
 
         colliders.push({
           id: `tree_${posX.toFixed(1)}_${posZ.toFixed(1)}_${tree.id}`,
           tag: 'tree',
-          x: center.x,
-          z: center.z,
+          x: tcX,
+          z: tcZ,
           y: groundY,
           radius: trunkRadius,
           height: 24.0 * scaleVal,
