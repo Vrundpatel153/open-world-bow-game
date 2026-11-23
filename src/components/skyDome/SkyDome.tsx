@@ -227,25 +227,16 @@ const SKY_FRAG = /* glsl */ `
     return v / max(norm, 0.001);
   }
 
-  // ── Star field ─────────────────────────────────────────────────────────────
-  // Fix 1 — Equal-angle UV:  u=az/(2π), v=asin(y)/(2π)
-  //          Both axes cover the same angle per UV unit at the equator.
-  //          Eliminates the 4× horizontal stretch of the old dir.y mapping.
-  //
-  // Fix 2 — 3×3 cell sampling + fwidth AA:
-  //          Sampling only the current cell causes stars to pop at cell borders
-  //          as the camera moves. Checking all 9 neighbors and using the pixel
-  //          footprint (fwidth) as the smoothstep edge width makes stars stable
-  //          and smooth at sub-pixel sizes.
-  //
-  // Fix 3 — Drift + Twinkle:
-  //          The direction vector is rotated slowly around Y (drift) before
-  //          computing UV, so the whole star field scrolls gradually.
-  //          Brightness oscillates per-star with a random phase (twinkle).
+  // ── Star field (Cube-Map Spherical Projection) ───────────────────────────
+  // Projects the celestial sphere onto a 6-faced cube coordinate space.
+  // Completely eliminates the polar singularity pinch (black hole + radiating
+  // spikes) and atan2 longitudinal seams caused by equirectangular (u,v) mapping.
+  // Every angle of the sky (including zenith straight up) renders crisp, uniform,
+  // isotropic circular stars with anti-aliasing and natural twinkling.
   float starField(vec3 dir) {
     if (dir.y < uStarFloor - 0.05) return 0.0;
 
-    // Drift Y: slow rotation around world Y-axis (horizontal scroll)
+    // Drift rotation around world celestial axis (slow realistic night sky rotation)
     float aY = uTime * uStarDriftY;
     float cY = cos(aY), sY = sin(aY);
     vec3 d = vec3(
@@ -254,75 +245,68 @@ const SKY_FRAG = /* glsl */ `
       -dir.x * sY + dir.z * cY
     );
 
-    // Drift Z: rotation around world Z-axis (roll / diagonal tilt)
-    float aZ = uTime * uStarDriftZ;
-    float cZ = cos(aZ), sZ = sin(aZ);
-    d = vec3(
-      d.x * cZ - d.y * sZ,
-      d.x * sZ + d.y * cZ,
-      d.z
-    );
+    // Cube-Map Projection: project 3D direction onto dominant cube face
+    vec3 a = abs(d);
+    vec2 p;
+    float faceId;
 
-    // Equal-angle spherical UV
-    // u: azimuth [0,1] spans 2π rad
-    // v: elevation via asin — same angular scale as u at the equator
-    float az = atan(d.z, d.x);                           // [-π, π]
-    float el = asin(clamp(d.y, -1.0, 1.0));              // [-π/2, π/2]
-    float u  = az / (2.0 * PI) + 0.5;                    // [0, 1]
-    float v  = el / (2.0 * PI) + 0.5;                    // [0.25, 0.75]
+    if (a.y >= a.x && a.y >= a.z) {
+      // Top (+Y) or Bottom (-Y) face — completely isotropic directly overhead at zenith
+      p = d.xz / a.y;
+      faceId = d.y > 0.0 ? 2.0 : 3.0;
+    } else if (a.x >= a.z) {
+      // +X or -X lateral face
+      p = d.yz / a.x;
+      faceId = d.x > 0.0 ? 0.0 : 1.0;
+    } else {
+      // +Z or -Z lateral face
+      p = d.xy / a.z;
+      faceId = d.z > 0.0 ? 4.0 : 5.0;
+    }
 
-    vec2 uv   = vec2(u, v) * uStarDensity;
+    // Map planar face coordinates [-1, 1] to star grid cells
+    vec2 uv = (p * 0.5 + 0.5) * uStarDensity;
     vec2 cell = floor(uv);
-    vec2 f    = fract(uv);
+    vec2 f = fract(uv);
 
-    // Pixel footprint in UV space → used for AA edge width.
-    // At the atan2 seam (az = ±π) u jumps from ~1 to ~0 across two adjacent
-    // pixels, so dFdx(uv.x) spikes to ~density (~300). That makes aa enormous,
-    // which causes 1-smoothstep(r, r+aa, dist) ≈ 1 for every star in the 3×3
-    // loop, lighting up the entire column as a bright line.
-    // Guard: if the footprint is unreasonably large we are on the seam —
-    // return 0 immediately. The seam is only 1-2 pixels wide; hiding them is
-    // invisible compared to the bright artifact.
+    // Pixel footprint in UV space for smooth anti-aliasing
     vec2 uvPx = vec2(
       length(vec2(dFdx(uv.x), dFdy(uv.x))),
       length(vec2(dFdx(uv.y), dFdy(uv.y)))
     );
-    if (max(uvPx.x, uvPx.y) > 2.0) return 0.0;
-    float aa = max(uvPx.x, uvPx.y);
+    float aa = clamp(max(uvPx.x, uvPx.y), 0.001, 0.45);
 
     float result = 0.0;
 
-    // Sample 3×3 neighbors — eliminates border-crossing flicker.
-    // nw wraps n.x modulo density to fix the atan2 seam (az = ±π):
-    // without the wrap, cells on the left side (n.x = -1) and cells on the
-    // right side (n.x = density) look up different hashes despite being
-    // spatially adjacent — producing a visible vertical artifact line that
-    // worsens as drift moves the star field through the seam over time.
+    // 3x3 cell sampling on the planar cube face
     for (int dy = -1; dy <= 1; dy++) {
       for (int dx = -1; dx <= 1; dx++) {
-        vec2 n          = cell + vec2(float(dx), float(dy));
-        vec2 nw         = vec2(mod(n.x, uStarDensity), n.y); // seam-safe wrap
-        float brightness = hash21(nw + 0.5);
-        float hasstar    = step(0.88, brightness); // top 12% of cells: clean minimal pinprick stars
+        vec2 n = cell + vec2(float(dx), float(dy));
+        vec3 nKey = vec3(n, faceId);
 
-        vec2  offset = hash22(nw);
-        float dist   = length(f - (vec2(float(dx), float(dy)) + offset));
-        float r      = uStarSize * (0.3 + 0.7 * brightness);
+        // Unique hash per cell across all 6 cube faces
+        float brightness = hash31(nKey * 13.17 + vec3(17.1, 31.7, 43.1));
+        float hasstar = step(0.88, brightness); // top 12% of cells have a star
 
-        // Anti-aliased disc using pixel footprint
-        float a = (1.0 - smoothstep(r, r + max(aa, 0.001), dist)) * hasstar;
+        // Position star strictly within cell interior [0.12, 0.88] so discs never bleed across faces
+        vec2 offset = 0.12 + 0.76 * hash22(nKey.xy + nKey.z * 19.31);
+        float dist = length(f - (vec2(float(dx), float(dy)) + offset));
+        float r = uStarSize * (0.35 + 0.65 * brightness);
+
+        // Anti-aliased circular disc
+        float starAlpha = (1.0 - smoothstep(r, r + aa, dist)) * hasstar;
 
         // Twinkle: per-star sine oscillation with random phase + speed
-        float phase   = hash21(nw + 3.7) * 6.28318;
-        float rate    = uStarTwinkleSpeed * (0.6 + 0.8 * hash21(nw + 1.3));
+        float phase = hash31(nKey * 7.91 + vec3(3.7, 11.3, 19.1)) * 6.28318;
+        float rate = uStarTwinkleSpeed * (0.6 + 0.8 * hash31(nKey * 5.23 + vec3(1.3, 7.7, 13.9)));
         float twinkle = 1.0 - uStarTwinkleAmount * (0.5 + 0.5 * sin(uTime * rate + phase));
-        a *= clamp(twinkle, 0.0, 1.0);
+        starAlpha *= clamp(twinkle, 0.0, 1.0);
 
-        result = max(result, a);
+        result = max(result, starAlpha);
       }
     }
 
-    result *= smoothstep(uStarFloor, uStarFloor + 0.1, dir.y);
+    result *= smoothstep(uStarFloor, uStarFloor + 0.08, dir.y);
     return result;
   }
 
