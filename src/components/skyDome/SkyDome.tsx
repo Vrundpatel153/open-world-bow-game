@@ -606,13 +606,8 @@ const SKY_FRAG = /* glsl */ `
       color = mix(color, cColor, cloudCover);
 
       // ── Rim light: silhouette halo (additive, after composite) ───────
-      // cloud * (1 - cloud) peaks at 0.25 where opacity = 0.5 — exactly at
-      // the cloud's silhouette boundary. Multiplying by 4 normalises it to 1.0.
-      // Applied additively to the ALREADY COMPOSITED color so it glows as a
-      // separate halo independent of cloud interior shading — like real backlit
-      // cloud edges where light bleeds around the silhouette without tinting the
-      // cloud body itself.
-      float silhouetteMask = 4.0 * cloud * (1.0 - cloud);
+      // Smooth edge factor instead of hollow 4*cloud*(1-cloud) wireframe
+      float silhouetteMask = edgeFactor * cloud;
       color += uCloudRim * silhouetteMask * moonLight * uCloudRimStrength;
     }
 
@@ -1420,7 +1415,7 @@ export default function SkyDome({
       cloudEdge: "#0a7cc7",
       cloudRim: "#8bbfee",
       cloudEdgeWidth: 0.07,
-      cloudRimStrength: 4.5,
+      cloudRimStrength: 0.0,
       // Volume light off by default — a preset opts in (see Sakura Dusk).
       cloudLit: "#ffe3c2",
       cloudLitStrength: 0,
@@ -1711,6 +1706,9 @@ export default function SkyDome({
       u.uMoonSpotThreshold.value = 0.55;
       u.uMoonSpotSharpness.value = 0.12;
       u.uMoonSpotOctaves.value = 4;
+      // Guarantee zero neon outlines or glowing squiggles around clouds at night
+      u.uCloudRimStrength.value = 0.0;
+      u.uCloudRim.value.set("#000000");
     } else {
       // Luminous Golden Sun Disc with warm atmospheric solar corona
       u.uMoonColor.value.set("#fffdf0");
@@ -1901,8 +1899,8 @@ export default function SkyDome({
       cB.set(to.cloudRim ?? "#8bbfee");
       u.uCloudRim.value.lerpColors(cA, cB, t);
       u.uCloudRimStrength.value = lerp(
-        from.cloudRimStrength ?? 4.5,
-        to.cloudRimStrength ?? 4.5,
+        from.cloudRimStrength ?? 0.0,
+        to.cloudRimStrength ?? 0.0,
         t,
       );
       cA.set(from.cloudLit ?? "#ffe3c2");
