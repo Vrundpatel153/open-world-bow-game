@@ -1,17 +1,17 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// TeardropFlameMaterial — Procedural Realistic Teardrop Torch Fire Shader
-// Open-source procedural fire mathematics:
-// - Dynamic Teardrop Distance Silhouette:
-//     R(y) = 2.0 * sqrt(y + 0.04) * (1.05 - y)^1.35
-//     Creates a natural bulbous fuel base that tapers to a slender licking apex.
-// - Multi-Octave Fractal Brownian Motion (FBM) Convection & Swirling Turbulence:
-//     Thermal buoyancy scrolls noise upward with wind deflection and curling tongues.
-// - Blackbody Thermal Radiation Color Palette:
-//     Incandescent White Core (>1600K) -> Blazing Gold -> Rich Fiery Orange ->
-//     Deep Ruby -> Smoky Charcoal Wisps.
-// - Tri-Planar Volumetric Structure:
-//     Rendered on intersecting vertical planes with soft alpha falloff,
-//     giving full 3D volumetric parallax with zero hard polygon edges or cartoon cones.
+// TeardropFlameMaterial — AAA Authentic Handmade Survival Wood Fire Shader
+// Inspired by Tomb Raider, The Forest, and Green Hell:
+// - Multi-Tongue Convective Wood Fire Dynamics:
+//     * Independent central roaring updraft and twin spiraling lateral licking tongues
+//     * Licking flame tendrils that curl, detach, and dance with thermal buoyancy
+// - True Blackbody Thermal Radiation Palette:
+//     * Incandescent White-Hot Fuel Core (>1650K) -> Radiant Blazing Gold ->
+//     * Rich Deep Roaring Orange -> Fiery Crimson Edges -> Dark Sooty Charcoal Smoke Wisps
+// - Natural Roaring Base & Wind Responsiveness:
+//     * Wide roaring base rooted in the burning cloth bundle
+//     * Fluid wind and locomotion deflection with natural air drag
+// - Multi-Planar Volumetric Structure:
+//     * Smooth alpha falloff with zero hard polygon edges or cartoon gas-burner cones
 // ─────────────────────────────────────────────────────────────────────────────
 
 import * as THREE from 'three'
@@ -38,7 +38,7 @@ const fragmentShader = /* glsl */ `
   varying vec2 vUv;
   varying vec3 vWorldPos;
 
-  // ── GLSL 2D Simplex / Value Noise (Inigo Quilez) ───────────────────────────
+  // ── Fast 2D Simplex / Value Noise ──────────────────────────────────────────
   vec2 hash2(vec2 p) {
     p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
     return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
@@ -68,83 +68,96 @@ const fragmentShader = /* glsl */ `
     return f / 0.9375;
   }
 
-  // ── Blackbody Thermal Radiation Palette (True Flame Emission) ──────────────
-  vec3 getThermalFireColor(float t) {
-    t = clamp(t, 0.0, 1.2);
-
+  // ── Authentic Survival Wood Fire Thermal Blackbody Gradient ───────────────
+  // White-hot coal base -> Radiant Gold -> Deep Roaring Orange -> Fiery Crimson -> Smoky Charcoal
+  vec4 getSurvivalFireColor(float t, float smoke) {
     vec3 col = vec3(0.0);
-    if (t < 0.22) {
-      // Dark smoke / deep crimson wisp
-      col = mix(vec3(0.0), vec3(0.72, 0.08, 0.01), t / 0.22);
-    } else if (t < 0.55) {
-      // Deep fiery orange body
-      float u = (t - 0.22) / 0.33;
-      col = mix(vec3(0.72, 0.08, 0.01), vec3(1.0, 0.50, 0.04), u);
-    } else if (t < 0.86) {
-      // Radiant blazing golden yellow
-      float u = (t - 0.55) / 0.31;
-      col = mix(vec3(1.0, 0.50, 0.04), vec3(1.0, 0.92, 0.38), u);
+    float alpha = 1.0;
+
+    if (t < 0.18) {
+      // Dark sooty wood smoke wisps at the outer lick and apex
+      float u = t / 0.18;
+      col = mix(vec3(0.12, 0.08, 0.06), vec3(0.60, 0.10, 0.01), u);
+      alpha = smoothstep(0.015, 0.18, t) * (0.50 + 0.50 * (1.0 - smoke));
+    } else if (t < 0.45) {
+      // Deep fiery crimson / burnt ember
+      float u = (t - 0.18) / 0.27;
+      col = mix(vec3(0.60, 0.10, 0.01), vec3(0.98, 0.40, 0.04), u);
+      alpha = 0.85 + u * 0.15;
+    } else if (t < 0.75) {
+      // Roaring golden amber wood flame body
+      float u = (t - 0.45) / 0.30;
+      col = mix(vec3(0.98, 0.40, 0.04), vec3(1.0, 0.82, 0.20), u);
+      alpha = 1.0;
     } else {
-      // Incandescent white-hot core
-      float u = (t - 0.86) / 0.34;
-      col = mix(vec3(1.0, 0.92, 0.38), vec3(1.0, 1.0, 0.98), u);
+      // Incandescent white-hot core above burning pitch coals
+      float u = (t - 0.75) / 0.25;
+      col = mix(vec3(1.0, 0.82, 0.20), vec3(1.0, 0.98, 0.90), u);
+      alpha = 1.0;
     }
 
-    return col;
+    return vec4(col, alpha);
   }
 
   void main() {
-    // Center horizontal coordinate: x in [-1, 1], y in [0, 1]
+    // Coordinate space: x in [-1, 1], y in [0, 1]
     vec2 q = vec2((vUv.x - 0.5) * 2.0, vUv.y);
-
     float y = clamp(q.y, 0.0, 1.0);
-    float t = uTime * 2.4;
+    float t = uTime * 3.4;
 
-    // ── 1. Realistic Mathematical Teardrop Flame Silhouette ──────────────────
-    // Wide bulbous base above glowing coals, curving smoothly into a slender pointed apex
-    float width = 1.95 * sqrt(y + 0.04) * pow(max(0.0, 1.06 - y), 1.30);
-    width *= (1.0 + uFlameSurge * 0.25);
+    // ── 1. Organic Survival Fire Envelope ────────────────────────────────────
+    // Rooted closely in the cloth bundle (width ~0.26 at y=0), billowing in the belly (y=0.25..0.4),
+    // and naturally tapering towards the apex.
+    float belly = sin(clamp(y * 2.8, 0.0, 3.14159));
+    float envelope = (0.26 + 0.34 * pow(belly, 0.75)) * smoothstep(1.0, 0.55, y);
 
-    // ── 2. Thermal Convection & Swirling FBM Noise ────────────────────────────
-    vec2 noiseCoord = vec2(q.x * 2.2, y * 3.2 - t);
-    float n1 = fbm(noiseCoord);
+    // ── 2. Convective Domain Warping & Wind Deflection ───────────────────────
+    // Buoyant convective air currents rising and swirling
+    vec2 warpCoord = vec2(q.x * 2.4, y * 2.8 - t * 2.2);
+    float wx = (noise2(warpCoord) - 0.5) * 0.38 * (y + 0.20);
+    float wy = (noise2(warpCoord + vec2(4.7, 2.1)) - 0.5) * 0.18 * y;
 
-    // Higher frequency secondary noise for licking flame tendrils
-    vec2 detailCoord = vec2(q.x * 4.5, y * 5.0 - t * 1.5);
-    float n2 = fbm(detailCoord);
+    // Fluid wind and locomotion deflection: sweeps flame backward and tilts
+    float windDeflect = (uWind.x * 0.40 + sin(y * 4.2 - t * 1.8) * 0.06) * uWindStrength * y * y;
+    vec2 warpedP = vec2(q.x - windDeflect + wx, y + wy);
 
-    // Displace horizontal coordinate based on rising turbulence & wind
-    float turbulence = (n1 * 0.7 + n2 * 0.3 - 0.5) * 0.42 * y * (2.0 - y);
-    float windOffset = uWind.x * uWindStrength * (y * y * 0.6);
+    // ── 3. Multi-Tongue Convective Dynamics (Tomb Raider Style) ──────────────
+    // Center roaring tongue
+    float distCenter = abs(warpedP.x) / max(0.01, envelope * 0.70);
+    float tongueCenter = exp(-distCenter * distCenter * 3.6) * (1.12 - y * 0.28);
 
-    float displacedX = q.x - turbulence - windOffset;
+    // Twin lateral licking flame tongues (spiral and curl outward independently)
+    float tongueLeft = exp(-pow(abs(warpedP.x + 0.12 * envelope) / max(0.01, envelope * 0.48), 2.0) * 4.2)
+                       * (0.80 + 0.35 * sin(t * 3.6 + y * 5.5)) * (1.0 - y * 0.35);
 
-    // Distance metric from flame central spine relative to teardrop boundary
-    float dist = abs(displacedX) / max(0.001, width);
+    float tongueRight = exp(-pow(abs(warpedP.x - 0.12 * envelope) / max(0.01, envelope * 0.48), 2.0) * 4.2)
+                        * (0.80 + 0.35 * cos(t * 4.1 + y * 5.5)) * (1.0 - y * 0.35);
 
-    // ── 3. Organic Flame Density & Soft Masking (Zero Hard Polygon Edges) ─────
-    float flameMask = smoothstep(1.0, 0.15, dist);
+    // Composite roaring flame tongues
+    float flameDensity = max(tongueCenter, max(tongueLeft, tongueRight));
 
-    // Smooth vertical envelope: gentle start at coal bed, fading out at apex
-    flameMask *= smoothstep(0.0, 0.09, y);
-    flameMask *= smoothstep(1.02, 0.78, y);
+    // High-frequency licking flame edge turbulence & breakup
+    float nTurb = fbm(vec2(q.x * 4.2, y * 5.2 - t * 3.0));
+    float nLick = fbm(vec2(q.x * 6.5 - t * 0.9, y * 8.0 - t * 4.2));
+    flameDensity *= (0.72 + 0.42 * nTurb + 0.20 * nLick);
 
-    // ── 4. Internal Thermal Density Field ────────────────────────────────────
-    float heat = flameMask * (1.35 - dist * 1.05) * (n1 * 0.6 + 0.65 + uFlameSurge * 0.4);
-    heat -= y * 0.32; // Natural thermal cooling toward apex
-    heat = max(0.0, heat);
+    // ── 4. Strict Non-Clipping Edge Falloff ──────────────────────────────────
+    // Smoothly decays to exact 0 well before quad boundaries (eliminates all planar edges)
+    float horizMask = smoothstep(0.92, 0.45, abs(q.x));
+    float vertMask = smoothstep(0.0, 0.05, y) * smoothstep(1.0, 0.70, y);
 
-    vec3 fireColor = getThermalFireColor(heat);
+    float heat = flameDensity * horizMask * vertMask;
 
-    // Soft atmospheric outer glow halo around flame
-    float glow = 0.08 / (dist * dist + 0.25) * (1.0 - y * 0.6);
-    vec3 ambientGlow = vec3(1.0, 0.35, 0.05) * glow * flameMask;
+    if (heat < 0.018) discard;
 
-    vec3 finalColor = fireColor + ambientGlow;
-    float finalAlpha = clamp(heat * 1.35 + glow * 0.4, 0.0, 1.0);
+    // Smoke factor at outer tips
+    float smoke = (1.0 - vertMask) * 0.7 + (1.0 - smoothstep(0.0, 0.35, heat)) * 0.4;
+    vec4 fireCol = getSurvivalFireColor(heat, smoke);
 
-    // Boost emissive luminance of the core
-    finalColor *= (1.0 + smoothstep(0.7, 1.1, heat) * 0.8);
+    // Subtle localized radiant flame core glow (strictly masked by horizMask and vertMask)
+    float coreGlow = exp(-abs(warpedP.x) * 4.5) * smoothstep(0.02, 0.25, y) * smoothstep(0.85, 0.45, y) * 0.20;
+    vec3 finalColor = fireCol.rgb + vec3(1.0, 0.45, 0.08) * coreGlow;
+    float finalAlpha = clamp(fireCol.a * smoothstep(0.018, 0.09, heat), 0.0, 1.0);
 
     gl_FragColor = vec4(finalColor, finalAlpha);
   }
@@ -163,7 +176,7 @@ export function createTeardropFlameMaterial() {
     transparent: true,
     depthWrite: false,
     depthTest: true,
-    blending: THREE.AdditiveBlending,
+    blending: THREE.NormalBlending,
     side: THREE.DoubleSide,
   })
 }

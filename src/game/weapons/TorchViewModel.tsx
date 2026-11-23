@@ -226,120 +226,183 @@ export default function TorchViewModel() {
   // ── Procedural Geometries for Authentic Handcrafted Wooden Survival Torch ───
   const {
     branchStaveGeo,
+    forkProngGeos,
+    charredStakeGeos,
     handleWrapGeo,
     handleWrapRingsGeos,
     pommelKnotGeo,
     burlapWrapGeo,
     burlapFoldsGeos,
     twineLashGeos,
-    pitchCoalBedGeo,
+    coalChunkGeos,
+    innerEmberGeo,
     flamePlaneGeo,
+    coreFlamePlaneGeo,
   } = useMemo(() => {
-    // 1. Natural Rugged Tree Branch Stave (Length ~0.38m)
-    // Modeled with natural organic curve and taper (radius 0.012m to 0.016m)
+    // 1. Natural Rugged Mountain Tree Branch Stave (Length ~0.40m)
+    // Modeled with natural organic curve and taper (radius 0.013m to 0.016m)
     const branchCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0.002, -0.15, 0.001),
-      new THREE.Vector3(0.004, -0.07, -0.002),
-      new THREE.Vector3(0.0, 0.02, 0.002),
-      new THREE.Vector3(-0.003, 0.10, -0.001),
+      new THREE.Vector3(0.002, -0.16, 0.001),
+      new THREE.Vector3(0.005, -0.08, -0.003),
+      new THREE.Vector3(0.001, 0.02, 0.002),
+      new THREE.Vector3(-0.004, 0.11, -0.002),
       new THREE.Vector3(0.0, 0.18, 0.003),
-      new THREE.Vector3(0.002, 0.23, 0.0),
+      new THREE.Vector3(0.002, 0.22, 0.0),
     ])
+    const branchStave = new THREE.TubeGeometry(branchCurve, 24, 0.0145, 12, false)
 
-    const branchStave = new THREE.TubeGeometry(branchCurve, 24, 0.0135, 12, false)
+    // 2. Forked Branch Prongs (Split top of branch that cups the fuel bundle)
+    const forkProngs: THREE.BufferGeometry[] = []
+    const forkAngles = [0, Math.PI * 0.5, Math.PI, Math.PI * 1.5]
+    for (const fa of forkAngles) {
+      const pCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(Math.cos(fa) * 0.012, 0.17, Math.sin(fa) * 0.012),
+        new THREE.Vector3(Math.cos(fa) * 0.022, 0.20, Math.sin(fa) * 0.022),
+        new THREE.Vector3(Math.cos(fa) * 0.024, 0.235, Math.sin(fa) * 0.024),
+      ])
+      forkProngs.push(new THREE.TubeGeometry(pCurve, 10, 0.0038, 8, false))
+    }
 
-    // 2. Weathered Fiber Handle Wrap on Grip Section
-    const grip = new THREE.CylinderGeometry(0.0145, 0.0148, 0.11, 14)
+    // 3. Charred Wooden Fire Stakes & Splinters jutting up through the center of the rags
+    const fireStakes: THREE.BufferGeometry[] = []
+    const stakeOffsets = [
+      { x: -0.008, z: 0.005, yTop: 0.275, tilt: 0.08 },
+      { x: 0.007, z: -0.006, yTop: 0.265, tilt: -0.10 },
+      { x: 0.004, z: 0.008, yTop: 0.280, tilt: 0.05 },
+      { x: -0.005, z: -0.007, yTop: 0.260, tilt: -0.06 },
+    ]
+    for (const so of stakeOffsets) {
+      const sGeo = new THREE.CylinderGeometry(0.0020, 0.0035, so.yTop - 0.20, 7)
+      sGeo.rotateZ(so.tilt)
+      sGeo.translate(so.x, (so.yTop + 0.20) * 0.5, so.z)
+      fireStakes.push(sGeo)
+    }
+
+    // 4. Weathered Hand-Tied Twine Grip Section
+    const grip = new THREE.CylinderGeometry(0.0152, 0.0155, 0.11, 14)
     grip.translate(0, -0.04, 0)
 
     const rings: THREE.TorusGeometry[] = []
     const ringYs = [-0.08, -0.05, -0.02, 0.01]
     for (const ry of ringYs) {
-      const ring = new THREE.TorusGeometry(0.0148, 0.0018, 6, 16)
+      const ring = new THREE.TorusGeometry(0.0155, 0.0020, 6, 16)
       ring.rotateX(Math.PI / 2)
       ring.translate(0, ry, 0)
       rings.push(ring)
     }
 
-    // 3. Knotted Cord Loop at Branch Base (Survival lanyard)
-    const pommelKnot = new THREE.TorusGeometry(0.012, 0.0025, 6, 16)
-    pommelKnot.translate(0, -0.155, 0)
+    // Survival cord lanyard loop at branch base
+    const pommelKnot = new THREE.TorusGeometry(0.013, 0.0028, 6, 16)
+    pommelKnot.translate(0, -0.160, 0)
 
-    // 4. Heavy Pine-Pitch Soaked Burlap Rag Wrap Bundle (Top of Branch)
-    // Bulky cloth wrap (radius 0.028m at top, height 0.085m, seated from y=0.155 to y=0.240)
-    const burlapWrap = new THREE.CylinderGeometry(0.029, 0.021, 0.085, 14)
-    burlapWrap.translate(0, 0.197, 0)
+    // 5. Heavy Pine-Pitch Soaked Burlap Rag Wrap Bundle (Top of Branch)
+    const burlapWrap = new THREE.CylinderGeometry(0.029, 0.021, 0.080, 14)
+    burlapWrap.translate(0, 0.195, 0)
 
-    // Additional organic cloth folds & frayed wraps
-    const clothFolds: THREE.CylinderGeometry[] = []
-    // Lower frayed cuff wrap
-    const cuff1 = new THREE.CylinderGeometry(0.025, 0.022, 0.024, 12)
+    // Organic cloth folds & frayed wraps
+    const clothFolds: THREE.BufferGeometry[] = []
+    const cuff1 = new THREE.CylinderGeometry(0.026, 0.022, 0.024, 12)
     cuff1.translate(0, 0.165, 0)
     clothFolds.push(cuff1)
 
-    // Bulging mid-fold wrap
-    const cuff2 = new THREE.CylinderGeometry(0.031, 0.028, 0.032, 12)
-    cuff2.translate(0, 0.205, 0)
+    const cuff2 = new THREE.CylinderGeometry(0.032, 0.028, 0.032, 12)
+    cuff2.translate(0, 0.202, 0)
     clothFolds.push(cuff2)
 
-    // Upper ragged lip wrap
-    const cuff3 = new THREE.CylinderGeometry(0.033, 0.030, 0.022, 12)
-    cuff3.translate(0, 0.232, 0)
+    const cuff3 = new THREE.CylinderGeometry(0.033, 0.030, 0.020, 12)
+    cuff3.translate(0, 0.228, 0)
     clothFolds.push(cuff3)
 
-    // 5. Wilderness Hemp Twine / Sinew Rope Lashings (Binding the cloth firmly to branch)
-    // Criss-cross diagonal and horizontal twine coils (ZERO iron basket ribs!)
-    const twineGeos: THREE.BufferGeometry[] = []
+    // Hanging frayed rag tabs
+    const tabCurve1 = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0.023, 0.175, 0.01),
+      new THREE.Vector3(0.025, 0.145, 0.012),
+      new THREE.Vector3(0.020, 0.125, 0.008),
+    ])
+    clothFolds.push(new THREE.TubeGeometry(tabCurve1, 8, 0.0035, 6, false))
 
-    // Horizontal binding cords
-    const cordLevels = [0.162, 0.185, 0.210, 0.228]
-    const cordRadii = [0.023, 0.027, 0.030, 0.032]
+    const tabCurve2 = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-0.022, 0.170, -0.01),
+      new THREE.Vector3(-0.024, 0.140, -0.012),
+      new THREE.Vector3(-0.018, 0.118, -0.007),
+    ])
+    clothFolds.push(new THREE.TubeGeometry(tabCurve2, 8, 0.0032, 6, false))
+
+    // 6. Wilderness Twine / Cord Lashings
+    const twineGeos: THREE.BufferGeometry[] = []
+    const cordLevels = [0.162, 0.185, 0.208]
+    const cordRadii = [0.023, 0.028, 0.031]
     for (let i = 0; i < cordLevels.length; i++) {
       const cord = new THREE.TorusGeometry(cordRadii[i], 0.0022, 6, 18)
-      cord.rotateX(Math.PI / 2 + 0.06) // Slight organic cant
+      cord.rotateX(Math.PI / 2 + 0.06)
       cord.translate(0, cordLevels[i], 0)
       twineGeos.push(cord)
     }
 
-    // Criss-cross diagonal lashing ropes
+    // Criss-cross diagonal lashings
     const diagLash1Curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(-0.025, 0.165, 0.012),
-      new THREE.Vector3(0.0, 0.195, 0.028),
+      new THREE.Vector3(0.0, 0.195, 0.029),
       new THREE.Vector3(0.027, 0.225, 0.015),
       new THREE.Vector3(0.027, 0.225, -0.015),
-      new THREE.Vector3(0.0, 0.195, -0.028),
+      new THREE.Vector3(0.0, 0.195, -0.029),
       new THREE.Vector3(-0.025, 0.165, -0.012),
     ], true)
     twineGeos.push(new THREE.TubeGeometry(diagLash1Curve, 18, 0.0020, 6, true))
 
     const diagLash2Curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(-0.025, 0.225, 0.015),
-      new THREE.Vector3(0.0, 0.195, 0.028),
+      new THREE.Vector3(0.0, 0.195, 0.029),
       new THREE.Vector3(0.027, 0.165, 0.012),
       new THREE.Vector3(0.027, 0.165, -0.012),
-      new THREE.Vector3(0.0, 0.195, -0.028),
+      new THREE.Vector3(0.0, 0.195, -0.029),
       new THREE.Vector3(-0.025, 0.225, -0.015),
     ], true)
     twineGeos.push(new THREE.TubeGeometry(diagLash2Curve, 18, 0.0020, 6, true))
 
-    // 6. Glowing Pine-Pitch Charcoal Core Bed (Sits atop the rag bundle)
-    const pitchBed = new THREE.CylinderGeometry(0.028, 0.026, 0.018, 12)
-    pitchBed.translate(0, 0.238, 0)
+    // 7. Bumpy Organic Charcoal Chunks & Glowing Embers Bed (NO FLAT DISCS!)
+    const coalChunks: THREE.BufferGeometry[] = []
+    const coalOffsets = [
+      { x: 0.0, y: 0.235, z: 0.0, r: 0.013 },
+      { x: -0.012, y: 0.233, z: 0.008, r: 0.009 },
+      { x: 0.011, y: 0.234, z: -0.009, r: 0.010 },
+      { x: -0.008, y: 0.236, z: -0.011, r: 0.008 },
+      { x: 0.012, y: 0.235, z: 0.007, r: 0.009 },
+      { x: 0.001, y: 0.240, z: -0.002, r: 0.011 },
+      { x: -0.014, y: 0.230, z: -0.004, r: 0.007 },
+      { x: 0.015, y: 0.231, z: 0.002, r: 0.008 },
+    ]
+    for (const co of coalOffsets) {
+      const cGeo = new THREE.DodecahedronGeometry(co.r, 0)
+      cGeo.translate(co.x, co.y, co.z)
+      coalChunks.push(cGeo)
+    }
 
-    // 7. Tri-Planar Teardrop Flame Geometry (Width 0.13m, Height 0.25m)
-    const flamePlane = new THREE.PlaneGeometry(0.13, 0.25)
-    flamePlane.translate(0, 0.125, 0) // Pivot at base
+    // Deep inner glowing coal crevice (hidden deep inside, glowing through cracks)
+    const innerGlowingCoals = new THREE.DodecahedronGeometry(0.016, 1)
+    innerGlowingCoals.translate(0, 0.230, 0)
+
+    // 8. Quad-Planar Volumetric Survival Wood Fire (Width 0.22m, Height 0.36m)
+    const flamePlane = new THREE.PlaneGeometry(0.22, 0.36)
+    flamePlane.translate(0, 0.18, 0) // Pivot at base
+
+    const coreFlamePlane = new THREE.PlaneGeometry(0.15, 0.24)
+    coreFlamePlane.translate(0, 0.12, 0)
 
     return {
       branchStaveGeo: branchStave,
+      forkProngGeos: forkProngs,
+      charredStakeGeos: fireStakes,
       handleWrapGeo: grip,
       handleWrapRingsGeos: rings,
       pommelKnotGeo: pommelKnot,
       burlapWrapGeo: burlapWrap,
       burlapFoldsGeos: clothFolds,
       twineLashGeos: twineGeos,
-      pitchCoalBedGeo: pitchBed,
+      coalChunkGeos: coalChunks,
+      innerEmberGeo: innerGlowingCoals,
       flamePlaneGeo: flamePlane,
+      coreFlamePlaneGeo: coreFlamePlane,
     }
   }, [])
 
@@ -443,9 +506,9 @@ export default function TorchViewModel() {
 
     // 3. First-Person Viewport Framing (Lower-Right Quadrant)
     const unequipDrop = 1.0 - equipProgress.current
-    const pRest = new THREE.Vector3(0.22, -0.12 - unequipDrop * 0.75, -0.38)
+    const pRest = new THREE.Vector3(0.24, -0.23 - unequipDrop * 0.75, -0.44)
     const qRest = new THREE.Quaternion().setFromEuler(
-      new THREE.Euler(0.08 - unequipDrop * 0.55, -0.12, 0.22 - unequipDrop * 0.35, 'YXZ')
+      new THREE.Euler(0.05 - unequipDrop * 0.55, -0.09, 0.18 - unequipDrop * 0.35, 'YXZ')
     )
 
     let finalPos = pRest.clone()
@@ -642,6 +705,18 @@ export default function TorchViewModel() {
           />
         </mesh>
 
+        {/* Split Mountain Pine Fork Prongs Clasping the Bundle */}
+        {forkProngGeos.map((geo, idx) => (
+          <mesh key={`fork-${idx}`} geometry={geo} castShadow>
+            <meshStandardMaterial
+              color="#3a2414"
+              map={barkTexture}
+              roughness={0.90}
+              metalness={0.0}
+            />
+          </mesh>
+        ))}
+
         {/* Heavy Pine-Pitch Soaked Burlap Cloth Wrap Bundle */}
         <mesh geometry={burlapWrapGeo} castShadow>
           <meshStandardMaterial
@@ -678,29 +753,67 @@ export default function TorchViewModel() {
           </mesh>
         ))}
 
-        {/* Incandescent Glowing Charcoal Ember Bed & Pine Pitch Core */}
-        <mesh geometry={pitchCoalBedGeo}>
+        {/* Charred Fire Stakes & Splinters Rising Through Flame Core */}
+        {charredStakeGeos.map((geo, idx) => (
+          <mesh key={`stake-${idx}`} geometry={geo} castShadow>
+            <meshStandardMaterial
+              color="#100b08"
+              roughness={0.96}
+              metalness={0.0}
+            />
+          </mesh>
+        ))}
+
+        {/* Faceted Charcoal Ember Chunks Clustered in Rag Head (No Flat Discs) */}
+        {coalChunkGeos.map((geo, idx) => (
+          <mesh key={`coal-${idx}`} geometry={geo} castShadow>
+            <meshStandardMaterial
+              color="#0d0704"
+              roughness={0.95}
+              metalness={0.02}
+            />
+          </mesh>
+        ))}
+
+        {/* Deep Incandescent Glowing Coal Core Visible Through Cracks */}
+        <mesh geometry={innerEmberGeo}>
           <meshStandardMaterial
             ref={emberMatRef}
             color="#180702"
-            emissive="#ff4400"
+            emissive="#ff3b00"
             emissiveIntensity={2.8}
-            roughness={0.88}
+            roughness={0.90}
           />
         </mesh>
 
-        {/* Tri-Planar Procedural Teardrop Flame (0°, 60°, 120° Intersecting Planes) */}
-        <group ref={flameGroupRef} position={[0, 0.238, 0]}>
+        {/* Quad-Planar Procedural Convective Wood Fire (0°, 45°, 90°, 135°) */}
+        <group ref={flameGroupRef} position={[0, 0.228, 0]}>
           <mesh geometry={flamePlaneGeo} material={flameMaterial} />
           <mesh
             geometry={flamePlaneGeo}
             material={flameMaterial}
-            rotation={[0, Math.PI / 3, 0]}
+            rotation={[0, Math.PI * 0.25, 0]}
           />
           <mesh
             geometry={flamePlaneGeo}
             material={flameMaterial}
-            rotation={[0, (Math.PI * 2) / 3, 0]}
+            rotation={[0, Math.PI * 0.5, 0]}
+          />
+          <mesh
+            geometry={flamePlaneGeo}
+            material={flameMaterial}
+            rotation={[0, Math.PI * 0.75, 0]}
+          />
+          {/* Inner core flame for deep multi-layered roaring wood fire */}
+          <mesh
+            geometry={coreFlamePlaneGeo}
+            material={flameMaterial}
+            rotation={[0, Math.PI * 0.125, 0]}
+          />
+          <mesh
+            geometry={coreFlamePlaneGeo}
+            material={flameMaterial}
+            rotation={[0, Math.PI * 0.625, 0]}
           />
         </group>
 
