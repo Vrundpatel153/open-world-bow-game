@@ -69,6 +69,7 @@ export default function GrassSceneContent({
   const sunIntensityRef = useRef(3.1);
   const sunElevRef = useRef(55);
   const sunAzimRef = useRef(180);
+  const trueSunElevRef = useRef(55);
   const isNightRef = useRef(false);
 
   // Continuous Atmospheric Sky and Fog synchronization refs
@@ -164,6 +165,7 @@ export default function GrassSceneContent({
           sunIntensityRef.current = intensity;
           sunElevRef.current = night ? moonElev : sunElev;
           sunAzimRef.current = night ? moonAzim : sunAzim;
+          trueSunElevRef.current = sunElev;
           isNightRef.current = night;
         }}
         onPhaseChange={(nextMode, nextPreset, phaseName) => {
@@ -202,6 +204,8 @@ export default function GrassSceneContent({
             preset={grassPreset}
             playerPosRef={playerPosRef}
             onLoaded={handleModelLoaded}
+            sunElevRef={trueSunElevRef}
+            isNightRef={isNightRef}
           />
         )}
       </Suspense>

@@ -226,6 +226,26 @@ export default function GameHUD({
           >
             [C] {isCompassVisible ? '▲' : '▼'}
           </span>
+          <span
+            onClick={(e) => {
+              e.stopPropagation()
+              if (typeof window !== 'undefined' && (window as any).__advanceTimePhase) {
+                (window as any).__advanceTimePhase()
+              }
+            }}
+            title="Click or press [T] to shift time between Day, Sunset, and Midnight"
+            style={{
+              fontSize: 7.5,
+              opacity: 0.85,
+              padding: '0 5px',
+              borderRadius: 3,
+              background: 'rgba(214, 184, 120, 0.20)',
+              border: '1px solid rgba(214, 184, 120, 0.35)',
+              cursor: 'pointer',
+            }}
+          >
+            [T] TIME
+          </span>
         </div>
 
         {/* Compass Ribbon Housing - Streamlined & Translucent Frosted Glass */}

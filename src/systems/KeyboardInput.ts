@@ -82,6 +82,10 @@ class InputManager {
       useQuestStore.getState().toggleQuestLog()
     } else if (code === 'KeyC' || key === 'c') {
       useQuestStore.getState().toggleCompass()
+    } else if (code === 'KeyT' || key === 't') {
+      if (typeof window !== 'undefined' && (window as any).__advanceTimePhase) {
+        (window as any).__advanceTimePhase()
+      }
     }
   }
 

@@ -48,7 +48,11 @@ const SKY_FRAG = /* glsl */ `
   uniform float uHorizonLine;
   uniform float uHorizonSpread;
 
-  // ── Moon ─────────────────────────────────────────────────────────────────
+  // ── Moon & Sun Celestial Physics ─────────────────────────────────────────
+  uniform sampler2D uMoonTexture;
+  uniform sampler2D uSunTexture;
+  uniform float uIsNight;
+  uniform float uSunElev;
   uniform vec3  uMoonDir;
   uniform vec3  uMoonColor;
   uniform vec3  uMoonGlowColor;
@@ -343,13 +347,18 @@ const SKY_FRAG = /* glsl */ `
     float t     = smoothstep(uHorizonLine - uHorizonSpread, uHorizonLine + uHorizonSpread, dir.y);
     vec3  color = mix(uSkyLow, uSkyHigh, t);
 
-    // ── 2. Moon glow (corona) — uses the UNWARPED dir
-    // Computed here but NOT added here. Everything the disc EMITS — this corona
-    // and the disc's own emission — is applied after the clouds, because a
-    // cloud in front of the sun does not delete its light, it scatters it. See
-    // the emissive pass at the end of main().
+    // ── 2. Realistic Compact Corona (Atmospheric Halo bounded to 1.0 - 3.8 radii) ────
     float cosA = dot(dirM, normalize(uMoonDir));
-    float glow  = pow(max(cosA, 0.0), uMoonGlowFalloff) * uMoonGlowIntensity;
+    float angDist = acos(clamp(cosA, -1.0, 1.0));
+    float relR = angDist / max(uMoonSize, 0.001);
+    float glow = 0.0;
+    if (relR >= 0.98 && relR < 3.8) {
+      float cNorm = (relR - 0.98) / 2.82;
+      float cFalloff = pow(clamp(1.0 - cNorm, 0.0, 1.0), uIsNight > 0.5 ? 4.0 : 3.2);
+      float cAngle = atan(dirM.y, dirM.x);
+      float cRays = 1.0 + (sin(cAngle * 12.0 + uTime * 0.8) * 0.12 + sin(cAngle * 26.0 - uTime * 0.5) * 0.06);
+      glow = cFalloff * cRays * uMoonGlowIntensity;
+    }
 
     // ── 3. Stars (strictly gated so zero starField calculations occur during daytime)
     if (uStarBrightness > 0.001) {
@@ -384,11 +393,7 @@ const SKY_FRAG = /* glsl */ `
       }
     }
 
-    // ── 4. Moon disc — applied BEFORE clouds so cloud mix naturally occludes it
-    float moonAngle = acos(clamp(cosA, -1.0, 1.0));
-
-    // Build a local 2-D frame at the moon's sky position so we can project
-    // the current fragment direction onto it and work in "moon UV" space.
+    // ── 4. Realistic 3D Spherical Celestial Body with 2K NASA & Solar Maps ────
     vec3 moonFwd   = normalize(uMoonDir);
     vec3 moonBase  = abs(moonFwd.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
     vec3 moonRight = normalize(cross(moonFwd, moonBase));
@@ -397,42 +402,80 @@ const SKY_FRAG = /* glsl */ `
     // Project the UNWARPED dir onto the frame: the disc ignores side distortion.
     float moonR2D = max(sin(uMoonSize), 0.0001);
     vec2  moonUV  = vec2(dot(dirM, moonRight), dot(dirM, moonUp)) / moonR2D;
+    float distToCenter = length(moonUV);
 
-    // Disc edge: 0.001 = near-pixel-hard, 0.5 = soft glow
-    float edge     = max(uMoonEdgeSoftness, 0.001);
-    float moonMask = 1.0 - smoothstep(1.0 - edge, 1.0 + edge, length(moonUV));
+    vec3 celestialSurface = vec3(0.0);
+    float celestialMask = 0.0;
 
-    // ── Linear phase gradient ────────────────────────────────────────────
-    // Rotate moonUV by uMoonPhaseAngle so the terminator can be tilted.
-    // Then project onto the rotated X axis — negative = lit side, positive = dark.
-    float cosPA   = cos(uMoonPhaseAngle);
-    float sinPA   = sin(uMoonPhaseAngle);
-    float projX   = moonUV.x * cosPA - moonUV.y * sinPA;
-    float litFactor = 1.0 - smoothstep(
-      uMoonPhasePos - uMoonPhaseSoftness,
-      uMoonPhasePos + uMoonPhaseSoftness,
-      projX
-    );
+    if (distToCenter <= 1.0) {
+      // Reconstruct 3-D spherical normal on front hemisphere: z = sqrt(1 - x^2 - y^2)
+      float nz = sqrt(max(0.0, 1.0 - dot(moonUV, moonUV)));
+      vec3 nLocal = normalize(vec3(moonUV.x, moonUV.y, nz));
 
-    // ── Surface texture: thresholded FBM blobs (hard lunar maria) ────────
-    // FBM is thresholded at uMoonSpotThreshold and sharpened by
-    // uMoonSpotSharpness — small values give crisp dark patches like the
-    // reference image; larger values give a painterly gradient.
-    vec3 moonTexColor = uMoonColor;
-    if (moonAngle < uMoonSize * 2.0) {
-      float spots     = fbmMoon(moonUV * uMoonSpotScale);
-      float spotPatch = smoothstep(
-        uMoonSpotThreshold - uMoonSpotSharpness,
-        uMoonSpotThreshold + uMoonSpotSharpness,
-        spots
-      );
-      moonTexColor = mix(uMoonColor, uMoonSpotColor, spotPatch * uMoonSpotStrength);
+      // Equirectangular spherical UV mapping with slow celestial axial rotation
+      float rotOffset = uIsNight > 0.5 ? 0.08 : uTime * 0.0004;
+      float uTex = fract(0.5 + atan(nLocal.x, nLocal.z) / (2.0 * PI) + rotOffset);
+      float vTex = clamp(0.5 - asin(clamp(nLocal.y, -1.0, 1.0)) / PI, 0.001, 0.999);
+      vec2 sphereUV = vec2(uTex, vTex);
+
+      float edgeAlpha = smoothstep(1.0, 0.96, distToCenter);
+
+      if (uIsNight > 0.5) {
+        // ── Authentic NASA Lunar Surface (LROC 2K Map) ──────────────────────
+        vec4 moonTex = texture2D(uMoonTexture, sphereUV);
+        float lunarAlbedo = moonTex.r * 0.90 + 0.10;
+
+        // True 3D Solar Illumination Vector in local frame
+        float cosPA = cos(uMoonPhaseAngle);
+        float sinPA = sin(uMoonPhaseAngle);
+        vec3 sunDirLocal = normalize(vec3(cosPA, sinPA, -uMoonPhasePos));
+
+        float nDotL = dot(nLocal, sunDirLocal);
+        float mu0 = max(0.0, nDotL);
+        float mu = max(0.0, nz);
+
+        // Lommel-Seeliger / Hapke lunar regolith reflectance model
+        float lommelSeeliger = mu0 / max(mu0 + mu, 0.001);
+        float phaseLight = mu0 * 0.35 + lommelSeeliger * 0.65;
+        phaseLight = smoothstep(0.02, 0.22, phaseLight);
+
+        // Sunlit lunar surface: silver-white lunar regolith with dark basaltic maria
+        vec3 litMoon = vec3(0.92, 0.95, 1.0) * lunarAlbedo * (1.15 + phaseLight * 0.35);
+
+        // Faint blue Earthshine on the night side of the moon
+        vec3 earthshine = mix(vec3(0.015, 0.025, 0.045), vec3(0.04, 0.06, 0.10), lunarAlbedo) * 0.25;
+
+        celestialSurface = mix(earthshine, litMoon, phaseLight);
+        celestialMask = edgeAlpha;
+      } else {
+        // ── Authentic Solar Photosphere with Real Eddington Limb Darkening ───
+        vec4 sunTex = texture2D(uSunTexture, sphereUV);
+        float granulation = sunTex.r;
+
+        // Eddington Limb Darkening: I(mu) = I0 * (1 - 0.62*(1 - mu))
+        float limbMu = nz;
+        float limbFactor = 1.0 - 0.62 * (1.0 - limbMu);
+
+        // Sunset extinction shift: brilliant noon white-gold -> fiery sunset amber
+        float sunsetExtinction = clamp((-uSunElev + 16.0) / 20.0, 0.0, 1.0);
+        vec3 sunCenter = mix(vec3(1.0, 0.99, 0.94), vec3(1.0, 0.68, 0.24), sunsetExtinction);
+        vec3 sunEdge = mix(vec3(1.0, 0.78, 0.28), vec3(0.92, 0.26, 0.04), sunsetExtinction);
+
+        vec3 solarPhotosphere = mix(sunEdge, sunCenter, limbFactor);
+        solarPhotosphere *= (0.88 + granulation * 0.30) * 1.85;
+
+        celestialSurface = solarPhotosphere;
+        celestialMask = edgeAlpha;
+      }
     }
 
-    // The disc's SURFACE. This one is a solid thing in the sky, so a cloud in
-    // front of it does occlude it — the cloud mix below is what does that.
-    float moonDisc = moonMask * litFactor;
-    color = mix(color, moonTexColor, moonDisc);
+    // Horizon extinction fade (smoothly melts into atmospheric haze at horizon)
+    float horizonExtinction = clamp((uMoonDir.y + 0.04) / 0.08, 0.0, 1.0);
+    celestialMask *= horizonExtinction;
+    glow *= horizonExtinction;
+
+    // Apply celestial surface before clouds so clouds naturally occlude it
+    color = mix(color, celestialSurface, celestialMask);
     // Its EMISSION is not applied here. Held for the pass after the clouds.
 
     // ── 5. FBM clouds ─────────────────────────────────────────────────────
@@ -624,7 +667,7 @@ const SKY_FRAG = /* glsl */ `
     // behaviour is back; above that, cloud crossing the sun lights up and the
     // disc dissolves into it rather than being stencilled out of it.
     float moonBleed = mix(1.0, uMoonCloudBleed, cloudCover);
-    color += (uMoonGlowColor * glow + moonTexColor * moonDisc * uMoonEmission)
+    color += (uMoonGlowColor * glow + celestialSurface * celestialMask * uMoonEmission)
            * moonBleed;
 
     gl_FragColor = vec4(color, 1.0);
@@ -1275,6 +1318,23 @@ export default function SkyDome({
     { collapsed: true },
   );
 
+  // Authentic 2K NASA Lunar & Solar Photosphere Textures
+  const moonTexture = useMemo(() => {
+    const loader = new THREE.TextureLoader();
+    const tex = loader.load("/assets/textures/moon_2k.jpg");
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    return tex;
+  }, []);
+
+  const sunTexture = useMemo(() => {
+    const loader = new THREE.TextureLoader();
+    const tex = loader.load("/assets/textures/sun_2k.jpg");
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    return tex;
+  }, []);
+
   const material = useMemo(
     () =>
       new THREE.ShaderMaterial({
@@ -1284,6 +1344,10 @@ export default function SkyDome({
         vertexShader: SKY_VERT,
         fragmentShader: SKY_FRAG,
         uniforms: {
+          uMoonTexture: { value: moonTexture },
+          uSunTexture: { value: sunTexture },
+          uIsNight: { value: 0.0 },
+          uSunElev: { value: 45.0 },
           uSkyLow: { value: new THREE.Color("#011851") },
           uSkyHigh: { value: new THREE.Color("#011f9d") },
           uHorizonLine: { value: 0.1 },
@@ -1687,47 +1751,39 @@ export default function SkyDome({
     // Stars strictly gated to nocturnal darkness (never render in blue daytime sky)
     const starFade = nightBool ? 1.0 : 0.0;
 
+    u.uMoonTexture.value = moonTexture;
+    u.uSunTexture.value = sunTexture;
+    u.uIsNight.value = nightBool ? 1.0 : 0.0;
+    u.uSunElev.value = effElev;
+
     if (nightBool) {
-      // Ethereal Silver Lunar Disc with authentic muted slate maria & crisp crescent
+      // Ethereal Silver Lunar Disc with authentic NASA crater maria & phase illumination
       u.uMoonColor.value.set("#edf4ff");
       u.uMoonGlowColor.value.set("#7aa6d6");
       u.uMoonSize.value = 0.024 * Math.max(0.001, horizonFade);
-      u.uMoonGlowFalloff.value = 80.0;
-      u.uMoonGlowIntensity.value = 0.26 * horizonFade;
+      u.uMoonGlowFalloff.value = 60.0;
+      u.uMoonGlowIntensity.value = 0.22 * horizonFade;
       u.uMoonEdgeSoftness.value = 0.025;
       u.uMoonPhasePos.value = 0.18; // Crisp realistic crescent moon
       u.uMoonPhaseSoftness.value = 0.08;
       u.uMoonPhaseAngle.value = (145 * Math.PI) / 180;
-      u.uMoonEmission.value = 0.70 * horizonFade;
+      u.uMoonEmission.value = 0.65 * horizonFade;
       u.uMoonCloudBleed.value = 0.65;
-      u.uMoonSpotColor.value.set("#788ca3"); // Authentic slate lunar rocks (zero neon cyan)
-      u.uMoonSpotStrength.value = 0.45;
-      u.uMoonSpotScale.value = 2.0;
-      u.uMoonSpotThreshold.value = 0.55;
-      u.uMoonSpotSharpness.value = 0.12;
-      u.uMoonSpotOctaves.value = 4;
-      // Guarantee zero neon outlines or glowing squiggles around clouds at night
       u.uCloudRimStrength.value = 0.0;
       u.uCloudRim.value.set("#000000");
     } else {
-      // Luminous Golden Sun Disc with warm atmospheric solar corona
+      // Luminous Golden Sun Disc with Eddington limb darkening & compact corona
       u.uMoonColor.value.set("#fffdf0");
       u.uMoonGlowColor.value.set("#ffa834");
-      u.uMoonSize.value = 0.028 * Math.max(0.001, horizonFade);
-      u.uMoonGlowFalloff.value = 22.0; // Wide glorious golden atmospheric corona
-      u.uMoonGlowIntensity.value = 0.58 * horizonFade;
+      u.uMoonSize.value = 0.026 * Math.max(0.001, horizonFade);
+      u.uMoonGlowFalloff.value = 28.0;
+      u.uMoonGlowIntensity.value = 0.42 * horizonFade;
       u.uMoonEdgeSoftness.value = 0.02;
-      u.uMoonPhasePos.value = -1.5; // Fully lit spherical solar disc (-1.5 = completely lit disc)
+      u.uMoonPhasePos.value = -1.5;
       u.uMoonPhaseSoftness.value = 0.1;
       u.uMoonPhaseAngle.value = 0;
-      u.uMoonEmission.value = 0.85 * horizonFade;
+      u.uMoonEmission.value = 0.75 * horizonFade;
       u.uMoonCloudBleed.value = 0.85;
-      u.uMoonSpotColor.value.set("#ffffff");
-      u.uMoonSpotStrength.value = 0.0;
-      u.uMoonSpotScale.value = 1.0;
-      u.uMoonSpotThreshold.value = 0.5;
-      u.uMoonSpotSharpness.value = 0.1;
-      u.uMoonSpotOctaves.value = 1;
     }
 
     // Stars — minimal needle points, sparse and peaceful

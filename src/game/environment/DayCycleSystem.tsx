@@ -72,7 +72,24 @@ export default function DayCycleSystem({
   const cNightZenith = useRef(new THREE.Color("#010206"));  // Pitch black midnight sky
 
   (window as any).__setCycleTime = (sec: number) => {
-    cycleTimeRef.current = sec;
+    cycleTimeRef.current = sec % FULL_CYCLE_SECONDS;
+  };
+
+  (window as any).__advanceTimePhase = () => {
+    const cur = cycleTimeRef.current;
+    if (cur < 300) {
+      cycleTimeRef.current = 360; // Midday
+      useQuestStore.setState({ notification: 'Time shifted to Midday (12:00 PM)' });
+    } else if (cur < 650) {
+      cycleTimeRef.current = 720; // Sunset
+      useQuestStore.setState({ notification: 'Time shifted to Sunset (06:00 PM)' });
+    } else if (cur < 1000) {
+      cycleTimeRef.current = 1080; // Midnight
+      useQuestStore.setState({ notification: 'Time shifted to Nocturnal Midnight (12:00 AM)' });
+    } else {
+      cycleTimeRef.current = 0; // Dawn
+      useQuestStore.setState({ notification: 'Time shifted to Dawn (06:00 AM)' });
+    }
   };
 
   useEffect(() => {
@@ -159,8 +176,8 @@ export default function DayCycleSystem({
       const tTwi = THREE.MathUtils.smoothstep((sunElevation + 14) / 12, 0, 1);
       skyHorizon.current.lerpColors(cNightHorizon.current, cTwilightHorizon.current, tTwi);
       skyZenith.current.lerpColors(cNightZenith.current, cTwilightZenith.current, tTwi);
-      lightColor.current.set("#6a8cc0");
-      lightIntensity = 0.35 + tTwi * 0.4;
+      lightColor.current.set("#5a78a8");
+      lightIntensity = 0.16 + tTwi * 0.35;
       currentMode = "night";
       phaseName = "TWILIGHT";
     } else {
@@ -168,8 +185,8 @@ export default function DayCycleSystem({
       const moonProgress = Math.max(0, moonElevation / 58);
       skyHorizon.current.copy(cNightHorizon.current);
       skyZenith.current.copy(cNightZenith.current);
-      lightColor.current.set("#8ab2ea");
-      lightIntensity = 0.32 + moonProgress * 0.12;
+      lightColor.current.set("#6a8ec4");
+      lightIntensity = 0.14 + moonProgress * 0.05;
       currentMode = "night";
       if (sunElevation < -42) {
         phaseName = "MIDNIGHT";
