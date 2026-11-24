@@ -158,9 +158,12 @@ const fragmentShader = /* glsl */ `
     float wr = length(warpedP.xz);
 
     // Organic teardrop envelope:
-    // Wide rooted base above coals (y=0.0..0.15), swelling belly (y=0.25..0.4), tapering to licking flame apex
+    // Rooted closely to the circular coals bed (y=0.0..0.08), swelling slightly in the buoyant belly,
+    // and naturally tapering to curling tendril tips.
+    float taper = 1.0 - pow(y, 1.25);
     float belly = sin(clamp(y * 3.14159, 0.0, 3.14159));
-    float envelope = (0.75 + 0.25 * belly) * (1.0 - pow(y, 1.2)) * smoothstep(0.0, 0.04, y);
+    float baseFit = mix(0.68, 0.85, smoothstep(0.0, 0.22, y));
+    float envelope = baseFit * taper * (0.85 + 0.15 * belly) * smoothstep(0.0, 0.025, y);
     if (wr > envelope) return vec4(0.0);
 
     // Convective upward velocity & 3D noise coordinates
@@ -180,34 +183,32 @@ const fragmentShader = /* glsl */ `
     float turb = turbulence(np);
 
     // Convective distortion of flame profile
-    float st_y = y + sqrt(max(0.0, y)) * magnitude * (turb - 0.46);
-    float st_x = wr / max(0.001, envelope);
-
-    if (st_x <= 0.0 || st_x >= 1.0 || st_y <= 0.0 || st_y >= 1.0) return vec4(0.0);
+    float st_y = clamp(y + (turb - 0.5) * 0.26 * sqrt(max(0.0, y)), 0.01, 0.99);
+    float st_x = clamp(wr / max(0.001, envelope), 0.01, 0.99);
 
     // Sample the authentic 3D fire gradient lookup texture
-    vec2 st = vec2(clamp(st_x, 0.01, 0.99), clamp(st_y, 0.01, 0.99));
-    vec4 tex = texture2D(fireTex, st);
+    vec4 tex = texture2D(fireTex, vec2(st_x, st_y));
 
     // Radial and vertical soft feathering to guarantee zero hard box edges
-    float edgeMask = smoothstep(1.0, 0.65, st_x) * smoothstep(0.0, 0.05, y) * smoothstep(1.0, 0.80, st_y);
+    float edgeMask = smoothstep(1.0, 0.65, st_x) * smoothstep(0.0, 0.03, y) * smoothstep(1.0, 0.70, y);
 
     // Blackbody thermal color ramp & incandescence
     float density = tex.r * edgeMask;
-    vec3 fireColor = tex.rgb * 1.85;
+    vec3 fireColor;
 
-    // Incandescent white-hot core at burning fuel bed
-    if (density > 0.35 && st_x < 0.55 && y < 0.55) {
-      float coreFactor = (density - 0.35) * 2.2 * (1.0 - st_x);
-      fireColor = mix(fireColor, vec3(1.0, 0.98, 0.90) * 2.6, coreFactor);
+    // Center fuel bed: incandescent white-hot core right above burning coals
+    if (st_x < 0.28 && y < 0.35) {
+      float coreU = (1.0 - st_x / 0.28) * (1.0 - y / 0.35);
+      fireColor = mix(vec3(1.0, 0.72, 0.12), vec3(1.0, 0.96, 0.85) * 1.8, coreU);
+    } else if (st_x < 0.65) {
+      float midU = (st_x - 0.28) / 0.37;
+      fireColor = mix(vec3(1.0, 0.72, 0.12), vec3(1.0, 0.38, 0.03), midU);
+    } else {
+      float edgeU = (st_x - 0.65) / 0.35;
+      fireColor = mix(vec3(1.0, 0.38, 0.03), vec3(0.70, 0.12, 0.01), edgeU);
     }
 
-    // Outer flame licking edges: deep roaring orange and ember crimson
-    if (st_x > 0.40) {
-      fireColor = mix(fireColor, vec3(1.0, 0.35, 0.04) * 1.5, (st_x - 0.40) * 1.4);
-    }
-
-    fireColor *= (1.0 + uSurge * 0.5);
+    fireColor *= (1.0 + uSurge * 0.45);
 
     return vec4(fireColor, density);
   }
@@ -230,16 +231,16 @@ const fragmentShader = /* glsl */ `
         // Map local box to fire space: Y in [0, 1], XZ in [-1, 1]
         vec3 p = vec3(rayPos.x * 2.0, rayPos.y, rayPos.z * 2.0);
         vec4 s = sampleVolumetricFire(p);
-        accumColor += s * 0.42;
+        accumColor += s * (stepLen * 3.0);
 
         // Early saturation exit
-        if (accumColor.r > 2.8) break;
+        if (accumColor.r > 2.6) break;
       }
 
       rayPos += rayDir * stepLen;
     }
 
-    accumColor.a = clamp(accumColor.r * 1.1, 0.0, 1.0);
+    accumColor.a = clamp(accumColor.r * 1.15, 0.0, 1.0);
     if (accumColor.a < 0.015) discard;
 
     gl_FragColor = accumColor;

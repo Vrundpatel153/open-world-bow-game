@@ -162,7 +162,7 @@ function ArrowTrailRenderer({
 
     // Update material time uniform
     if ((material as any).uniforms?.uTime) {
-      ;(material as any).uniforms.uTime.value = state.clock.elapsedTime
+      ; (material as any).uniforms.uTime.value = state.clock.elapsedTime
     }
   })
 
@@ -275,15 +275,11 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
         continue
       }
 
-      // ── Stuck Arrow Quiver Wobble & Dissipating Slipstream ──────────────────
+      // ── Stuck Arrow Quiver Wobble ──────────────────────────────────────────
       if (a.stuck) {
         if (a.wobbleAmp > 0.001) {
           a.wobbleTime += dt
           a.wobbleAmp = THREE.MathUtils.damp(a.wobbleAmp, 0, 8, dt)
-          arrowsUpdated = true
-        }
-        if (a.trail.length > 0) {
-          a.trail.shift()
           arrowsUpdated = true
         }
         continue
@@ -509,8 +505,8 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
           renderQuat.multiply(wobbleQ)
         }
 
-        // Dynamic aerodynamic ribbon trail (camera-facing slipstream)
-        const hasTrail = a.trail.length > 1
+        // Efficient pre-allocated ribbon trail mesh
+        const hasTrail = !a.stuck && a.trail.length > 1
 
         return (
           <group key={a.id}>
@@ -525,7 +521,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
               quaternion={renderQuat}
             >
               {arrowNodes.Arrow_1 && (
-                <group position={[0, 0, -0.706]} rotation={[-Math.PI * 0.5, 0, 0]} scale={26.25}>
+                <group position={[0, 0, -0.807]} rotation={[-Math.PI * 0.5, 0, 0]} scale={30.0}>
                   {/* Turkey Feathers */}
                   <mesh geometry={arrowNodes.Arrow_1.geometry} material={fletchMat} />
                   {/* Straight Cedar Shaft */}

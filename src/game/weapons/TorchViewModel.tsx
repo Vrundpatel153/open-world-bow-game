@@ -220,8 +220,9 @@ export default function TorchViewModel() {
     return { woodMat, burlapMat, coalMat }
   }, [barkTexture, burlapTexture])
 
-  // Open-Source 3D Volumetric Raymarched Fire
+  // Open-Source 3D Volumetric Raymarched Fire Geometry
   const fireBoxGeo = useMemo(() => {
+    // Unit box: X, Z in [-0.5, 0.5], Y in [0.0, 1.0] (base anchored at Y=0)
     const geo = new THREE.BoxGeometry(1.0, 1.0, 1.0)
     geo.translate(0, 0.5, 0)
     return geo
@@ -388,7 +389,7 @@ export default function TorchViewModel() {
 
     // 6b. Synchronize Global Torch Data for Environment & Foliage Shaders
     if (!(window as any).__torchData) {
-      ;(window as any).__torchData = {
+      ; (window as any).__torchData = {
         active: false,
         pos: new THREE.Vector3(0, -9999, 0),
         intensity: 0,
@@ -510,21 +511,33 @@ export default function TorchViewModel() {
                 castShadow
               />
 
-              {/* 3. Incandescent Pine-Pitch Coal Head Core */}
+              {/* 3. Handle Binding Rope Cord */}
               <mesh
                 geometry={nodes.WoodenTorch_3.geometry}
-                material={materials.coalMat}
+                material={materials.woodMat}
               />
             </group>
           )}
 
-          {/* Authentic Open-Source 3D Volumetric Raymarched Fire (Zero Flat Quads, 100% 3D Fluid) */}
+          {/* Burning Pine-Pitch Coal Head Core (anchored snugly inside the burlap rim) */}
+          <mesh position={[0, 0.238, 0]}>
+            <cylinderGeometry args={[0.024, 0.021, 0.014, 16]} />
+            <meshStandardMaterial
+              color="#1c0702"
+              emissive="#ff3d00"
+              emissiveIntensity={3.4}
+              roughness={0.88}
+              metalness={0.02}
+            />
+          </mesh>
+
+          {/* Authentic 3D Volumetric Raymarched Fire (snugly rooted on coals, diameter matches stick head) */}
           <mesh
             ref={fireMeshRef}
             geometry={fireBoxGeo}
             material={volumetricFireMat}
-            position={[0, 0.245, 0]}
-            scale={[0.18, 0.34, 0.18]}
+            position={[0, 0.238, 0]}
+            scale={[0.062, 0.26, 0.062]}
             renderOrder={1000}
           />
 
