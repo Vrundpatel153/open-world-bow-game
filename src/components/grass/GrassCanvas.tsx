@@ -19,12 +19,14 @@ import GrassSceneContent from "./GrassSceneContent";
 import FpsSystem from "@/systems/FpsSystem";
 import { inputManager } from "@/systems/KeyboardInput";
 import GameHUD from "@/game/ui/GameHUD";
+import { useQuestStore } from "@/game/stores/questStore";
 
 const CAMERA_FAR = 3000;
 
 export default function GrassCanvas() {
   const [isLoadingModel, setIsLoadingModel] = useState(true);
   const [isPointerLocked, setIsPointerLocked] = useState(false);
+  const isCardsHidden = useQuestStore((s) => s.isCardsHidden);
 
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
   const cameraYawRef = useRef<number>(0);
@@ -107,7 +109,7 @@ export default function GrassCanvas() {
       />
 
       {/* ── First-Person Pointer Lock Prompt (Clean RPG Style) ────────────── */}
-      {!isPointerLocked && !isLoadingModel && (
+      {!isPointerLocked && !isLoadingModel && !isCardsHidden && (
         <div
           onClick={() => {
             const canvas = document.querySelector('canvas')

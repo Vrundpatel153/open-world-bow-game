@@ -79,7 +79,7 @@ class InputManager {
     } else if (code === 'Digit5' || key === '5') {
       useQuestStore.setState({ notification: 'Field Tools: Flint & Kindling' })
     } else if (code === 'KeyJ' || key === 'j') {
-      useQuestStore.getState().toggleQuestLog()
+      useQuestStore.getState().toggleCardsHidden()
     } else if (code === 'KeyC' || key === 'c') {
       useQuestStore.getState().toggleCompass()
     } else if (code === 'KeyT' || key === 't') {

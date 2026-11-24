@@ -81,9 +81,12 @@ interface QuestState {
   notification: string | null
   dayPhaseName: string
   isQuestLogCollapsed: boolean
+  isCardsHidden: boolean
   isCompassVisible: boolean
 
   // Actions
+  toggleCardsHidden: () => void
+  setCardsHidden: (hidden: boolean) => void
   toggleQuestLog: () => void
   setQuestLogCollapsed: (collapsed: boolean) => void
   toggleCompass: () => void
@@ -116,7 +119,10 @@ export const useQuestStore = create<QuestState>((set, get) => ({
   notification: 'Dispel the guardian embers around the four ancient monoliths.',
   dayPhaseName: 'DAYLIGHT',
   isQuestLogCollapsed: false,
+  isCardsHidden: false,
   isCompassVisible: true,
+  toggleCardsHidden: () => set((state) => ({ isCardsHidden: !state.isCardsHidden })),
+  setCardsHidden: (isCardsHidden) => set({ isCardsHidden }),
   toggleQuestLog: () => set((state) => ({ isQuestLogCollapsed: !state.isQuestLogCollapsed })),
   setQuestLogCollapsed: (isQuestLogCollapsed) => set({ isQuestLogCollapsed }),
   toggleCompass: () => set((state) => ({ isCompassVisible: !state.isCompassVisible })),

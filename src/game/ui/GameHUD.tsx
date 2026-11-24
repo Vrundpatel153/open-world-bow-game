@@ -61,6 +61,8 @@ export default function GameHUD({
   const dayPhaseName = useQuestStore((s) => s.dayPhaseName)
   const isQuestLogCollapsed = useQuestStore((s) => s.isQuestLogCollapsed)
   const toggleQuestLog = useQuestStore((s) => s.toggleQuestLog)
+  const isCardsHidden = useQuestStore((s) => s.isCardsHidden)
+  const toggleCardsHidden = useQuestStore((s) => s.toggleCardsHidden)
   const isCompassVisible = useQuestStore((s) => s.isCompassVisible)
   const toggleCompass = useQuestStore((s) => s.toggleCompass)
   const resetGame = useQuestStore((s) => s.resetGame)
@@ -245,6 +247,24 @@ export default function GameHUD({
             }}
           >
             [T] TIME
+          </span>
+          <span
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleCardsHidden()
+            }}
+            title="Click or press [J] to toggle all HUD cards (keep only compass)"
+            style={{
+              fontSize: 7.5,
+              opacity: 0.85,
+              padding: '0 5px',
+              borderRadius: 3,
+              background: isCardsHidden ? 'rgba(214, 184, 120, 0.35)' : 'rgba(214, 184, 120, 0.20)',
+              border: '1px solid rgba(214, 184, 120, 0.35)',
+              cursor: 'pointer',
+            }}
+          >
+            [J] {isCardsHidden ? 'SHOW HUD' : 'HIDE HUD'}
           </span>
         </div>
 
@@ -453,7 +473,7 @@ export default function GameHUD({
       {/* ─────────────────────────────────────────────────────────────────────
           2. DYNAMIC COLLAPSIBLE RPG QUEST TRACKER (TOP-LEFT)
       ───────────────────────────────────────────────────────────────────── */}
-      {isQuestLogCollapsed ? (
+      {!isCardsHidden && (isQuestLogCollapsed ? (
         /* Collapsed / Hidden State: Minimal Frosted Pill Badge */
         <div
           onClick={toggleQuestLog}
@@ -780,7 +800,7 @@ export default function GameHUD({
               : 'Draw your recurve bow and dispel the 3 orbiting guardian embers around each monolith.'}
           </div>
         </div>
-      )}
+      ))}
 
       {/* ─────────────────────────────────────────────────────────────────────
           3. CINEMATIC NOTIFICATION BANNER (TOP-CENTER)
@@ -991,21 +1011,21 @@ export default function GameHUD({
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────────
-          5. AUTHENTIC RPG EQUIPMENT HOTBAR & COMBAT GUIDES (BOTTOM-CENTER)
+          5. AUTHENTIC RPG EQUIPMENT HOTBAR & COMBAT GUIDES (BOTTOM-LEFT)
       ───────────────────────────────────────────────────────────────────── */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 22,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 6,
-          pointerEvents: 'none',
-        }}
-      >
+      {!isCardsHidden && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 22,
+            left: 22,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            gap: 6,
+            pointerEvents: 'none',
+          }}
+        >
         {/* 5-Slot Survival Quick-Access Tray (Survivor Bag Hotbar) */}
         <div
           style={{
@@ -1339,6 +1359,7 @@ export default function GameHUD({
           </div>
         )}
       </div>
+      )}
 
       {/* ─────────────────────────────────────────────────────────────────────
           6. GRAND HERALDIC VICTORY PROCLAMATION (MODAL ON 4/4 RESTORED)
