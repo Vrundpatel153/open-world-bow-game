@@ -120,7 +120,7 @@ export function makePineLeafMaterial(
             float _tAtten = clamp( 1.0 - _tDist / uTorchParams.x, 0.0, 1.0 );
             _tAtten = pow( _tAtten, 1.45 );
             vec3  _tLight = uTorchColor * ( _tAtten * uTorchParams.y * ( 1.0 + uTorchParams.w ) * 0.9 );
-            diffuseColor.rgb += diffuseColor.rgb * _tLight;
+            diffuseColor.rgb += ( diffuseColor.rgb * 0.4 + vec3(0.06, 0.12, 0.04) ) * _tLight;
           }
         }
       }`,

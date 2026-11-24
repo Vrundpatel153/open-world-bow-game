@@ -381,10 +381,10 @@ export default function TorchViewModel() {
     const flicker3 = (Math.random() - 0.5) * 0.28
 
     if (flameLightRef.current) {
-      const baseIntensity = 10.0 * equipProgress.current
+      const baseIntensity = 14.0 * equipProgress.current
       flameLightRef.current.intensity = Math.max(
-        2.5,
-        baseIntensity + flicker1 * 1.5 + flicker2 * 1.0 + flicker3 + (waveTimer.current > 0 ? 4.0 : 0.0)
+        3.5,
+        baseIntensity + flicker1 * 2.0 + flicker2 * 1.4 + flicker3 + (waveTimer.current > 0 ? 5.0 : 0.0)
       )
     }
 
@@ -404,7 +404,7 @@ export default function TorchViewModel() {
       const torchHeadWorld = new THREE.Vector3(0, 0.25, 0)
       localGroup.localToWorld(torchHeadWorld)
       td.pos.copy(torchHeadWorld)
-      td.intensity = 2.4 * equipProgress.current
+      td.intensity = 3.6 * equipProgress.current
       td.flicker = flicker1 * 0.12 + flicker2 * 0.08
     } else {
       td.intensity = 0
@@ -551,18 +551,14 @@ export default function TorchViewModel() {
             />
           </group>
 
-          {/* Dynamic PointLight Illuminating the Forest (28m Reach) */}
+          {/* Dynamic PointLight Illuminating the Forest (32m Reach) */}
           <pointLight
             ref={flameLightRef}
             position={[0, 0.28, 0]}
             color="#ff8820"
-            intensity={10.0}
-            distance={28}
-            decay={1.3}
-            castShadow
-            shadow-bias={-0.0015}
-            shadow-mapSize-width={512}
-            shadow-mapSize-height={512}
+            intensity={14.0}
+            distance={34}
+            decay={1.15}
           />
         </group>
       </group>

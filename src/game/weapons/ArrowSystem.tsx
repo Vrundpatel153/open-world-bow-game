@@ -6,13 +6,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useRef, useEffect, useImperativeHandle, forwardRef, useMemo } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useQuestStore } from '../stores/questStore'
 import { sound } from '../audio/SoundSynthesizer'
 import { getOpenWorldHeight } from '@/components/world/OpenWorldGrassField'
 import { worldCollisionSystem } from '../physics/WorldCollisionSystem'
+import { createArrowTrackMaterial } from './ArrowTrackMaterial'
 
 export interface ArrowSystemHandle {
   spawnArrow: (origin: THREE.Vector3, direction: THREE.Vector3, power: number) => void
@@ -47,7 +48,13 @@ const GRAVITY = -13.5 // Realistic ballistic drop (m/s^2) with aerodynamic arche
 const MAX_ARROWS = 32
 const MAX_TRAIL_POINTS = 26
 
-// ── Zero-Allocation GPU Streamed Aerodynamic Ribbon Trail ───────────────────
+// Scratch vectors for camera-facing billboard ribbon generation (Zero GC allocations)
+const _tVec = new THREE.Vector3()
+const _cVec = new THREE.Vector3()
+const _nVec = new THREE.Vector3()
+const _upFallback = new THREE.Vector3(0, 1, 0)
+
+// ── AAA Camera-Facing Aerodynamic Ribbon Flight Trail ────────────────────────
 function ArrowTrailRenderer({
   points,
   material,
@@ -55,19 +62,28 @@ function ArrowTrailRenderer({
   points: THREE.Vector3[]
   material: THREE.Material
 }) {
+  const { camera } = useThree()
   const geo = useMemo(() => {
-    const pos = new Float32Array(MAX_TRAIL_POINTS * 4 * 3)
+    const vertexCount = MAX_TRAIL_POINTS * 2
+    const pos = new Float32Array(vertexCount * 3)
+    const uvs = new Float32Array(vertexCount * 2)
     const indices: number[] = []
+
     for (let pi = 0; pi < MAX_TRAIL_POINTS - 1; pi++) {
-      const b = pi * 4
-      indices.push(b, b + 1, b + 4)
-      indices.push(b + 1, b + 5, b + 4)
-      indices.push(b + 2, b + 3, b + 6)
-      indices.push(b + 3, b + 7, b + 6)
+      const i0 = pi * 2
+      const i1 = pi * 2 + 1
+      const i2 = (pi + 1) * 2
+      const i3 = (pi + 1) * 2 + 1
+      indices.push(i0, i1, i2)
+      indices.push(i2, i1, i3)
     }
+
     const g = new THREE.BufferGeometry()
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+    g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
     g.setIndex(indices)
+    // Pre-set static bounding sphere to avoid per-frame computeBoundingSphere
+    g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 400)
     return g
   }, [])
 
@@ -77,32 +93,77 @@ function ArrowTrailRenderer({
     }
   }, [geo])
 
-  useFrame(() => {
+  useFrame((state) => {
     if (!geo) return
     const posAttr = geo.getAttribute('position') as THREE.BufferAttribute
+    const uvAttr = geo.getAttribute('uv') as THREE.BufferAttribute
     const pos = posAttr.array as Float32Array
+    const uvs = uvAttr.array as Float32Array
     const n = points.length
-    if (n < 2) return
+    if (n < 2) {
+      geo.setDrawRange(0, 0)
+      return
+    }
+
+    const camPos = camera.position
 
     for (let pi = 0; pi < n; pi++) {
       const p = points[pi]
+
+      // Flight tangent vector
+      if (pi < n - 1) {
+        _tVec.copy(points[pi + 1]).sub(p)
+      } else {
+        _tVec.copy(p).sub(points[pi - 1])
+      }
+      if (_tVec.lengthSq() < 1e-6) {
+        _tVec.set(0, 0, 1)
+      } else {
+        _tVec.normalize()
+      }
+
+      // Vector to camera viewpoint
+      _cVec.copy(camPos).sub(p)
+
+      // Ribbon normal perpendicular to both tangent and view line
+      _nVec.crossVectors(_tVec, _cVec)
+      if (_nVec.lengthSq() < 1e-6) {
+        _nVec.crossVectors(_tVec, _upFallback)
+      }
+      _nVec.normalize()
+
+      // Progression: pi = 0 (oldest/tail, t = 0), pi = n - 1 (newest/nock, t = 1)
       const t = pi / (n - 1)
-      const halfW = 0.003 + 0.016 * t
-      pos[pi * 12 + 0] = p.x
-      pos[pi * 12 + 1] = p.y + halfW
-      pos[pi * 12 + 2] = p.z
-      pos[pi * 12 + 3] = p.x
-      pos[pi * 12 + 4] = p.y - halfW
-      pos[pi * 12 + 5] = p.z
-      pos[pi * 12 + 6] = p.x + halfW
-      pos[pi * 12 + 7] = p.y
-      pos[pi * 12 + 8] = p.z
-      pos[pi * 12 + 9] = p.x - halfW
-      pos[pi * 12 + 10] = p.y
-      pos[pi * 12 + 11] = p.z
+
+      // Width: starts sleek at arrow nock (~0.005m halfW = 10mm width), diffuses outward to 0.018m at tail
+      const halfW = 0.018 - 0.013 * t
+
+      // Left vertex
+      pos[pi * 6 + 0] = p.x + _nVec.x * halfW
+      pos[pi * 6 + 1] = p.y + _nVec.y * halfW
+      pos[pi * 6 + 2] = p.z + _nVec.z * halfW
+
+      // Right vertex
+      pos[pi * 6 + 3] = p.x - _nVec.x * halfW
+      pos[pi * 6 + 4] = p.y - _nVec.y * halfW
+      pos[pi * 6 + 5] = p.z - _nVec.z * halfW
+
+      // u: 0.0 at arrow nock (t = 1), 1.0 at dissipating tail (t = 0)
+      const u = 1.0 - t
+      uvs[pi * 4 + 0] = u
+      uvs[pi * 4 + 1] = 0.0
+      uvs[pi * 4 + 2] = u
+      uvs[pi * 4 + 3] = 1.0
     }
+
     posAttr.needsUpdate = true
-    geo.setDrawRange(0, (n - 1) * 12)
+    uvAttr.needsUpdate = true
+    geo.setDrawRange(0, (n - 1) * 6)
+
+    // Update material time uniform
+    if ((material as any).uniforms?.uTime) {
+      ;(material as any).uniforms.uTime.value = state.clock.elapsedTime
+    }
   })
 
   return <mesh geometry={geo} material={material} />
@@ -149,14 +210,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       side: THREE.DoubleSide,
     })
 
-    const trMat = new THREE.MeshBasicMaterial({
-      color: '#d0f0ff',
-      transparent: true,
-      opacity: 0.38,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    })
+    const trMat = createArrowTrackMaterial()
 
     return {
       shaftMat: sMat,
@@ -221,11 +275,15 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
         continue
       }
 
-      // ── Stuck Arrow Quiver Wobble ──────────────────────────────────────────
+      // ── Stuck Arrow Quiver Wobble & Dissipating Slipstream ──────────────────
       if (a.stuck) {
         if (a.wobbleAmp > 0.001) {
           a.wobbleTime += dt
           a.wobbleAmp = THREE.MathUtils.damp(a.wobbleAmp, 0, 8, dt)
+          arrowsUpdated = true
+        }
+        if (a.trail.length > 0) {
+          a.trail.shift()
           arrowsUpdated = true
         }
         continue
@@ -451,8 +509,8 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
           renderQuat.multiply(wobbleQ)
         }
 
-        // Efficient pre-allocated ribbon trail mesh
-        const hasTrail = !a.stuck && a.trail.length > 1
+        // Dynamic aerodynamic ribbon trail (camera-facing slipstream)
+        const hasTrail = a.trail.length > 1
 
         return (
           <group key={a.id}>
@@ -467,7 +525,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
               quaternion={renderQuat}
             >
               {arrowNodes.Arrow_1 && (
-                <group position={[0, 0, -0.807]} rotation={[-Math.PI * 0.5, 0, 0]} scale={30.0}>
+                <group position={[0, 0, -0.706]} rotation={[-Math.PI * 0.5, 0, 0]} scale={26.25}>
                   {/* Turkey Feathers */}
                   <mesh geometry={arrowNodes.Arrow_1.geometry} material={fletchMat} />
                   {/* Straight Cedar Shaft */}

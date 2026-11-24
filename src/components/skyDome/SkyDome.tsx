@@ -1771,6 +1771,8 @@ export default function SkyDome({
       u.uMoonCloudBleed.value = 0.65;
       u.uCloudRimStrength.value = 0.0;
       u.uCloudRim.value.set("#000000");
+      u.uCloudEdge.value.set("#071120");
+      u.uCloudCore.value.set("#050b14");
     } else {
       // Luminous Golden Sun Disc with Eddington limb darkening & compact corona
       u.uMoonColor.value.set("#fffdf0");
@@ -1944,17 +1946,17 @@ export default function SkyDome({
         t,
       );
 
-      // Cloud colors
-      cA.set(from.cloudCore ?? "#00348a");
-      cB.set(to.cloudCore ?? "#00348a");
+      // Cloud colors - natural nocturnal tones during night, avoiding cyan edges
+      cA.set(from.cloudCore ?? (nightBool ? "#050b14" : "#00348a"));
+      cB.set(to.cloudCore ?? (nightBool ? "#050b14" : "#00348a"));
       u.uCloudCore.value.lerpColors(cA, cB, t);
-      cA.set(from.cloudEdge ?? "#0a7cc7");
-      cB.set(to.cloudEdge ?? "#0a7cc7");
+      cA.set(from.cloudEdge ?? (nightBool ? "#071120" : "#2a5299"));
+      cB.set(to.cloudEdge ?? (nightBool ? "#071120" : "#2a5299"));
       u.uCloudEdge.value.lerpColors(cA, cB, t);
-      cA.set(from.cloudRim ?? "#8bbfee");
-      cB.set(to.cloudRim ?? "#8bbfee");
+      cA.set(from.cloudRim ?? (nightBool ? "#000000" : "#8bbfee"));
+      cB.set(to.cloudRim ?? (nightBool ? "#000000" : "#8bbfee"));
       u.uCloudRim.value.lerpColors(cA, cB, t);
-      u.uCloudRimStrength.value = lerp(
+      u.uCloudRimStrength.value = nightBool ? 0.0 : lerp(
         from.cloudRimStrength ?? 0.0,
         to.cloudRimStrength ?? 0.0,
         t,
@@ -2020,6 +2022,9 @@ export default function SkyDome({
         to.cloudsEnabled ? (to.cloudOpacity ?? cloudOpacity) : 0,
         t,
       );
+      u.uAuroraIntensity.value = (from.auroraEnabled || to.auroraEnabled)
+        ? lerp(from.auroraEnabled ? 1 : 0, to.auroraEnabled ? 1 : 0, t)
+        : 0;
     }
 
     // ── Where the disc actually IS, in world space ────────────────────────

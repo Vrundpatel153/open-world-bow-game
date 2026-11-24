@@ -192,7 +192,7 @@ export function makeGroundMaterial(
           vec3  _tDir = _toT / max( _tDist, 0.001 );
           float _tNdotL = max( _tDir.y * 0.7 + 0.3, 0.0 );
           vec3  _tLight = uTorchColor * _tNdotL * ( _tAtten * uTorchParams.y * ( 1.0 + uTorchParams.w ) );
-          _gndCol += _gndCol * _tLight;
+          _gndCol += ( _gndCol * 0.4 + uGrassBottom * 0.6 + vec3(0.08) ) * _tLight;
         }
       }
 

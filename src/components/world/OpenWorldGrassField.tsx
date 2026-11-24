@@ -285,6 +285,9 @@ export default function OpenWorldGrassField({
             const std = srcMat as THREE.MeshStandardMaterial
             m.customDepthMaterial = makePineLeafDepthMaterial(std)
             m.material = makePineLeafMaterial(std, m, u.surface)
+          } else {
+            // Suppress non-rock, non-tree diorama meshes (e.g. Plane.001) that occlude grass
+            m.visible = false
           }
         }
       })
@@ -513,10 +516,10 @@ export default function OpenWorldGrassField({
     const td = (window as any).__torchData
     if (td && td.active && s.uTorchPos && s.uTorchParams) {
       s.uTorchPos.value.copy(td.pos)
-      s.uTorchParams.value.set(24.0, td.intensity, 1.0, td.flicker)
+      s.uTorchParams.value.set(32.0, td.intensity, 1.0, td.flicker)
       s.uTorchColor.value.copy(td.color)
     } else if (s.uTorchParams) {
-      s.uTorchParams.value.set(24.0, 0.0, 0.0, 0.0)
+      s.uTorchParams.value.set(32.0, 0.0, 0.0, 0.0)
     }
 
     // ── Environmental Day-Night Dynamics ────────────────────────────────────
@@ -569,9 +572,9 @@ export default function OpenWorldGrassField({
     s.uShadowSampleY.value = 0.4
     s.uShadowRadius.value = 0.3
 
-    // Trampling settings
-    s.uRockFlatten.value = 0.05
-    s.uRockBend.value = 0.15
+    // Trampling settings (Blades remain 100% full height & lush, never flattening away)
+    s.uRockFlatten.value = 0.0
+    s.uRockBend.value = 0.08
     s.uRockRadiusMul.value = 0.85
     s.uRockFalloff.value = 0.25
 

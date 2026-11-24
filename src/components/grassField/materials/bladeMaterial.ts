@@ -278,7 +278,7 @@ export function makeBladeMaterial(u: BladeUniforms): THREE.MeshLambertMaterial {
             vec3  _tDir = _toT / max( _tDist, 0.001 );
             float _tWrap = max( dot( normalize( vBladeN ), _tDir ) * 0.5 + 0.5, 0.0 );
             vec3  _tLight = uTorchColor * ( _tWrap * 0.8 + 0.35 ) * ( _tAtten * uTorchParams.y * ( 1.0 + uTorchParams.w ) );
-            gl_FragColor.rgb += _bladeCol * _tLight;
+            gl_FragColor.rgb += ( _bladeCol * 0.4 + uGrassBottom * 0.6 + vec3(0.08) ) * _tLight;
           }
         }
 
