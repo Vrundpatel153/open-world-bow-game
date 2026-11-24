@@ -222,7 +222,9 @@ export default function TorchViewModel() {
 
   // Open-Source 3D Volumetric Raymarched Fire
   const fireBoxGeo = useMemo(() => {
-    return new THREE.BoxGeometry(0.18, 0.28, 0.18)
+    const geo = new THREE.BoxGeometry(1.0, 1.0, 1.0)
+    geo.translate(0, 0.5, 0)
+    return geo
   }, [])
 
   const fireTexture = useMemo(() => {
@@ -521,7 +523,8 @@ export default function TorchViewModel() {
             ref={fireMeshRef}
             geometry={fireBoxGeo}
             material={volumetricFireMat}
-            position={[0, 0.385, 0]}
+            position={[0, 0.245, 0]}
+            scale={[0.18, 0.34, 0.18]}
             renderOrder={1000}
           />
 

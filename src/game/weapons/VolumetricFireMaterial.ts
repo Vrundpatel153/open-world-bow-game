@@ -4,10 +4,11 @@
 // Real-Time Procedural Volumetric Fire & mattatz/THREE.Fire & Ashima 3D Simplex).
 // Features:
 // - True 3D Object-Space Volumetric Raymarching (ZERO flat crossed quads or paper cards)
-// - Multi-Octave 3D Simplex Convective Turbulence & Domain Warping
+// - Organic Teardrop Boundary Envelope with Guaranteed ZERO Box Silhouette
+// - Multi-Octave 3D Simplex Convective Turbulence & 3D Domain Warping
 // - Authentic Thermal Blackbody Radiation Curve with Incandescent Fuel Core (>1650K)
 // - Dynamic Locomotion & Wind Convective Deflection
-// - Anti-Banding Jittered Ray Progression & Smooth Boundary Attenuation
+// - Anti-Banding Jittered Ray Progression & High Optical Density
 // ─────────────────────────────────────────────────────────────────────────────
 
 import * as THREE from 'three'
@@ -29,7 +30,7 @@ const vertexShader = /* glsl */ `
 const fragmentShader = /* glsl */ `
   precision highp float;
 
-  #define ITERATIONS 30
+  #define ITERATIONS 32
   #define OCTAVES 3
 
   uniform sampler2D fireTex;
@@ -142,62 +143,71 @@ const fragmentShader = /* glsl */ `
 
   // ── Procedural Volumetric Sample ───────────────────────────────────────────
   vec4 sampleVolumetricFire(vec3 p) {
+    // p.y is in [0.0, 1.0] (0 = base coals, 1 = flame tip)
+    // p.xz is in [-1.0, 1.0]
     float r = length(p.xz);
     float y = p.y;
 
-    // Hard box margin rejection
-    if (r >= 1.0 || y <= 0.0 || y >= 1.0) return vec4(0.0);
+    // Strict boundary margin rejection
+    if (r >= 0.95 || y <= 0.01 || y >= 0.98) return vec4(0.0);
 
     // Dynamic wind and movement drag deflection: tilts flame backward
-    vec2 windOffset = uWind.xz * (y * y * 0.38) * uWindStrength;
-    p.xz -= windOffset;
+    vec2 windOffset = uWind.xz * (y * y * 0.45) * uWindStrength;
+    vec3 warpedP = p;
+    warpedP.xz -= windOffset;
+    float wr = length(warpedP.xz);
+
+    // Organic teardrop envelope:
+    // Wide rooted base above coals (y=0.0..0.15), swelling belly (y=0.25..0.4), tapering to licking flame apex
+    float belly = sin(clamp(y * 3.14159, 0.0, 3.14159));
+    float envelope = (0.75 + 0.25 * belly) * (1.0 - pow(y, 1.2)) * smoothstep(0.0, 0.04, y);
+    if (wr > envelope) return vec4(0.0);
 
     // Convective upward velocity & 3D noise coordinates
-    vec3 np = p;
-    np.y -= (seed + time * 2.4) * noiseScale.w;
+    vec3 np = warpedP;
+    np.y -= (seed + time * 3.0) * noiseScale.w;
     np.xz *= noiseScale.xz;
     np.y *= noiseScale.y;
 
-    // Domain warp: curling tendrils and turbulent licking tongues
-    vec3 warp = vec3(
-      snoise(np * 1.4 + vec3(0.0, -time * 1.5, 2.1)),
-      snoise(np * 1.4 + vec3(4.2, -time * 2.0, 0.7)),
-      snoise(np * 1.4 + vec3(1.7, -time * 1.8, 5.3))
+    // 3D Domain warp: curling tendrils and turbulent licking tongues
+    vec3 curl = vec3(
+      snoise(np * 1.5 + vec3(0.0, -time * 1.8, 2.3)),
+      snoise(np * 1.5 + vec3(5.1, -time * 2.2, 0.9)),
+      snoise(np * 1.5 + vec3(1.7, -time * 2.0, 4.7))
     );
-    np += warp * 0.22;
+    np += curl * 0.26;
 
     float turb = turbulence(np);
 
     // Convective distortion of flame profile
-    float st_y = y + sqrt(max(0.0, y)) * magnitude * (turb - 0.48);
-    float st_x = r + (turb - 0.5) * 0.20 * y;
+    float st_y = y + sqrt(max(0.0, y)) * magnitude * (turb - 0.46);
+    float st_x = wr / max(0.001, envelope);
 
     if (st_x <= 0.0 || st_x >= 1.0 || st_y <= 0.0 || st_y >= 1.0) return vec4(0.0);
 
     // Sample the authentic 3D fire gradient lookup texture
-    vec2 st = vec2(st_x, st_y);
+    vec2 st = vec2(clamp(st_x, 0.01, 0.99), clamp(st_y, 0.01, 0.99));
     vec4 tex = texture2D(fireTex, st);
 
-    // Thermal color grading & Blackbody radiation core:
-    // Core (high density, low radius) burns at intense incandescent white-yellow
-    float density = tex.r;
-    vec3 fireColor = tex.rgb * 1.55;
+    // Radial and vertical soft feathering to guarantee zero hard box edges
+    float edgeMask = smoothstep(1.0, 0.65, st_x) * smoothstep(0.0, 0.05, y) * smoothstep(1.0, 0.80, st_y);
 
-    // Incandescent white-hot core
-    if (density > 0.38 && st_x < 0.65) {
-      float coreFactor = (density - 0.38) * 1.6 * (1.0 - st_x);
-      fireColor = mix(fireColor, vec3(1.0, 0.96, 0.82) * 2.2, coreFactor);
+    // Blackbody thermal color ramp & incandescence
+    float density = tex.r * edgeMask;
+    vec3 fireColor = tex.rgb * 1.85;
+
+    // Incandescent white-hot core at burning fuel bed
+    if (density > 0.35 && st_x < 0.55 && y < 0.55) {
+      float coreFactor = (density - 0.35) * 2.2 * (1.0 - st_x);
+      fireColor = mix(fireColor, vec3(1.0, 0.98, 0.90) * 2.6, coreFactor);
     }
 
     // Outer flame licking edges: deep roaring orange and ember crimson
     if (st_x > 0.40) {
-      fireColor *= vec3(1.1, 0.75, 0.45);
+      fireColor = mix(fireColor, vec3(1.0, 0.35, 0.04) * 1.5, (st_x - 0.40) * 1.4);
     }
 
-    // Smooth boundary falloff to eliminate any box seams
-    float edgeFade = smoothstep(1.0, 0.72, r) * smoothstep(0.0, 0.06, y) * smoothstep(1.0, 0.78, y);
-    fireColor *= edgeFade;
-    density *= edgeFade;
+    fireColor *= (1.0 + uSurge * 0.5);
 
     return vec4(fireColor, density);
   }
@@ -209,34 +219,28 @@ const fragmentShader = /* glsl */ `
 
     // Anti-aliasing / dithering: jitter initial step position along the ray
     float jitter = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
-    float stepLen = 1.42 / float(ITERATIONS);
+    float stepLen = 1.35 / float(ITERATIONS);
     rayPos += rayDir * (stepLen * jitter);
 
     vec4 accumColor = vec4(0.0);
 
     for (int i = 0; i < ITERATIONS; i++) {
-      // Bounds check within unit box [-0.5, 0.5]
-      if (abs(rayPos.x) <= 0.5 && abs(rayPos.y) <= 0.5 && abs(rayPos.z) <= 0.5) {
-        // Map local box [-0.5, 0.5] to fire space: Y in [0, 1], XZ radius in [0, 1]
-        vec3 p = rayPos;
-        p.y += 0.5;
-        p.xz *= 2.0;
-
+      // Bounds check within unit box XZ in [-0.5, 0.5], Y in [0, 1]
+      if (rayPos.y >= 0.0 && rayPos.y <= 1.0 && abs(rayPos.x) <= 0.5 && abs(rayPos.z) <= 0.5) {
+        // Map local box to fire space: Y in [0, 1], XZ in [-1, 1]
+        vec3 p = vec3(rayPos.x * 2.0, rayPos.y, rayPos.z * 2.0);
         vec4 s = sampleVolumetricFire(p);
-        accumColor += s * (stepLen * 2.6);
+        accumColor += s * 0.42;
 
         // Early saturation exit
-        if (accumColor.r > 2.5) break;
+        if (accumColor.r > 2.8) break;
       }
 
       rayPos += rayDir * stepLen;
     }
 
-    // Flame flare surge boost when waving or swinging
-    accumColor.rgb *= (1.0 + uSurge * 0.4);
-    accumColor.a = clamp(accumColor.r * 0.85, 0.0, 1.0);
-
-    if (accumColor.a < 0.01) discard;
+    accumColor.a = clamp(accumColor.r * 1.1, 0.0, 1.0);
+    if (accumColor.a < 0.015) discard;
 
     gl_FragColor = accumColor;
   }
