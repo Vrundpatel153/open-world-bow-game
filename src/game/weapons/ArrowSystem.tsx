@@ -182,7 +182,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       const fwd = direction.clone().normalize()
       const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), fwd)
 
-      const tailPos = origin.clone().addScaledVector(fwd, -0.52)
+      const tailPos = origin.clone().addScaledVector(fwd, -0.807)
       const newArrow: FlyingArrow = {
         id: Date.now() + Math.random(),
         pos: origin.clone(),
@@ -262,9 +262,9 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
         a.quat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), fwd)
       }
 
-      // Append trail point at the tail of the arrow (0.52m behind tip)
+      // Append trail point at the tail of the arrow (0.807m behind tip)
       const fwd = speed > 0.1 ? a.vel.clone().normalize() : new THREE.Vector3(0, 0, 1)
-      const tailPos = a.pos.clone().addScaledVector(fwd, -0.52)
+      const tailPos = a.pos.clone().addScaledVector(fwd, -0.807)
       a.trail.push(tailPos)
       if (a.trail.length > MAX_TRAIL_POINTS) {
         a.trail.shift()
@@ -467,7 +467,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
               quaternion={renderQuat}
             >
               {arrowNodes.Arrow_1 && (
-                <group position={[0, 0, -0.538]} rotation={[-Math.PI * 0.5, 0, 0]} scale={20.0}>
+                <group position={[0, 0, -0.807]} rotation={[-Math.PI * 0.5, 0, 0]} scale={30.0}>
                   {/* Turkey Feathers */}
                   <mesh geometry={arrowNodes.Arrow_1.geometry} material={fletchMat} />
                   {/* Straight Cedar Shaft */}

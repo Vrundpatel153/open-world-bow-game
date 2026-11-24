@@ -111,15 +111,15 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const geo = new THREE.BufferGeometry()
     // 3 vertices: Upper Tip -> String Nock Center -> Lower Tip
     const positions = new Float32Array([
-      0, 0.242, 0.096,
-      0, 0.000, 0.096,
-      0, -0.242, 0.096,
+      0, 0.510, 0.202,
+      0, 0.000, 0.202,
+      0, -0.510, 0.202,
     ])
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
 
     const mat = new THREE.LineBasicMaterial({
       color: '#ded8ce',
-      linewidth: 1.5,
+      linewidth: 2.0,
     })
 
     const line = new THREE.Line(geo, mat)
@@ -156,9 +156,9 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
           // Spawn origin at arrow shelf rest in camera world coordinates
           const aFactor = aimProgress.current
           const spawnOffset = new THREE.Vector3()
-            .addScaledVector(camRight, THREE.MathUtils.lerp(0.18, 0.0, aFactor))
+            .addScaledVector(camRight, THREE.MathUtils.lerp(0.24, 0.04, aFactor))
             .addScaledVector(camUp, THREE.MathUtils.lerp(-0.08, -0.01, aFactor))
-            .addScaledVector(fwd, 0.55)
+            .addScaledVector(fwd, 0.65)
 
           const spawnPos = camera.position.clone().add(spawnOffset)
 
@@ -265,19 +265,20 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
     const aFactor = aimProgress.current
 
     // Viewmodel Position in Camera Space
-    // Idle stance: lower-right viewport (X~0.22m, Y~-0.16m, Z~-0.44m)
-    // Aiming stance: brought up toward center sight corridor (X~0.04m, Y~-0.03m, Z~-0.38m)
-    const eqY = (1.0 - equipProgress.current) * -0.55
-    const targetX = THREE.MathUtils.lerp(0.22, 0.04, aFactor) + bobX + swayOffset.current.x
-    const targetY = THREE.MathUtils.lerp(-0.16, -0.03, aFactor) + bobY + eqY + swayOffset.current.y
-    const targetZ = THREE.MathUtils.lerp(-0.44, -0.38, aFactor) + recoilOffset.current
+    // Heroic archery framing in right third: upper limb arcs high into upper right sky (matching user sketch)
+    // Idle stance: (X~0.27m, Y~-0.18m, Z~-0.48m)
+    // Aiming stance: brought up toward center sight picture (X~0.08m, Y~-0.05m, Z~-0.42m)
+    const eqY = (1.0 - equipProgress.current) * -0.65
+    const targetX = THREE.MathUtils.lerp(0.27, 0.08, aFactor) + bobX + swayOffset.current.x
+    const targetY = THREE.MathUtils.lerp(-0.18, -0.05, aFactor) + bobY + eqY + swayOffset.current.y
+    const targetZ = THREE.MathUtils.lerp(-0.48, -0.42, aFactor) + recoilOffset.current
 
     rigGroupRef.current.position.set(targetX, targetY, targetZ)
 
-    // Viewmodel Rotation
-    const pitchX = THREE.MathUtils.lerp(0.04, 0.01, aFactor) + recoilRotation.current
-    const yawY = THREE.MathUtils.lerp(0.06, -0.02, aFactor)
-    const rollZ = THREE.MathUtils.lerp(-0.16, -0.05, aFactor) + swayRot.current.z
+    // Viewmodel Rotation (natural archer cant to the right as in user sketch)
+    const pitchX = THREE.MathUtils.lerp(0.06, 0.02, aFactor) + recoilRotation.current
+    const yawY = THREE.MathUtils.lerp(-0.04, -0.01, aFactor)
+    const rollZ = THREE.MathUtils.lerp(-0.20, -0.06, aFactor) + swayRot.current.z
 
     rigGroupRef.current.rotation.set(pitchX, yawY, rollZ, 'YXZ')
 
@@ -287,22 +288,22 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
 
     // 6. Dynamic String Pull & Arrow Placement
     const tension = drawTension.current
-    const pullDistance = 0.095 * tension
+    const pullDistance = 0.22 * tension
 
     stringVibration.current = THREE.MathUtils.damp(stringVibration.current, 0, 14, dt)
-    const vibZ = Math.sin(state.clock.elapsedTime * 125) * 0.004 * stringVibration.current
+    const vibZ = Math.sin(state.clock.elapsedTime * 125) * 0.006 * stringVibration.current
 
     // String nock position (moves back along +Z towards archer when drawn)
-    const currentNockZ = 0.096 + pullDistance + vibZ
+    const currentNockZ = 0.202 + pullDistance + vibZ
 
     // Update dynamic bowstring buffer
     const posAttr = stringGeo.getAttribute('position') as THREE.BufferAttribute
     const posArr = posAttr.array as Float32Array
 
-    // Upper Tip
+    // Upper Tip (flexes slightly forward/inward under draw tension)
     posArr[0] = 0.0
-    posArr[1] = 0.242
-    posArr[2] = 0.096 - tension * 0.012
+    posArr[1] = 0.510
+    posArr[2] = 0.202 - tension * 0.025
 
     // Nock Center on String
     posArr[3] = 0.0
@@ -311,8 +312,8 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
 
     // Lower Tip
     posArr[6] = 0.0
-    posArr[7] = -0.242
-    posArr[8] = 0.096 - tension * 0.012
+    posArr[7] = -0.510
+    posArr[8] = 0.202 - tension * 0.025
 
     posAttr.needsUpdate = true
     stringGeo.computeBoundingSphere()
@@ -326,14 +327,14 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
 
         let arrowZ = currentNockZ
         let arrowY = 0.0
-        let arrowX = 0.005
+        let arrowX = 0.012
 
         if (isReloading.current) {
           const tSlide = (reloadProgress - 0.55) / 0.45
           const easeSlide = THREE.MathUtils.smoothstep(tSlide, 0, 1)
-          arrowY -= (1 - easeSlide) * 0.06
-          arrowX += (1 - easeSlide) * 0.04
-          arrowZ += (1 - easeSlide) * 0.12
+          arrowY -= (1 - easeSlide) * 0.09
+          arrowX += (1 - easeSlide) * 0.06
+          arrowZ += (1 - easeSlide) * 0.18
         }
 
         arrowGroupRef.current.position.set(arrowX, arrowY, arrowZ)
@@ -352,7 +353,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
       <group ref={rigGroupRef}>
         {/* Authentic 3D Handcrafted Wooden Recurve Bow Model */}
         {bowNodes.Bow_Wooden_1 && (
-          <group rotation={[0, -Math.PI * 0.5, 0]} scale={0.095}>
+          <group rotation={[0, -Math.PI * 0.5, 0]} scale={0.20}>
             <group rotation={[-Math.PI / 2, 0, 0]} scale={100}>
               {/* 1. Sculpted Mountain Yew Recurve Limbs & Fadeouts */}
               <mesh
@@ -376,7 +377,7 @@ export default function BowViewModel({ onFireArrow }: BowViewModelProps) {
         {/* Authentic 3D Cedar Hunting Arrow */}
         <group ref={arrowGroupRef}>
           {arrowNodes.Arrow_1 && (
-            <group rotation={[Math.PI * 0.5, 0, 0]} scale={20.0}>
+            <group rotation={[Math.PI * 0.5, 0, 0]} scale={30.0}>
               {/* 1. Shield-Cut Turkey Feathers */}
               <mesh
                 geometry={arrowNodes.Arrow_1.geometry}
