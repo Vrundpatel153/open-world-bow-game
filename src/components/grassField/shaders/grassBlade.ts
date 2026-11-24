@@ -158,11 +158,12 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
     normalize(vec3(instanceMatrix[1])),
     normalize(vec3(instanceMatrix[2]))
   );
+  mat3 invRot = transpose(instRot);
   // uWindFixLocal = 0 applies the WORLD wind vector as if it were local — every
   // blade then leans along its own random rotation and the field fans out. Kept
   // as a switch because it's the clearest way to show why the transpose is here.
   vec3 windWrong = vec3(uWindDir.x, 0.0, uWindDir.y);
-  vec3 windRight = transpose(instRot) * windWrong;
+  vec3 windRight = invRot * windWrong;
   vec3 windLocal = mix(windWrong, windRight, uWindFixLocal);
   transformed += windLocal * (swing + lean);
 
@@ -170,7 +171,7 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
   // wind. Bending on top of the flattening is what sells the trampling: pressed
   // down AND pushed aside, rather than merely scaled short.
   if (rockInfl > 0.001) {
-    vec3 awayLocal = transpose(instRot) * vec3(rockAway.x, 0.0, rockAway.y);
+    vec3 awayLocal = invRot * vec3(rockAway.x, 0.0, rockAway.y);
     transformed += awayLocal * (uRockBend * rockInfl * hMask);
   }
 
@@ -185,7 +186,7 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
       // High-frequency tactile jiggle and subtle soft lean as the explorer brushes past
       float pJiggle = sin(uTime * 14.0 + playerDist * 8.0) * 0.06 * pPush;
       vec2 pDir = pAway * (pPush * 0.08 + pJiggle);
-      vec3 pLocal = transpose(instRot) * vec3(pDir.x, 0.0, pDir.y);
+      vec3 pLocal = invRot * vec3(pDir.x, 0.0, pDir.y);
       transformed += pLocal * hMask;
       // ZERO height loss - blades remain 100% full height, lush, and visible
     }
@@ -194,16 +195,17 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
   // ── Localized Sword Slash Directional Wind, Wavy Ripple & Parting ─────────
   if (uSwordSlash.w > 0.001) {
     vec2 toSlash = baseXZ - uSwordSlash.xz;
-    float distToSlash = length(toSlash);
     float slashRadius = uSwordSlash.w;
-    if (distToSlash < slashRadius) {
-      float falloff = 1.0 - smoothstep(0.0, slashRadius, distToSlash);
+    float distSq = dot(toSlash, toSlash);
+    if (distSq < slashRadius * slashRadius) {
+      float distToSlash = sqrt(distSq);
+      float falloff = 1.0 - (distToSlash / slashRadius);
       // Directional impulse along sword slash direction
-      vec2 slashDir = normalize(uSwordDir.xz + vec2(0.001));
+      vec2 slashDir = uSwordDir.xz;
       // Dynamic resonant wave ripple traveling outward like a wind gust
       float waveRipple = sin(distToSlash * 7.0 - uTime * 18.0) * 0.12 * falloff;
-      vec2 totalSlash = slashDir * (falloff * 0.14) + slashDir * waveRipple;
-      vec3 slashForceLocal = transpose(instRot) * vec3(totalSlash.x, 0.0, totalSlash.y);
+      vec2 totalSlash = slashDir * (falloff * 0.14 + waveRipple);
+      vec3 slashForceLocal = invRot * vec3(totalSlash.x, 0.0, totalSlash.y);
       transformed += slashForceLocal * hMask;
       // ZERO height loss - tips sway and jiggle dynamically without vanishing
     }

@@ -11,6 +11,8 @@
 
 import * as THREE from 'three'
 
+const _rayDir = new THREE.Vector3()
+
 export type ColliderTag = 'rock' | 'tree' | 'shrine' | 'pillar'
 
 export interface WorldCollider {
@@ -160,10 +162,11 @@ class WorldCollisionSystem {
     p1: THREE.Vector3,
     rayRadius: number = 0.05
   ): RayHit | null {
-    const rayDir = p1.clone().sub(p0)
-    const rayLength = rayDir.length()
+    _rayDir.copy(p1).sub(p0)
+    const rayLength = _rayDir.length()
     if (rayLength < 0.0001) return null
-    rayDir.normalize()
+    _rayDir.divideScalar(rayLength)
+    const rayDir = _rayDir
 
     let closestHit: RayHit | null = null
     let closestDist = rayLength

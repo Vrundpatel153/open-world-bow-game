@@ -8,6 +8,22 @@ class SoundSynthesizer {
   private ctx: AudioContext | null = null
   private masterGain: GainNode | null = null
   private isMuted: boolean = false
+  private sharedNoiseBuffer: AudioBuffer | null = null
+
+  private getSharedNoiseBuffer(): AudioBuffer | null {
+    if (!this.ctx) return null
+    if (this.sharedNoiseBuffer) return this.sharedNoiseBuffer
+
+    // Pre-allocate a 1.0s high-fidelity noise buffer once
+    const length = Math.floor(this.ctx.sampleRate * 1.0)
+    const buf = this.ctx.createBuffer(1, length, this.ctx.sampleRate)
+    const data = buf.getChannelData(0)
+    for (let i = 0; i < length; i++) {
+      data[i] = Math.random() * 2 - 1
+    }
+    this.sharedNoiseBuffer = buf
+    return buf
+  }
 
   private init() {
     if (this.ctx) return
@@ -579,15 +595,10 @@ class SoundSynthesizer {
 
     const now = this.ctx.currentTime
 
-    // Air cutting whoosh noise buffer
+    // Air cutting whoosh noise buffer (reused pre-rendered noise for 0ms lag)
     const duration = comboStep === 3 ? 0.26 : 0.18
-    const bufferSize = Math.floor(this.ctx.sampleRate * duration)
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate)
-    const data = buffer.getChannelData(0)
-    for (let i = 0; i < bufferSize; i++) {
-      const env = Math.sin((i / bufferSize) * Math.PI)
-      data[i] = (Math.random() * 2 - 1) * env
-    }
+    const buffer = this.getSharedNoiseBuffer()
+    if (!buffer) return
     const noise = this.ctx.createBufferSource()
     noise.buffer = buffer
 
@@ -644,15 +655,10 @@ class SoundSynthesizer {
 
     const now = this.ctx.currentTime
 
-    // Heavy sonic whirlwind power whoosh
+    // Heavy sonic whirlwind power whoosh (reused pre-rendered noise for 0ms lag)
     const duration = 0.35
-    const bufferSize = Math.floor(this.ctx.sampleRate * duration)
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate)
-    const data = buffer.getChannelData(0)
-    for (let i = 0; i < bufferSize; i++) {
-      const env = Math.sin((i / bufferSize) * Math.PI)
-      data[i] = (Math.random() * 2 - 1) * env
-    }
+    const buffer = this.getSharedNoiseBuffer()
+    if (!buffer) return
     const noise = this.ctx.createBufferSource()
     noise.buffer = buffer
 
