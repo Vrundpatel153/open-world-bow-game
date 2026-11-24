@@ -140,12 +140,27 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
   vec3 wPos = (instanceMatrix * vec4(position, 1.0)).xyz;
   vWorldPos = (modelMatrix * instanceMatrix * vec4(position, 1.0)).xyz;
 
-  float primary = sin(dot(wPos.xz, uWindDir) * uWindFreq + uTime * uWindSpeed);
-  float second  = sin(dot(wPos.xz, uWindDir) * uWindFreq * 2.6 + uTime * uWindSpeed * 1.8 + 1.3) * 0.35;
-  vec2  perp    = vec2(-uWindDir.y, uWindDir.x);
-  float turb    = sin(dot(wPos.xz, perp) * uWindFreq * 1.9 + uTime * uWindSpeed * 0.7 + 2.6) * uWindTurb;
-  float swing   = (primary + second + turb) * uWindStrength * hMask;
-  float lean    = uWindLean * hMask;
+  // ── Multi-Harmonic Rolling Wind Simulation (Fluid Waves, Eddies & Height Bowing) ──
+  vec2 windCoord = vWorldPos.xz;
+  vec2 perp = vec2(-uWindDir.y, uWindDir.x);
+
+  // Curved wave front: prevents flat parallel stripes by curving along the perpendicular axis
+  float waveFront = dot(windCoord, uWindDir) * uWindFreq + sin(dot(windCoord, perp) * (uWindFreq * 0.45) + 0.5) * 1.6;
+  float primary = sin(waveFront - uTime * uWindSpeed);
+
+  // Secondary undulating ripple
+  float second = sin(dot(windCoord, uWindDir) * (uWindFreq * 2.2) - uTime * (uWindSpeed * 1.5) + 1.2) * 0.35;
+
+  // Cross-breeze eddy turbulence
+  float turb = sin(dot(windCoord, perp) * (uWindFreq * 1.8) + uTime * (uWindSpeed * 0.8) + 2.4) * uWindTurb;
+
+  // Rolling wind gust envelope (sweeping breeze surges rolling across the landscape)
+  float gustSweep = 0.72 + 0.28 * sin(dot(windCoord, uWindDir) * 0.04 - uTime * 0.52 + 1.1);
+  gustSweep = gustSweep * gustSweep;
+
+  float totalSwing = (primary + second + turb) * gustSweep;
+  float swing = totalSwing * uWindStrength * hMask;
+  float lean = uWindLean * hMask;
 
   // Wind is a world-space vector but transformed is in blade-local space, and
   // every blade has a random Y rotation — so local +X points a different way per
@@ -167,28 +182,58 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
   vec3 windLocal = mix(windWrong, windRight, uWindFixLocal);
   transformed += windLocal * (swing + lean);
 
+  // Natural physical arc-length conservation: blade bows down in Y as it displaces horizontally
+  float horizDisplace = length(windLocal.xz * (swing + lean));
+  transformed.y -= horizDisplace * horizDisplace * 0.36 * hMask;
+
   // Splay the tips away from the rock's centre — same world→local trick as the
   // wind. Bending on top of the flattening is what sells the trampling: pressed
   // down AND pushed aside, rather than merely scaled short.
   if (rockInfl > 0.001) {
     vec3 awayLocal = invRot * vec3(rockAway.x, 0.0, rockAway.y);
     transformed += awayLocal * (uRockBend * rockInfl * hMask);
+    transformed.y -= uRockFlatten * rockInfl * 0.35 * hMask;
   }
 
-  // ── Dynamic Player Walking Interaction (Elastic Jiggle & Organic Parting) ──
+  // ── Dynamic Player Walking Interaction (Smooth Directional Parting & Elastic Wake) ──
   if (uPlayerPos.w > 0.001) {
     vec2 toPlayer = baseXZ - uPlayerPos.xz;
     float playerDist = length(toPlayer);
     float playerRadius = uPlayerPos.w;
     if (playerDist < playerRadius) {
-      float pPush = 1.0 - smoothstep(0.0, playerRadius, playerDist);
-      vec2 pAway = playerDist > 0.001 ? toPlayer / playerDist : vec2(0.0, 1.0);
-      // High-frequency tactile jiggle and subtle soft lean as the explorer brushes past
-      float pJiggle = sin(uTime * 14.0 + playerDist * 8.0) * 0.06 * pPush;
-      vec2 pDir = pAway * (pPush * 0.08 + pJiggle);
-      vec3 pLocal = invRot * vec3(pDir.x, 0.0, pDir.y);
+      // Silky smooth quadratic falloff
+      float pFactor = 1.0 - smoothstep(0.0, playerRadius, playerDist);
+      float pPush = pFactor * pFactor;
+
+      // Base radial push away from player center
+      vec2 pAway = playerDist > 1e-4 ? toPlayer / playerDist : vec2(0.0, 1.0);
+
+      // Velocity wake: part grass along the movement direction
+      vec2 pVel = uPlayerVelocity.xz;
+      float pSpeed = length(pVel);
+      vec2 pDir = pAway;
+
+      if (pSpeed > 0.12) {
+        vec2 pVelNorm = pVel / pSpeed;
+        float forwardDot = dot(pAway, pVelNorm);
+        vec2 pSide = pAway - pVelNorm * forwardDot;
+        // Blend radial push with forward & lateral wake
+        pDir = normalize(pAway * 0.60 + pSide * 0.40 + pVelNorm * max(forwardDot, 0.0) * 0.35);
+      }
+
+      // Proportional push force: up to 0.46m deflection
+      float pushStrength = (0.32 + min(pSpeed * 0.04, 0.18)) * pPush;
+
+      // Soft natural elastic ripple (gentle fluid reaction, zero harsh buzzing)
+      float pElastic = sin(uTime * 5.5 - playerDist * 3.8) * 0.035 * pPush;
+      vec2 totalPlayerDisplace = pDir * (pushStrength + pElastic);
+
+      vec3 pLocal = invRot * vec3(totalPlayerDisplace.x, 0.0, totalPlayerDisplace.y);
       transformed += pLocal * hMask;
-      // ZERO height loss - blades remain 100% full height, lush, and visible
+
+      // Realistic downward bowing: grass bends underfoot and brushes under legs
+      float pDownwardBend = pPush * (0.38 + min(pSpeed * 0.03, 0.14)) * hMask;
+      transformed.y -= pDownwardBend;
     }
   }
 
@@ -200,14 +245,12 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
     if (distSq < slashRadius * slashRadius) {
       float distToSlash = sqrt(distSq);
       float falloff = 1.0 - (distToSlash / slashRadius);
-      // Directional impulse along sword slash direction
       vec2 slashDir = uSwordDir.xz;
-      // Dynamic resonant wave ripple traveling outward like a wind gust
       float waveRipple = sin(distToSlash * 7.0 - uTime * 18.0) * 0.12 * falloff;
-      vec2 totalSlash = slashDir * (falloff * 0.14 + waveRipple);
+      vec2 totalSlash = slashDir * (falloff * 0.18 + waveRipple);
       vec3 slashForceLocal = invRot * vec3(totalSlash.x, 0.0, totalSlash.y);
       transformed += slashForceLocal * hMask;
-      // ZERO height loss - tips sway and jiggle dynamically without vanishing
+      transformed.y -= falloff * 0.15 * hMask;
     }
   }
 

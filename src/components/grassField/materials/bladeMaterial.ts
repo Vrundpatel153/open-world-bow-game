@@ -176,6 +176,7 @@ export function makeBladeMaterial(u: BladeUniforms): THREE.MeshLambertMaterial {
       varying float vDirt;
       varying float vPatch;
       ${DEBUG_FRAGMENT_UNIFORMS}
+      uniform float uTime;
       uniform vec3  uGrassBottom;
       uniform vec3  uGrassTop;
       uniform float uBrightness;
@@ -204,14 +205,15 @@ export function makeBladeMaterial(u: BladeUniforms): THREE.MeshLambertMaterial {
         varying vec4 vGrassShCoord[ GRASS_SHADOW_TAPS ];
       #endif\n` + shader.fragmentShader;
 
-    // Both faces shade identically
+    // Both faces shade with smooth foliage normal
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <normal_fragment_begin>",
       `#include <normal_fragment_begin>
-      normal = normalize( mat3( viewMatrix ) * vec3( 0.0, 1.0, 0.0 ) );`,
+      vec3 _softFragN = normalize( mix( vec3( 0.0, 1.0, 0.0 ), vBladeN, 0.24 * vBH ) );
+      normal = normalize( mat3( viewMatrix ) * _softFragN );`,
     );
 
-    // Blend base-to-tip gradient and organic meadow patches (ZERO yellow cast)
+    // Blend base-to-tip gradient, organic meadow patches, and rolling wind wave sheen
     shader.fragmentShader = shader.fragmentShader.replace(
       "vec4 diffuseColor = vec4( diffuse, opacity );",
       `float _gT = clamp( ( vBH - uGradStart ) / max( uGradEnd - uGradStart, 0.001 ), 0.0, 1.0 );
@@ -222,6 +224,10 @@ export function makeBladeMaterial(u: BladeUniforms): THREE.MeshLambertMaterial {
       _bladeCol = mix( _bladeCol, mix( uPatchLush, uPatchDry, _pt ), uPatchStrength );
 
       _bladeCol = mix( _bladeCol, uDirtColor, vDirt * uDirtBlend );
+
+      // Subtle rolling wind wave light sheen across waving blade tips
+      float _windSheen = sin( dot( vWorldPos.xz, uSunDir.xz ) * 0.12 + vWorldPos.x * 0.05 - uTime * 1.6 ) * 0.05 + 0.05;
+      _bladeCol += vec3( 0.04, 0.06, 0.02 ) * ( _windSheen * vBH );
 
       vec4 diffuseColor = vec4( _bladeCol * uBrightness, opacity );`,
     );

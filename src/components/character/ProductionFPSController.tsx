@@ -15,7 +15,7 @@ import { sound } from '@/game/audio/SoundSynthesizer'
 import { worldCollisionSystem } from '@/game/physics/WorldCollisionSystem'
 
 interface ProductionFPSControllerProps {
-  onPositionUpdate?: (pos: THREE.Vector3) => void
+  onPositionUpdate?: (pos: THREE.Vector3, vel: THREE.Vector3) => void
   getTerrainHeight: (x: number, z: number) => number
   worldRadius?: number
   cameraYawRef?: React.MutableRefObject<number>
@@ -179,9 +179,9 @@ export default function ProductionFPSController({
         targetVel.current.set(0, 0, 0)
       }
 
-      // Smooth horizontal velocity integration (Snappy AAA instant response)
-      const accelRate = isGrounded.current ? 52 : 16
-      const frictionRate = isGrounded.current ? 28 : 4
+      // Smooth horizontal velocity integration (Smooth, responsive AAA locomotion)
+      const accelRate = isGrounded.current ? 38 : 14
+      const frictionRate = isGrounded.current ? 24 : 4
 
       if (isMoving) {
         vel.current.x = THREE.MathUtils.damp(vel.current.x, targetVel.current.x, accelRate, FIXED_DT)
@@ -302,8 +302,8 @@ export default function ProductionFPSController({
       cameraYawRef.current = yaw.current
     }
 
-    // Notify scene of player position for real-time grass trampling
-    onPositionUpdate?.(pos.current)
+    // Notify scene of player position and velocity for real-time grass trampling & parting wake
+    onPositionUpdate?.(pos.current, vel.current)
   })
 
   return null

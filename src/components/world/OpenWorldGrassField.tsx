@@ -78,6 +78,7 @@ function applyWorldYShift(obj: THREE.Object3D, deltaWorldY: number) {
 interface OpenWorldGrassFieldProps {
   preset?: string
   playerPosRef?: React.MutableRefObject<THREE.Vector3>
+  playerVelRef?: React.MutableRefObject<THREE.Vector3>
   onLoaded?: () => void
   sunElevRef?: React.MutableRefObject<number>
   isNightRef?: React.MutableRefObject<boolean>
@@ -107,6 +108,7 @@ const FLOWER_TEXTURES_B = [
 
 export default function OpenWorldGrassField({
   playerPosRef,
+  playerVelRef,
   onLoaded,
   sunElevRef,
   isNightRef,
@@ -193,7 +195,7 @@ export default function OpenWorldGrassField({
     forestLawnGeo.computeVertexNormals()
 
     // 44,000 14-blade natural interlocking sods (616,000 broad forest lawn blades across the entire world):
-    // Multi-tier sods interlace with radial overlap, completely eliminating gaps, bare patches, and plain areas.
+    // 3 segments per blade deliver silky smooth continuous parabolic curvature from root to tip.
     const coreBlades = scatterBlades(new THREE.Mesh(forestLawnGeo), {
       uniforms: u.surface,
       density: 4.8,
@@ -203,7 +205,7 @@ export default function OpenWorldGrassField({
       minLength: 1.05,
       maxLength: 1.30,
       tiltMax: 0.20,
-      segments: 2,
+      segments: 3,
     })
 
     // 2. Perimeter Boundary Hills Turf Ring (Radius 48m to 82m)
@@ -490,11 +492,16 @@ export default function OpenWorldGrassField({
       s.uSunColor.value.copy(sunLightRef.current.color).multiplyScalar(sunLightRef.current.intensity)
     }
 
-    // Real-Time Grass Interactive Elastic Jiggle & Bending under player's feet
+    // Real-Time Grass Interactive Elastic Parting & Directional Wake under player's feet
     if (playerPosRef?.current) {
       const p = playerPosRef.current
+      const v = playerVelRef?.current
       if (s.uPlayerPos) {
-        s.uPlayerPos.value.set(p.x, p.y, p.z, 0.55)
+        // Natural 1.35m interaction radius with smooth quadratic falloff
+        s.uPlayerPos.value.set(p.x, p.y, p.z, 1.35)
+      }
+      if (s.uPlayerVelocity && v) {
+        s.uPlayerVelocity.value.copy(v)
       }
     }
 
@@ -523,14 +530,14 @@ export default function OpenWorldGrassField({
       grassWindImpulse.active = false
     }
 
-    // Wind parameters (Calm, natural forest meadow breeze - ZERO global shaking on sword swing)
+    // Wind parameters (Serene, rolling meadow breeze with sweeping gust waves)
     const rad = 45 * (Math.PI / 180)
     s.uWindDir.value.set(Math.cos(rad), Math.sin(rad))
-    s.uWindStrength.value = 0.22
-    s.uWindSpeed.value = 1.30
-    s.uWindFreq.value = 0.36
-    s.uWindTurb.value = 0.25
-    s.uWindLean.value = 0.45
+    s.uWindStrength.value = 0.28
+    s.uWindSpeed.value = 1.15
+    s.uWindFreq.value = 0.24
+    s.uWindTurb.value = 0.32
+    s.uWindLean.value = 0.38
     s.uWindFixLocal.value = 1
 
     // ── Synchronize Dynamic Torch Firelight Illumination ───────────────────────

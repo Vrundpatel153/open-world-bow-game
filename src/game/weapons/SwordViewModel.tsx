@@ -93,16 +93,16 @@ const _fwdVec = new THREE.Vector3()
 
 // Pre-computed Strike Quaternion Keyframes
 const Q_OBERHAU_START = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.4, 0.5, -0.4))
-const Q_OBERHAU_END   = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35, -0.6, 0.7))
+const Q_OBERHAU_END = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35, -0.6, 0.7))
 
 const Q_UNTERHAU_START = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.3, -0.5, 0.5))
-const Q_UNTERHAU_END   = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.5, 0.6, -0.6))
+const Q_UNTERHAU_END = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.5, 0.6, -0.6))
 
 const Q_ZORNHAU_START = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.7, 0.1, -0.1))
-const Q_ZORNHAU_END   = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.7, 0.0, 0.0))
+const Q_ZORNHAU_END = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.7, 0.0, 0.0))
 
-const Q_HEAVY_START   = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.1, 1.2, -0.8))
-const Q_HEAVY_END     = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.1, -1.4, 0.9))
+const Q_HEAVY_START = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.1, 1.2, -0.8))
+const Q_HEAVY_END = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.1, -1.4, 0.9))
 
 // Trail parameters
 const TRAIL_STEPS = 22

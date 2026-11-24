@@ -29,8 +29,9 @@ export default function GrassScene() {
   const [currentSky, setCurrentSky] = useState<SkyMode>('day')
   const [activePreset, setActivePreset] = useState<SkyPreset>(SKY_PRESETS['day'])
 
-  // Live player position ref for real-time grass trampling
+  // Live player position and velocity ref for real-time grass trampling & parting wake
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0))
+  const playerVelRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0))
 
   const handleLoaded = useCallback(() => {
     setBakeSignal((n) => n + 1)
@@ -44,8 +45,11 @@ export default function GrassScene() {
     }
   }
 
-  const handlePlayerMove = (pos: THREE.Vector3) => {
+  const handlePlayerMove = (pos: THREE.Vector3, vel?: THREE.Vector3) => {
     playerPosRef.current.copy(pos)
+    if (vel) {
+      playerVelRef.current.copy(vel)
+    }
   }
 
   return (
@@ -98,6 +102,7 @@ export default function GrassScene() {
             preset="default"
             onLoaded={handleLoaded}
             playerPosRef={playerPosRef}
+            playerVelRef={playerVelRef}
           />
         </Suspense>
       </Canvas>
