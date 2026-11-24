@@ -191,6 +191,7 @@ interface TrailSlice {
 export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordViewModelProps) {
   const { camera } = useThree()
   const swordRootRef = useRef<THREE.Group>(null!)
+  const swordMeshGroupRef = useRef<THREE.Group>(null!)
   const trailMeshRef = useRef<THREE.Mesh>(null!)
   const crescentMeshRef = useRef<THREE.Mesh>(null!)
 
@@ -253,43 +254,37 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
   const materials = useMemo(() => {
     // Crossguard & Pommel - Tempered Dark Steel
     const darkSteelMat = new THREE.MeshStandardMaterial({
-      color: '#363b40',
-      metalness: 0.92,
-      roughness: 0.32,
+      color: '#4e565f',
+      metalness: 0.85,
+      roughness: 0.35,
     })
 
     // Handle Core - Whittled Mountain Hardwood
     const handleWoodMat = new THREE.MeshStandardMaterial({
-      color: '#422816',
-      map: woodTexture,
-      bumpMap: woodTexture,
-      bumpScale: 0.002,
-      roughness: 0.82,
+      color: '#482c1a',
+      roughness: 0.80,
       metalness: 0.02,
     })
 
     // Grip Cord Wrap - Friction Hemp / Weathered Leather
     const gripWrapMat = new THREE.MeshStandardMaterial({
-      color: '#322216',
-      map: hempTexture,
-      bumpMap: hempTexture,
-      bumpScale: 0.003,
-      roughness: 0.88,
+      color: '#38261a',
+      roughness: 0.86,
       metalness: 0.04,
     })
 
-    // Cutting Edge - Razor Sharpened Silver Bevel
+    // Cutting Edge - Razor Sharpened Gleaming Silver Steel
     const edgeSteelMat = new THREE.MeshStandardMaterial({
-      color: '#d4dee8',
-      metalness: 0.96,
-      roughness: 0.16,
+      color: '#e2ebf4',
+      metalness: 0.82,
+      roughness: 0.22,
     })
 
     // Central Fuller Spine - Forged Carbon Steel
     const fullerSteelMat = new THREE.MeshStandardMaterial({
-      color: '#76808a',
-      metalness: 0.90,
-      roughness: 0.28,
+      color: '#84909c',
+      metalness: 0.78,
+      roughness: 0.36,
     })
 
     return { darkSteelMat, handleWoodMat, gripWrapMat, edgeSteelMat, fullerSteelMat }
@@ -585,37 +580,149 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       const t = swingProgress
 
       if (currentSwing.current === 'combo1') {
-        const ease = THREE.MathUtils.smoothstep(t, 0, 1)
-        _scratchQuat.slerpQuaternions(Q_OBERHAU_START, Q_OBERHAU_END, ease)
-        _scratchPos.set(
-          THREE.MathUtils.lerp(0.08, -0.14, ease),
-          THREE.MathUtils.lerp(0.06, -0.10, ease),
-          THREE.MathUtils.lerp(-0.04, -0.12, Math.sin(ease * Math.PI))
-        )
+        // Descending diagonal cleave (high-right over shoulder down to low-left)
+        if (t < 0.16) {
+          const u = THREE.MathUtils.smoothstep(t / 0.16, 0, 1)
+          _scratchPos.set(0.12 * u, 0.08 * u, 0.08 * u)
+          _euler.set(-0.35 * u, 0.50 * u, -0.45 * u, 'YXZ')
+          _scratchQuat.setFromEuler(_euler)
+        } else if (t < 0.58) {
+          const u = THREE.MathUtils.smoothstep((t - 0.16) / 0.42, 0, 1)
+          _scratchPos.set(
+            THREE.MathUtils.lerp(0.12, -0.45, u),
+            THREE.MathUtils.lerp(0.08, -0.16, u),
+            THREE.MathUtils.lerp(0.08, -0.14, Math.sin(u * Math.PI))
+          )
+          _euler.set(
+            THREE.MathUtils.lerp(-0.35, 0.45, u),
+            THREE.MathUtils.lerp(0.50, -0.95, u),
+            THREE.MathUtils.lerp(-0.45, 0.85, u),
+            'YXZ'
+          )
+          _scratchQuat.setFromEuler(_euler)
+        } else {
+          const u = THREE.MathUtils.smoothstep((t - 0.58) / 0.42, 0, 1)
+          _scratchPos.set(
+            THREE.MathUtils.lerp(-0.45, 0.0, u),
+            THREE.MathUtils.lerp(-0.16, 0.0, u),
+            0.0
+          )
+          _euler.set(
+            THREE.MathUtils.lerp(0.45, 0.0, u),
+            THREE.MathUtils.lerp(-0.95, 0.0, u),
+            THREE.MathUtils.lerp(0.85, 0.0, u),
+            'YXZ'
+          )
+          _scratchQuat.setFromEuler(_euler)
+        }
       } else if (currentSwing.current === 'combo2') {
-        const ease = THREE.MathUtils.smoothstep(t, 0, 1)
-        _scratchQuat.slerpQuaternions(Q_UNTERHAU_START, Q_UNTERHAU_END, ease)
-        _scratchPos.set(
-          THREE.MathUtils.lerp(-0.12, 0.10, ease),
-          THREE.MathUtils.lerp(-0.08, 0.08, ease),
-          THREE.MathUtils.lerp(-0.04, -0.10, Math.sin(ease * Math.PI))
-        )
+        // Ascending backhand slash (low-left sweeping up to high-right)
+        if (t < 0.15) {
+          const u = THREE.MathUtils.smoothstep(t / 0.15, 0, 1)
+          _scratchPos.set(-0.18 * u, -0.12 * u, 0.06 * u)
+          _euler.set(-0.25 * u, -0.40 * u, 0.55 * u, 'YXZ')
+          _scratchQuat.setFromEuler(_euler)
+        } else if (t < 0.56) {
+          const u = THREE.MathUtils.smoothstep((t - 0.15) / 0.41, 0, 1)
+          _scratchPos.set(
+            THREE.MathUtils.lerp(-0.18, 0.38, u),
+            THREE.MathUtils.lerp(-0.12, 0.22, u),
+            THREE.MathUtils.lerp(0.06, -0.10, Math.sin(u * Math.PI))
+          )
+          _euler.set(
+            THREE.MathUtils.lerp(-0.25, 0.35, u),
+            THREE.MathUtils.lerp(-0.40, 0.65, u),
+            THREE.MathUtils.lerp(0.55, -0.65, u),
+            'YXZ'
+          )
+          _scratchQuat.setFromEuler(_euler)
+        } else {
+          const u = THREE.MathUtils.smoothstep((t - 0.56) / 0.44, 0, 1)
+          _scratchPos.set(
+            THREE.MathUtils.lerp(0.38, 0.0, u),
+            THREE.MathUtils.lerp(0.22, 0.0, u),
+            0.0
+          )
+          _euler.set(
+            THREE.MathUtils.lerp(0.35, 0.0, u),
+            THREE.MathUtils.lerp(0.65, 0.0, u),
+            THREE.MathUtils.lerp(-0.65, 0.0, u),
+            'YXZ'
+          )
+          _scratchQuat.setFromEuler(_euler)
+        }
       } else if (currentSwing.current === 'combo3') {
-        const ease = THREE.MathUtils.smoothstep(t, 0, 1)
-        _scratchQuat.slerpQuaternions(Q_ZORNHAU_START, Q_ZORNHAU_END, ease)
-        _scratchPos.set(
-          THREE.MathUtils.lerp(0.02, 0.0, ease),
-          THREE.MathUtils.lerp(0.12, -0.18, ease),
-          THREE.MathUtils.lerp(-0.02, -0.16, Math.sin(ease * Math.PI))
-        )
+        // Overhead wrath cleave (raised overhead and driven down into ground)
+        if (t < 0.20) {
+          const u = THREE.MathUtils.smoothstep(t / 0.20, 0, 1)
+          _scratchPos.set(-0.10 * u, 0.28 * u, 0.06 * u)
+          _euler.set(-0.85 * u, 0.30 * u, -0.15 * u, 'YXZ')
+          _scratchQuat.setFromEuler(_euler)
+        } else if (t < 0.62) {
+          const u = THREE.MathUtils.smoothstep((t - 0.20) / 0.42, 0, 1)
+          _scratchPos.set(
+            THREE.MathUtils.lerp(-0.10, -0.05, u),
+            THREE.MathUtils.lerp(0.28, -0.28, u),
+            THREE.MathUtils.lerp(0.06, -0.18, Math.sin(u * Math.PI))
+          )
+          _euler.set(
+            THREE.MathUtils.lerp(-0.85, 0.75, u),
+            THREE.MathUtils.lerp(0.30, 0.0, u),
+            THREE.MathUtils.lerp(-0.15, 0.05, u),
+            'YXZ'
+          )
+          _scratchQuat.setFromEuler(_euler)
+        } else {
+          const u = THREE.MathUtils.smoothstep((t - 0.62) / 0.38, 0, 1)
+          _scratchPos.set(
+            THREE.MathUtils.lerp(-0.05, 0.0, u),
+            THREE.MathUtils.lerp(-0.28, 0.0, u),
+            0.0
+          )
+          _euler.set(
+            THREE.MathUtils.lerp(0.75, 0.0, u),
+            0.0,
+            THREE.MathUtils.lerp(0.05, 0.0, u),
+            'YXZ'
+          )
+          _scratchQuat.setFromEuler(_euler)
+        }
       } else if (currentSwing.current === 'heavy') {
-        const ease = THREE.MathUtils.smoothstep(t, 0, 1)
-        _scratchQuat.slerpQuaternions(Q_HEAVY_START, Q_HEAVY_END, ease)
-        _scratchPos.set(
-          THREE.MathUtils.lerp(0.18, -0.22, ease),
-          THREE.MathUtils.lerp(0.02, 0.0, ease),
-          THREE.MathUtils.lerp(-0.06, -0.20, Math.sin(ease * Math.PI))
-        )
+        // 270° horizontal whirlwind cleave
+        if (t < 0.18) {
+          const u = THREE.MathUtils.smoothstep(t / 0.18, 0, 1)
+          _scratchPos.set(0.22 * u, 0.06 * u, 0.12 * u)
+          _euler.set(-0.40 * u, 0.85 * u, -0.55 * u, 'YXZ')
+          _scratchQuat.setFromEuler(_euler)
+        } else if (t < 0.62) {
+          const u = THREE.MathUtils.smoothstep((t - 0.18) / 0.44, 0, 1)
+          _scratchPos.set(
+            THREE.MathUtils.lerp(0.22, -0.55, u),
+            THREE.MathUtils.lerp(0.06, -0.06, u),
+            THREE.MathUtils.lerp(0.12, -0.22, Math.sin(u * Math.PI))
+          )
+          _euler.set(
+            THREE.MathUtils.lerp(-0.40, 0.30, u),
+            THREE.MathUtils.lerp(0.85, -1.85, u),
+            THREE.MathUtils.lerp(-0.55, 0.65, u),
+            'YXZ'
+          )
+          _scratchQuat.setFromEuler(_euler)
+        } else {
+          const u = THREE.MathUtils.smoothstep((t - 0.62) / 0.38, 0, 1)
+          _scratchPos.set(
+            THREE.MathUtils.lerp(-0.55, 0.0, u),
+            THREE.MathUtils.lerp(-0.06, 0.0, u),
+            0.0
+          )
+          _euler.set(
+            THREE.MathUtils.lerp(0.30, 0.0, u),
+            THREE.MathUtils.lerp(-1.85, 0.0, u),
+            THREE.MathUtils.lerp(0.65, 0.0, u),
+            'YXZ'
+          )
+          _scratchQuat.setFromEuler(_euler)
+        }
       }
 
       if (swingProgress >= 1.0) {
@@ -624,21 +731,24 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     }
 
     // 7. Dynamic Spring Target Setup
-    const eqY = (1.0 - equipProgress.current) * -0.6
+    const eqY = (1.0 - equipProgress.current) * -0.65
     const gFactor = guardProgress.current
     const cFactor = chargeProgress.current
 
-    const readyX = 0.23 + bobX
-    const readyY = -0.18 + bobY + eqY
-    const readyZ = -0.46
+    // Authentic martial ready guard (held from bottom-right, blade canted forward towards crosshair)
+    const readyX = 0.28 + bobX
+    const readyY = -0.24 + bobY + eqY
+    const readyZ = -0.40
 
-    const guardX = 0.0
-    const guardY = -0.06
-    const guardZ = -0.38
+    // Braced Crown Guard (parrying across chest on RMB)
+    const guardX = 0.08
+    const guardY = -0.10
+    const guardZ = -0.34
 
-    const chargeX = 0.28
-    const chargeY = 0.04
-    const chargeZ = -0.32
+    // Heavy Attack Wind-up Pullback
+    const chargeX = 0.35
+    const chargeY = -0.12
+    const chargeZ = -0.28
 
     let targetX = THREE.MathUtils.lerp(readyX, guardX, gFactor)
     let targetY = THREE.MathUtils.lerp(readyY, guardY, gFactor)
@@ -649,11 +759,31 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     targetZ = THREE.MathUtils.lerp(targetZ, chargeZ, cFactor) + _scratchPos.z
 
     posSpring.current.target.set(targetX, targetY, targetZ)
-    rotSpring.current.target.set(
-      THREE.MathUtils.lerp(0.12, 0.25, gFactor),
-      THREE.MathUtils.lerp(-0.18, 0.45, gFactor),
-      THREE.MathUtils.lerp(-0.14, -0.55, gFactor) + bobRotZ
-    )
+
+    // Ready Rotation: Pitch ~0.70rad (39° forward into screen), Yaw ~-0.42rad (inward to crosshair), Roll ~0.26rad
+    const readyRotX = 0.70
+    const readyRotY = -0.42
+    const readyRotZ = 0.26 + bobRotZ
+
+    // Guard Rotation: blade held horizontally across upper chest
+    const guardRotX = 0.35
+    const guardRotY = 0.22
+    const guardRotZ = -1.15
+
+    // Charge Rotation
+    const chargeRotX = 0.50
+    const chargeRotY = 0.35
+    const chargeRotZ = -0.45
+
+    let targetRotX = THREE.MathUtils.lerp(readyRotX, guardRotX, gFactor)
+    let targetRotY = THREE.MathUtils.lerp(readyRotY, guardRotY, gFactor)
+    let targetRotZ = THREE.MathUtils.lerp(readyRotZ, guardRotZ, gFactor)
+
+    targetRotX = THREE.MathUtils.lerp(targetRotX, chargeRotX, cFactor)
+    targetRotY = THREE.MathUtils.lerp(targetRotY, chargeRotY, cFactor)
+    targetRotZ = THREE.MathUtils.lerp(targetRotZ, chargeRotZ, cFactor)
+
+    rotSpring.current.target.set(targetRotX, targetRotY, targetRotZ)
 
     const curPos = posSpring.current.update(dt)
     const curRot = rotSpring.current.update(dt)
@@ -662,7 +792,7 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
     swordRootRef.current.position.copy(camera.position)
     swordRootRef.current.quaternion.copy(camera.quaternion)
 
-    const localGroup = swordRootRef.current.children[0] as THREE.Group
+    const localGroup = swordMeshGroupRef.current
     if (localGroup) {
       localGroup.position.copy(curPos)
       _euler.set(curRot.x, curRot.y, curRot.z, 'YXZ')
@@ -809,10 +939,14 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
         renderer.clearDepth()
       }}
     >
-      <group>
+      {/* Dedicated Viewmodel Key & Fill Lights (Ensures blade reflections always gleam) */}
+      <directionalLight position={[0.6, 1.2, 0.4]} intensity={2.2} color="#f0f6ff" />
+      <directionalLight position={[-0.6, -0.4, -0.2]} intensity={0.8} color="#dbe6f2" />
+
+      <group ref={swordMeshGroupRef}>
         {/* Authentic 3D Handcrafted Steel Sword Model */}
         {nodes.Sword_1 && (
-          <group rotation={[-Math.PI / 2, 0, 0]} scale={11.0}>
+          <group rotation={[-Math.PI / 2, 0, 0]} scale={9.8}>
             {/* 1. Crossguard, Quillons & Counterweight Pommel */}
             <mesh
               geometry={nodes.Sword_1.geometry}
@@ -850,9 +984,6 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
 
       {/* Dynamic Luminous Aerodynamic Blade-Edge Ribbon Trail */}
       <mesh ref={trailMeshRef} geometry={dynamicTrailGeo} material={slashMat} />
-
-      {/* Martial Combo Slash Crescent Arc (Expanding Shockwave VFX) */}
-      <mesh ref={crescentMeshRef} geometry={crescentGeo} material={crescentMat} />
     </group>
   )
 }
