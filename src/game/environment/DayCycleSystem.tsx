@@ -68,8 +68,8 @@ export default function DayCycleSystem({
   const cTwilightHorizon = useRef(new THREE.Color("#1c263c")); // Deep twilight dusk blue-slate
   const cTwilightZenith = useRef(new THREE.Color("#0a101e"));  // Twilight deep sky
 
-  const cNightHorizon = useRef(new THREE.Color("#070e1c")); // Deep nocturnal slate navy
-  const cNightZenith = useRef(new THREE.Color("#010206"));  // Pitch black midnight sky
+  const cNightHorizon = useRef(new THREE.Color("#121e33")); // Atmospheric nocturnal slate navy
+  const cNightZenith = useRef(new THREE.Color("#060b16"));  // Deep starry indigo midnight sky
 
   (window as any).__setCycleTime = (sec: number) => {
     cycleTimeRef.current = sec % FULL_CYCLE_SECONDS;
@@ -185,8 +185,8 @@ export default function DayCycleSystem({
       const moonProgress = Math.max(0, moonElevation / 58);
       skyHorizon.current.copy(cNightHorizon.current);
       skyZenith.current.copy(cNightZenith.current);
-      lightColor.current.set("#6a8ec4");
-      lightIntensity = 0.14 + moonProgress * 0.05;
+      lightColor.current.set("#7aa2d8");
+      lightIntensity = 0.45 + moonProgress * 0.15;
       currentMode = "night";
       if (sunElevation < -42) {
         phaseName = "MIDNIGHT";

@@ -222,11 +222,11 @@ export default function TorchViewModel() {
 
   // Quad-planar volumetric flame plane geometries
   const { flamePlaneGeo, coreFlamePlaneGeo } = useMemo(() => {
-    const flamePlane = new THREE.PlaneGeometry(0.20, 0.34)
-    flamePlane.translate(0, 0.17, 0)
+    const flamePlane = new THREE.PlaneGeometry(0.14, 0.20)
+    flamePlane.translate(0, 0.10, 0)
 
-    const coreFlamePlane = new THREE.PlaneGeometry(0.14, 0.22)
-    coreFlamePlane.translate(0, 0.11, 0)
+    const coreFlamePlane = new THREE.PlaneGeometry(0.09, 0.14)
+    coreFlamePlane.translate(0, 0.07, 0)
 
     return { flamePlaneGeo: flamePlane, coreFlamePlaneGeo: coreFlamePlane }
   }, [])
@@ -334,16 +334,16 @@ export default function TorchViewModel() {
 
     // 4. Spring Target Calculation
     // Natural wilderness stance: lower-right viewport, tilted forward, leaving 80% screen clear
-    const eqY = (1.0 - equipProgress.current) * -0.55
-    const targetX = 0.24 + bobX + waveOffsetX
-    const targetY = -0.22 + bobY + eqY + waveOffsetY
-    const targetZ = -0.46 + waveOffsetZ
+    const eqY = (1.0 - equipProgress.current) * -0.65
+    const targetX = 0.23 + bobX + waveOffsetX
+    const targetY = -0.34 + bobY + eqY + waveOffsetY
+    const targetZ = -0.52 + waveOffsetZ
 
     posSpring.current.target.set(targetX, targetY, targetZ)
     rotSpring.current.target.set(
-      0.08 + waveRotX,
-      -0.16 + waveRotY,
-      -0.06 + bobRotZ
+      0.36 + waveRotX,
+      -0.24 + waveRotY,
+      -0.10 + bobRotZ
     )
 
     const curPos = posSpring.current.update(dt)
@@ -376,22 +376,45 @@ export default function TorchViewModel() {
     }
 
     // 6. Dynamic PointLight Intensity Jitter & Thermal Flicker
+    const flicker1 = Math.sin(time * 12.0) * 0.35
+    const flicker2 = Math.sin(time * 23.5) * 0.22
+    const flicker3 = (Math.random() - 0.5) * 0.28
+
     if (flameLightRef.current) {
-      const flicker1 = Math.sin(time * 12.0) * 0.35
-      const flicker2 = Math.sin(time * 23.5) * 0.22
-      const flicker3 = (Math.random() - 0.5) * 0.28
-      const baseIntensity = 4.2 * equipProgress.current
+      const baseIntensity = 10.0 * equipProgress.current
       flameLightRef.current.intensity = Math.max(
-        1.5,
-        baseIntensity + flicker1 + flicker2 + flicker3 + (waveTimer.current > 0 ? 1.5 : 0.0)
+        2.5,
+        baseIntensity + flicker1 * 1.5 + flicker2 * 1.0 + flicker3 + (waveTimer.current > 0 ? 4.0 : 0.0)
       )
+    }
+
+    // 6b. Synchronize Global Torch Data for Environment & Foliage Shaders
+    if (!(window as any).__torchData) {
+      ;(window as any).__torchData = {
+        active: false,
+        pos: new THREE.Vector3(0, -9999, 0),
+        intensity: 0,
+        color: new THREE.Color('#ff8522'),
+        flicker: 0,
+      }
+    }
+    const td = (window as any).__torchData
+    td.active = isTorchActive && equipProgress.current > 0.05
+    if (td.active && localGroup) {
+      const torchHeadWorld = new THREE.Vector3(0, 0.25, 0)
+      localGroup.localToWorld(torchHeadWorld)
+      td.pos.copy(torchHeadWorld)
+      td.intensity = 2.4 * equipProgress.current
+      td.flicker = flicker1 * 0.12 + flicker2 * 0.08
+    } else {
+      td.intensity = 0
     }
 
     // 7. Global Embers & Flying Sparks Simulation
     if (isTorchActive && equipProgress.current > 0.5) {
       // Spawn new embers at torch flame head
       if (Math.random() < 0.45 && embers.current.length < MAX_TORCH_EMBERS) {
-        const torchHeadWorld = new THREE.Vector3(0, 0.46, 0)
+        const torchHeadWorld = new THREE.Vector3(0, 0.25, 0)
         if (localGroup) localGroup.localToWorld(torchHeadWorld)
 
         embers.current.push({
@@ -473,7 +496,7 @@ export default function TorchViewModel() {
         <group>
           {/* Authentic 3D Handcrafted Wooden Torch Meshes */}
           {nodes.WoodenTorch_1 && (
-            <group rotation={[-Math.PI / 2, 0, 0]} scale={30.23}>
+            <group rotation={[-Math.PI / 2, 0, 0]} scale={16.0}>
               {/* 1. Sculpted Natural Tree Branch Stave */}
               <mesh
                 geometry={nodes.WoodenTorch_1.geometry}
@@ -498,7 +521,7 @@ export default function TorchViewModel() {
           )}
 
           {/* Quad-Planar Procedural Convective Wood Fire (0°, 45°, 90°, 135°) */}
-          <group ref={flameGroupRef} position={[0, 0.46, 0]}>
+          <group ref={flameGroupRef} position={[0, 0.245, 0]}>
             <mesh geometry={flamePlaneGeo} material={flameMaterial} />
             <mesh
               geometry={flamePlaneGeo}
@@ -528,14 +551,14 @@ export default function TorchViewModel() {
             />
           </group>
 
-          {/* Dynamic PointLight Illuminating the Forest (26m Reach) */}
+          {/* Dynamic PointLight Illuminating the Forest (28m Reach) */}
           <pointLight
             ref={flameLightRef}
-            position={[0, 0.52, 0]}
+            position={[0, 0.28, 0]}
             color="#ff8820"
-            intensity={4.2}
-            distance={26}
-            decay={1.8}
+            intensity={10.0}
+            distance={28}
+            decay={1.3}
             castShadow
             shadow-bias={-0.0015}
             shadow-mapSize-width={512}

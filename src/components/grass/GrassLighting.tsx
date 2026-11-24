@@ -62,10 +62,10 @@ export default function GrassLighting({
       if (fl) {
         const fillDir = new THREE.Vector3(-sunDir.x, Math.max(0.3, sunDir.y * 0.5), -sunDir.z).normalize();
         fl.position.copy(targetPos).addScaledVector(fillDir, 45);
-        fl.intensity = effIntensity > 1.0 ? 0.85 : (effIntensity > 0.4 ? 0.20 : 0.02);
+        fl.intensity = effIntensity > 1.0 ? 0.85 : (effIntensity > 0.45 ? 0.30 : 0.18);
       }
 
-      // Dynamic ambient and environmental lighting (Full daylight -> dramatic dark survival night)
+      // Dynamic ambient and environmental lighting (Full daylight -> atmospheric silver-blue night)
       if (hemi) {
         if (effIntensity > 1.8) {
           // Broad Daylight: Radiant blue sky and lush mossy turf bounce
@@ -77,21 +77,21 @@ export default function GrassLighting({
           hemi.intensity = 1.35;
           hemi.color.set("#ffd8b4");
           hemi.groundColor.set("#5a4028");
-        } else if (effIntensity > 0.35) {
+        } else if (effIntensity > 0.45) {
           // Twilight: Soft deep indigo
-          hemi.intensity = 0.40;
+          hemi.intensity = 0.55;
           hemi.color.set("#283e5c");
           hemi.groundColor.set("#101a14");
         } else {
-          // Pure Nocturnal Darkness: Mysterious dark midnight (true survival night)
-          hemi.intensity = 0.07;
-          hemi.color.set("#0c1626");
-          hemi.groundColor.set("#030605");
+          // Atmospheric Moonlight: Visible, moody night with silver-blue skylight and deep forest bounce
+          hemi.intensity = 0.42;
+          hemi.color.set("#1e2e4a");
+          hemi.groundColor.set("#0a1610");
         }
       }
 
       if (amb) {
-        amb.intensity = effIntensity > 1.0 ? 0.82 : (effIntensity > 0.35 ? 0.18 : 0.03);
+        amb.intensity = effIntensity > 1.0 ? 0.82 : (effIntensity > 0.45 ? 0.28 : 0.22);
       }
     } else {
       const l = preset.light;

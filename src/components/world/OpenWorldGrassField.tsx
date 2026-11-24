@@ -509,6 +509,16 @@ export default function OpenWorldGrassField({
     s.uWindLean.value = 0.45
     s.uWindFixLocal.value = 1
 
+    // ── Synchronize Dynamic Torch Firelight Illumination ───────────────────────
+    const td = (window as any).__torchData
+    if (td && td.active && s.uTorchPos && s.uTorchParams) {
+      s.uTorchPos.value.copy(td.pos)
+      s.uTorchParams.value.set(24.0, td.intensity, 1.0, td.flicker)
+      s.uTorchColor.value.copy(td.color)
+    } else if (s.uTorchParams) {
+      s.uTorchParams.value.set(24.0, 0.0, 0.0, 0.0)
+    }
+
     // ── Environmental Day-Night Dynamics ────────────────────────────────────
     // Smoothly transitions meadow turf, pine needles, soil, and bark from radiant noon to nocturnal midnight
     const elev = sunElevRef?.current ?? 45
@@ -519,8 +529,8 @@ export default function OpenWorldGrassField({
 
     const c = colorsRef.current
     if (nightFactor > 0.05) {
-      c.grassTop.lerpColors(new THREE.Color('#6da824'), new THREE.Color('#0d2012'), nightFactor)
-      c.grassBottom.lerpColors(new THREE.Color('#1a3c10'), new THREE.Color('#040a05'), nightFactor)
+      c.grassTop.lerpColors(new THREE.Color('#6da824'), new THREE.Color('#224825'), nightFactor)
+      c.grassBottom.lerpColors(new THREE.Color('#1a3c10'), new THREE.Color('#0a1d0d'), nightFactor)
     } else if (sunsetFactor > 0.08) {
       c.grassTop.lerpColors(new THREE.Color('#6da824'), new THREE.Color('#868a1e'), sunsetFactor)
       c.grassBottom.set('#1c3a0e')
@@ -535,12 +545,12 @@ export default function OpenWorldGrassField({
     s.uGradEnd.value = 0.92
     s.uGradPower.value = 1.15
 
-    // Grass Brightness: 1.02 at noon -> 0.22 at midnight (creates authentic darkness at night)
-    s.uBrightness.value = THREE.MathUtils.lerp(1.02, 0.22, nightFactor)
+    // Grass Brightness: 1.02 at noon -> 0.62 at midnight (atmospheric nocturnal visibility)
+    s.uBrightness.value = THREE.MathUtils.lerp(1.02, 0.62, nightFactor)
 
     // Lush vs Dry environmental patches
-    s.uPatchLush.value.set(nightFactor > 0.5 ? '#030804' : '#16360c')
-    s.uPatchDry.value.set(nightFactor > 0.5 ? '#0e2414' : '#78a420')
+    s.uPatchLush.value.set(nightFactor > 0.5 ? '#061308' : '#16360c')
+    s.uPatchDry.value.set(nightFactor > 0.5 ? '#152e18' : '#78a420')
     s.uPatchStrength.value = 0.12
     s.uPatchScale.value = 0.08
     s.uPatchBias.value = 1.2
@@ -568,14 +578,14 @@ export default function OpenWorldGrassField({
     // Ground Dirt & Moss Variation - Natural organic tonal depth and micro grain
     s.uTintFloor.value = 1
     s.uFlatFloorNormal.value = 1
-    s.uGndVarColor.value.set(nightFactor > 0.5 ? '#040804' : '#1e3c12')
+    s.uGndVarColor.value.set(nightFactor > 0.5 ? '#0c1a0e' : '#1e3c12')
     s.uGndVarScale.value = 0.35
     s.uGndVarStrength.value = 0.50
     s.uGndGrainScale.value = 5.2
     s.uGndGrainStrength.value = 0.38
     s.uGndReliefScale.value = 0.6
     s.uGndReliefStrength.value = 0.25
-    c.dirtColor.set(nightFactor > 0.5 ? '#030704' : '#1a3c10')
+    c.dirtColor.set(nightFactor > 0.5 ? '#0d1d10' : '#1a3c10')
     s.uDirtColor.value.copy(c.dirtColor)
     s.uDirtCoverage.value = 0.0
     s.uDirtScale.value = 0.25
@@ -586,17 +596,17 @@ export default function OpenWorldGrassField({
 
     // Bark Uniforms - dark nocturnal trunks at night
     b.uBarkScale.value = 1.0
-    c.barkTint.set(nightFactor > 0.5 ? '#120f0d' : '#2b2118')
+    c.barkTint.set(nightFactor > 0.5 ? '#1a1512' : '#2b2118')
     b.uBarkTint.value.copy(c.barkTint)
     b.uBarkTintStrength.value = 0.55
     b.uBarkSaturation.value = 1.0
-    b.uBarkBrightness.value = THREE.MathUtils.lerp(1.25, 0.28, nightFactor)
+    b.uBarkBrightness.value = THREE.MathUtils.lerp(1.25, 0.58, nightFactor)
     b.uBarkAOStrength.value = 0.85
 
     // Pine Canopy Foliage - Lush healthy forest pine needles at noon -> deep nocturnal pines at midnight
-    s.uLeafBottom.value.set(nightFactor > 0.5 ? '#040d06' : '#1e4420')
-    s.uLeafTop.value.set(nightFactor > 0.5 ? '#0a1e0e' : '#568c2e')
-    s.uLeafBrightness.value = THREE.MathUtils.lerp(1.35, 0.24, nightFactor)
+    s.uLeafBottom.value.set(nightFactor > 0.5 ? '#0d2212' : '#1e4420')
+    s.uLeafTop.value.set(nightFactor > 0.5 ? '#18381c' : '#568c2e')
+    s.uLeafBrightness.value = THREE.MathUtils.lerp(1.35, 0.60, nightFactor)
     s.uLeafGradPower.value = 1.05
 
     // Dynamic Distance-based Lazy Loading for Foliage Clusters (Zero per-frame traversal)

@@ -81,6 +81,11 @@ export type BladeUniforms = {
   uSwordSlash: THREE.IUniform<THREE.Vector4>; // xyz = position, w = radius * intensity
   uSwordDir: THREE.IUniform<THREE.Vector3>;   // world slash direction
 
+  // Dynamic torch firelight illumination
+  uTorchPos: THREE.IUniform<THREE.Vector3>;
+  uTorchColor: THREE.IUniform<THREE.Color>;
+  uTorchParams: THREE.IUniform<THREE.Vector4>; // x = radius (e.g. 24.0m), y = intensity, z = active (0 or 1), w = flicker
+
   // Translucency (subsurface back-light). uSunDir/uSunColor mirror the scene's
   // directional light — GrassField writes them every frame.
   uSunDir: THREE.IUniform<THREE.Vector3>; // world, blade → sun
@@ -250,6 +255,10 @@ export function createGrassFieldUniforms(): GrassFieldUniforms {
 
       uSwordSlash: { value: new THREE.Vector4(0, -9999, 0, 0) },
       uSwordDir: { value: new THREE.Vector3(0, 0, -1) },
+
+      uTorchPos: { value: new THREE.Vector3(0, -9999, 0) },
+      uTorchColor: { value: new THREE.Color("#ff8822") },
+      uTorchParams: { value: new THREE.Vector4(24.0, 0.0, 0.0, 0.0) },
 
       uSunDir: { value: new THREE.Vector3(0, 1, 0) },
       uSunColor: { value: new THREE.Color(1, 1, 1) },

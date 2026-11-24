@@ -49,6 +49,7 @@ export function makeGroundMaterial(
       uniform float uFlatFloorNormal;
       uniform float uShadowRadius;
       varying vec2 vGndXZ;
+      varying vec3 vGndWorld;
       #ifdef USE_SHADOWMAP
         varying vec4 vGndShCoord[ GRASS_SHADOW_TAPS ];
       #endif\n` + shader.vertexShader;
@@ -61,7 +62,8 @@ export function makeGroundMaterial(
     shader.vertexShader = shader.vertexShader.replace(
       "#include <begin_vertex>",
       `#include <begin_vertex>
-      vGndXZ = ( modelMatrix * vec4( transformed, 1.0 ) ).xz;`,
+      vGndWorld = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;
+      vGndXZ = vGndWorld.xz;`,
     );
     // Same soft-shadow scheme as the blades: disable Lambert's own shadow (its
     // world position lands outside the frustum → getShadow → fully lit) and build
@@ -86,6 +88,10 @@ export function makeGroundMaterial(
     shader.fragmentShader =
       `#define GRASS_SHADOW_TAPS ${MAX_SHADOW_TAPS}
       varying vec2  vGndXZ;
+      varying vec3  vGndWorld;
+      uniform vec3  uTorchPos;
+      uniform vec3  uTorchColor;
+      uniform vec4  uTorchParams;
       uniform vec3  uGrassBottom;
       uniform float uBrightness;
       uniform float uTintFloor;
@@ -175,6 +181,20 @@ export function makeGroundMaterial(
       _gndCol += ( _varCol - _gndCol ) * _var   * uGndVarStrength;
       _gndCol += ( _varCol - _gndCol ) * _grain * uGndGrainStrength;
       _gndCol = max( _gndCol, vec3( 0.0 ) );
+
+      // Dynamic torch firelight illumination on ground terrain
+      if ( uTorchParams.z > 0.01 ) {
+        vec3  _toT = uTorchPos - vGndWorld;
+        float _tDist = length( _toT );
+        if ( _tDist < uTorchParams.x ) {
+          float _tAtten = clamp( 1.0 - _tDist / uTorchParams.x, 0.0, 1.0 );
+          _tAtten = pow( _tAtten, 1.45 );
+          vec3  _tDir = _toT / max( _tDist, 0.001 );
+          float _tNdotL = max( _tDir.y * 0.7 + 0.3, 0.0 );
+          vec3  _tLight = uTorchColor * _tNdotL * ( _tAtten * uTorchParams.y * ( 1.0 + uTorchParams.w ) );
+          _gndCol += _gndCol * _tLight;
+        }
+      }
 
       vec4 diffuseColor = vec4( _gndCol, opacity );`,
     );

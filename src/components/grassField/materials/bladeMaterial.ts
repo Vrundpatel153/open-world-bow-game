@@ -192,6 +192,9 @@ export function makeBladeMaterial(u: BladeUniforms): THREE.MeshLambertMaterial {
       uniform float uShadowStrength;
       uniform vec3  uSunDir;
       uniform vec3  uSunColor;
+      uniform vec3  uTorchPos;
+      uniform vec3  uTorchColor;
+      uniform vec4  uTorchParams;
       uniform vec3  uTransColor;
       uniform float uTransStrength;
       uniform float uTransPower;
@@ -264,6 +267,20 @@ export function makeBladeMaterial(u: BladeUniforms): THREE.MeshLambertMaterial {
 
         // Subsurface scatter illuminates the grass with lush emerald vibrancy
         gl_FragColor.rgb += _trans;
+
+        // Dynamic torch firelight illumination on grass blades
+        if ( uTorchParams.z > 0.01 ) {
+          vec3  _toT = uTorchPos - vWorldPos;
+          float _tDist = length( _toT );
+          if ( _tDist < uTorchParams.x ) {
+            float _tAtten = clamp( 1.0 - _tDist / uTorchParams.x, 0.0, 1.0 );
+            _tAtten = pow( _tAtten, 1.45 );
+            vec3  _tDir = _toT / max( _tDist, 0.001 );
+            float _tWrap = max( dot( normalize( vBladeN ), _tDir ) * 0.5 + 0.5, 0.0 );
+            vec3  _tLight = uTorchColor * ( _tWrap * 0.8 + 0.35 ) * ( _tAtten * uTorchParams.y * ( 1.0 + uTorchParams.w ) );
+            gl_FragColor.rgb += _bladeCol * _tLight;
+          }
+        }
 
         ${DEBUG_VIEW_FRAGMENT}
       }`,

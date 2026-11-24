@@ -24,7 +24,7 @@ import { PINE_WIND_UNIFORMS, PINE_WIND_VERTEX } from "../shaders/pineLeaf";
 // ─────────────────────────────────────────────────────────────────────────────
 
 type LeafWindUniforms = PineLeafUniforms &
-  Pick<BladeUniforms, "uTime" | "uWindDir" | "uWindSpeed" | "uWindFreq">;
+  Pick<BladeUniforms, "uTime" | "uWindDir" | "uWindSpeed" | "uWindFreq" | "uTorchPos" | "uTorchColor" | "uTorchParams">;
 
 /** The canopy's own vertical extent — the wind's height mask is relative to it,
  *  so branches near the trunk stay put while the outer foliage moves. */
@@ -69,6 +69,9 @@ export function makePineLeafMaterial(
     shader.fragmentShader =
       `varying vec3  vLeafLocal;
       varying vec3  vLeafWorld;
+      uniform vec3  uTorchPos;
+      uniform vec3  uTorchColor;
+      uniform vec4  uTorchParams;
       uniform vec3  uLeafBottom;
       uniform vec3  uLeafTop;
       uniform float uLeafBrightness;
@@ -108,6 +111,18 @@ export function makePineLeafMaterial(
         float _n = _lfNoise( vLeafWorld * uLeafVarScale ) - 0.5;
         _leaf += ( uLeafVarColor - _leaf ) * _n * uLeafVarStrength;
         diffuseColor.rgb = max( _leaf, vec3( 0.0 ) ) * uLeafBrightness;
+
+        // Dynamic torch firelight illumination on pine needles
+        if ( uTorchParams.z > 0.01 ) {
+          vec3  _toT = uTorchPos - vLeafWorld;
+          float _tDist = length( _toT );
+          if ( _tDist < uTorchParams.x ) {
+            float _tAtten = clamp( 1.0 - _tDist / uTorchParams.x, 0.0, 1.0 );
+            _tAtten = pow( _tAtten, 1.45 );
+            vec3  _tLight = uTorchColor * ( _tAtten * uTorchParams.y * ( 1.0 + uTorchParams.w ) * 0.9 );
+            diffuseColor.rgb += diffuseColor.rgb * _tLight;
+          }
+        }
       }`,
     );
   };
