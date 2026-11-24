@@ -221,6 +221,7 @@ export default function ProductionFPSController({
         if (inputManager.isJumping()) {
           vel.current.y = JUMP_IMPULSE
           isGrounded.current = false
+          sound.playJump()
         }
       } else {
         // Airborne Freefall
@@ -234,6 +235,7 @@ export default function ProductionFPSController({
           landingSquash.current = Math.min(0.12, impactSpeed * 0.009)
           vel.current.y = 0
           isGrounded.current = true
+          sound.playLandingImpact(impactSpeed > 6.0)
         }
       }
     }
@@ -265,7 +267,7 @@ export default function ProductionFPSController({
       stepTimer.current += dt
       if (stepTimer.current >= stepFreq) {
         stepTimer.current = 0
-        sound.playFootstep(inputManager.isSprinting())
+        sound.playFootstep(inputManager.isSprinting(), 'grass')
       }
     } else {
       stepTimer.current = 0

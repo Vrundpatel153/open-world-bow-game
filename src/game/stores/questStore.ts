@@ -121,7 +121,12 @@ export const useQuestStore = create<QuestState>((set, get) => ({
   isQuestLogCollapsed: false,
   isCardsHidden: false,
   isCompassVisible: true,
-  toggleCardsHidden: () => set((state) => ({ isCardsHidden: !state.isCardsHidden })),
+  toggleCardsHidden: () =>
+    set((state) => {
+      const next = !state.isCardsHidden
+      sound.playHudToggle(next)
+      return { isCardsHidden: next }
+    }),
   setCardsHidden: (isCardsHidden) => set({ isCardsHidden }),
   toggleQuestLog: () => set((state) => ({ isQuestLogCollapsed: !state.isQuestLogCollapsed })),
   setQuestLogCollapsed: (isQuestLogCollapsed) => set({ isQuestLogCollapsed }),
@@ -217,6 +222,8 @@ export const useQuestStore = create<QuestState>((set, get) => ({
     if (current === item) {
       // Stow current item
       if (item === 'bow') sound.playBowUnequip()
+      else if (item === 'torch') sound.playTorchExtinguish()
+      else if (item === 'sword') sound.playSteelSwordStow()
       set({
         activeItem: 'none',
         isBowEquipped: false,
@@ -232,6 +239,8 @@ export const useQuestStore = create<QuestState>((set, get) => ({
     } else {
       // Equip target item
       if (item === 'bow') sound.playBowEquip()
+      else if (item === 'torch') sound.playTorchIgnite()
+      else if (item === 'sword') sound.playSteelSwordDraw()
       set({
         activeItem: item,
         isBowEquipped: item === 'bow',

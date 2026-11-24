@@ -29,6 +29,7 @@ import RockSparkSystem, { type RockSparkRef } from "@/game/effects/RockSparkSyst
 import { ArrowSystem, type ArrowSystemHandle } from "@/game/weapons/ArrowSystem";
 import ShrineMonoliths from "@/game/shrines/ShrineMonoliths";
 import DayCycleSystem from "@/game/environment/DayCycleSystem";
+import { sound } from "@/game/audio/SoundSynthesizer";
 import * as THREE from "three";
 
 interface GrassSceneContentProps {
@@ -62,6 +63,7 @@ export default function GrassSceneContent({
   const arrowSystemRef = useRef<ArrowSystemHandle>(null);
   // Rock Scratch Spark System Ref
   const rockSparkRef = useRef<RockSparkRef>(null);
+  const playerVelRef = useRef(new THREE.Vector3(0, 0, 0));
 
   // Celestial Orbit Trajectory States (Continuous Sun & Moon Movement)
   const sunDirRef = useRef(new THREE.Vector3(0, 1, 0));
@@ -77,7 +79,10 @@ export default function GrassSceneContent({
   const skyZenithRef = useRef(new THREE.Color("#1e6ac4"));
 
   // Synchronize scene fog color with sky horizon on every GPU frame (zero React re-renders)
-  useFrame(({ scene }) => {
+  useFrame(({ scene }, delta) => {
+    // Continuous Procedural Nature Ambience (Gentle birds in day, crickets & owls at night)
+    sound.updateNatureAmbience(delta, isNightRef.current);
+
     if (scene.fog) {
       (scene.fog as THREE.Fog).color.copy(skyHorizonRef.current);
     }
@@ -112,7 +117,10 @@ export default function GrassSceneContent({
       ) : (
         <>
           <ProductionFPSController
-            onPositionUpdate={(p) => playerPosRef?.current?.copy(p)}
+            onPositionUpdate={(p, v) => {
+              playerPosRef?.current?.copy(p);
+              if (v) playerVelRef.current.copy(v);
+            }}
             getTerrainHeight={getOpenWorldHeight}
             worldRadius={52}
             cameraYawRef={cameraYawRef}
@@ -209,6 +217,7 @@ export default function GrassSceneContent({
           <OpenWorldGrassField
             preset={grassPreset}
             playerPosRef={playerPosRef}
+            playerVelRef={playerVelRef}
             onLoaded={handleModelLoaded}
             sunElevRef={trueSunElevRef}
             isNightRef={isNightRef}

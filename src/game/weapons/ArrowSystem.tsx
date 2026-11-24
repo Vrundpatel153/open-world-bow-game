@@ -464,7 +464,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
         a.wobbleFreq = 22
         a.wobbleTime = 0
         a.vel.set(0, 0, 0)
-        sound.playArrowHitWood()
+        sound.playArrowHitDirt()
         arrowsUpdated = true
         continue
       }

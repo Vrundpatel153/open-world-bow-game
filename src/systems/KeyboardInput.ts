@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useQuestStore } from '@/game/stores/questStore'
+import { sound } from '@/game/audio/SoundSynthesizer'
 
 class InputManager {
   private keys = new Set<string>()
@@ -70,21 +71,28 @@ class InputManager {
     // Hotbar Item Toggles: [1] Bow, [2] Torch, [3] Wooden Sword, [4] Herbal Bandages, [5] Field Tools
     if (code === 'Digit1' || key === '1') {
       useQuestStore.getState().toggleItem('bow')
+      sound.playHotbarClick(1)
     } else if (code === 'Digit2' || key === '2') {
       useQuestStore.getState().toggleItem('torch')
+      sound.playHotbarClick(2)
     } else if (code === 'Digit3' || key === '3') {
       useQuestStore.getState().toggleItem('sword')
+      sound.playHotbarClick(3)
     } else if (code === 'Digit4' || key === '4') {
       useQuestStore.setState({ notification: 'Field Pouch: Herbal Bandages (3 available)' })
+      sound.playHotbarClick(4)
     } else if (code === 'Digit5' || key === '5') {
       useQuestStore.setState({ notification: 'Field Tools: Flint & Kindling' })
+      sound.playHotbarClick(5)
     } else if (code === 'KeyJ' || key === 'j') {
       useQuestStore.getState().toggleCardsHidden()
     } else if (code === 'KeyC' || key === 'c') {
       useQuestStore.getState().toggleCompass()
+      sound.playCompassClick()
     } else if (code === 'KeyT' || key === 't') {
       if (typeof window !== 'undefined' && (window as any).__advanceTimePhase) {
         (window as any).__advanceTimePhase()
+        sound.playTimeClick()
       }
     }
   }
