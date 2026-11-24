@@ -182,13 +182,12 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
     if (playerDist < playerRadius) {
       float pPush = 1.0 - smoothstep(0.0, playerRadius, playerDist);
       vec2 pAway = playerDist > 0.001 ? toPlayer / playerDist : vec2(0.0, 1.0);
-      // Natural elastic spring jiggle as grass blades brush past the player
-      float pJiggle = sin(uTime * 14.0 + playerDist * 10.0) * 0.12 * pPush;
-      vec2 pDir = pAway * (pPush * 0.50 + pJiggle);
+      // High-frequency tactile jiggle and subtle soft lean as the explorer brushes past
+      float pJiggle = sin(uTime * 14.0 + playerDist * 8.0) * 0.06 * pPush;
+      vec2 pDir = pAway * (pPush * 0.08 + pJiggle);
       vec3 pLocal = transpose(instRot) * vec3(pDir.x, 0.0, pDir.y);
       transformed += pLocal * hMask;
-      // Subtle organic blade tilt, NEVER crushing or flattening
-      transformed.y -= pPush * 0.05 * hMask;
+      // ZERO height loss - blades remain 100% full height, lush, and visible
     }
   }
 
@@ -199,15 +198,14 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
     float slashRadius = uSwordSlash.w;
     if (distToSlash < slashRadius) {
       float falloff = 1.0 - smoothstep(0.0, slashRadius, distToSlash);
-      // Directional push along sword slash vector plus lateral aerodynamic parting
-      vec2 slashDir = normalize(uSwordDir.xz * 1.8 + toSlash * 0.7);
-      // Beautiful resonant wavy jiggle ripple through grass as sword cuts the air
-      float slashJiggle = sin(uTime * 22.0 - distToSlash * 8.0) * 0.20 * falloff;
-      vec2 totalSlash = (slashDir * (falloff * 0.65) + toSlash * slashJiggle);
+      // Directional impulse along sword slash direction
+      vec2 slashDir = normalize(uSwordDir.xz + vec2(0.001));
+      // Dynamic resonant wave ripple traveling outward like a wind gust
+      float waveRipple = sin(distToSlash * 7.0 - uTime * 18.0) * 0.12 * falloff;
+      vec2 totalSlash = slashDir * (falloff * 0.14) + slashDir * waveRipple;
       vec3 slashForceLocal = transpose(instRot) * vec3(totalSlash.x, 0.0, totalSlash.y);
       transformed += slashForceLocal * hMask;
-      // Graceful tip deflection, ZERO height flattening
-      transformed.y -= falloff * 0.04 * hMask;
+      // ZERO height loss - tips sway and jiggle dynamically without vanishing
     }
   }
 

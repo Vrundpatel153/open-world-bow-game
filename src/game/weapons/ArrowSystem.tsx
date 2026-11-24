@@ -7,6 +7,7 @@
 
 import { useState, useRef, useEffect, useImperativeHandle, forwardRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useQuestStore } from '../stores/questStore'
 import { sound } from '../audio/SoundSynthesizer'
@@ -118,56 +119,11 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
   const recordShot = useQuestStore((s) => s.recordShot)
   const hitTarget = useQuestStore((s) => s.hitTarget)
 
-  // ── Realistic 3D Arrow Mesh Template (Length 0.52m, tip at (0,0,0) facing +Z) ──
-  const { shaftGeo, tipGeo, ferruleGeo, fletchGeo, nockGeo, threadGeo, shaftMat, tipMat, ferruleMat, fletchMat, nockMat, threadMat, trailMat } = useMemo(() => {
-    // 1. Broadhead Razor Blade (Point at z = 0 pointing forward +Z, barbs at z = -0.050)
-    const tipShape = new THREE.Shape()
-    tipShape.moveTo(0, 0.0) // Razor point at 0
-    tipShape.lineTo(0.009, -0.050) // Right trailing barb
-    tipShape.lineTo(0.0025, -0.045)
-    tipShape.lineTo(-0.0025, -0.045)
-    tipShape.lineTo(-0.009, -0.050) // Left trailing barb
-    tipShape.closePath()
+  // ── Authentic 3D Arrow Model ───────────────────────────────────────────────
+  const { nodes: arrowNodes } = useGLTF('/assets/models/Arrow.glb') as any
 
-    const tip = new THREE.ExtrudeGeometry(tipShape, {
-      depth: 0.0014,
-      bevelEnabled: true,
-      bevelSegments: 1,
-      bevelSize: 0.0003,
-      bevelThickness: 0.0003,
-    })
-    tip.rotateX(Math.PI / 2)
-    tip.rotateZ(Math.PI / 4) // 45 deg blade tilt
-
-    // 2. Metal Ferrule Collar connecting broadhead to shaft
-    const ferrule = new THREE.CylinderGeometry(0.0033, 0.0028, 0.015, 12)
-    ferrule.rotateX(Math.PI / 2)
-    ferrule.translate(0, 0, -0.050)
-
-    // 3. Cedar Wood Shaft: diameter 5.2mm, length 0.460m, extends from z = -0.050 to z = -0.510
-    const shaft = new THREE.CylinderGeometry(0.0026, 0.0026, 0.460, 12)
-    shaft.rotateX(Math.PI / 2)
-    shaft.translate(0, 0, -0.280)
-
-    // 4. White Turkey Shield-Cut Feathers (3 sleek vanes at rear tail, height 5.5mm, length 5.5cm)
-    const fletchShape = new THREE.Shape()
-    fletchShape.moveTo(0, 0)
-    fletchShape.lineTo(0.0055, -0.010)
-    fletchShape.lineTo(0.0055, -0.050)
-    fletchShape.lineTo(0, -0.058)
-    fletchShape.closePath()
-    const fletch = new THREE.ShapeGeometry(fletchShape)
-    fletch.rotateX(Math.PI / 2) // Extends backward along -Z
-
-    // Linen thread whipping rings binding the feather quills
-    const thread = new THREE.CylinderGeometry(0.0029, 0.0029, 0.004, 12)
-    thread.rotateX(Math.PI / 2)
-
-    // 5. Carved Dark Horn Nock (at rear tail z = -0.510 to -0.520)
-    const nock = new THREE.CylinderGeometry(0.0026, 0.0026, 0.0075, 12)
-    nock.rotateX(Math.PI / 2)
-    nock.translate(0, 0, -0.516)
-
+  // ── Realistic 3D Arrow Mesh Template & PBR Materials ────────────────────────
+  const { shaftMat, tipMat, ferruleMat, fletchMat, trailMat } = useMemo(() => {
     // Materials
     const sMat = new THREE.MeshStandardMaterial({
       color: '#5c351a',
@@ -193,18 +149,6 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
       side: THREE.DoubleSide,
     })
 
-    const nMat = new THREE.MeshStandardMaterial({
-      color: '#1a1410',
-      roughness: 0.72,
-      metalness: 0.08,
-    })
-
-    const thMat = new THREE.MeshStandardMaterial({
-      color: '#3d2516',
-      roughness: 0.75,
-      metalness: 0.05,
-    })
-
     const trMat = new THREE.MeshBasicMaterial({
       color: '#d0f0ff',
       transparent: true,
@@ -215,18 +159,10 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
     })
 
     return {
-      shaftGeo: shaft,
-      tipGeo: tip,
-      ferruleGeo: ferrule,
-      fletchGeo: fletch,
-      nockGeo: nock,
-      threadGeo: thread,
       shaftMat: sMat,
       tipMat: tMat,
       ferruleMat: feMat,
       fletchMat: fMat,
-      nockMat: nMat,
-      threadMat: thMat,
       trailMat: trMat,
     }
   }, [])
@@ -530,28 +466,18 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
               position={[a.pos.x, a.pos.y, a.pos.z]}
               quaternion={renderQuat}
             >
-              {/* 1. Forged Steel Two-Blade Broadhead (at front z = 0, pointing +Z) */}
-              <mesh geometry={tipGeo} material={tipMat} position={[0, 0, 0]} />
-
-              {/* 2. Metal Ferrule Collar */}
-              <mesh geometry={ferruleGeo} material={ferruleMat} position={[0, 0, 0]} />
-
-              {/* 3. Cedar Wood Shaft */}
-              <mesh geometry={shaftGeo} material={shaftMat} position={[0, 0, 0]} castShadow />
-
-              {/* 4. Carved Dark Horn Nock */}
-              <mesh geometry={nockGeo} material={nockMat} position={[0, 0, 0]} />
-
-              {/* 5. 3 Sleek White Turkey Feathers (at rear tail z = -0.450 to -0.508) */}
-              {[0, (Math.PI * 2) / 3, (Math.PI * 4) / 3].map((angle, i) => (
-                <group key={i} position={[0, 0, -0.450]} rotation={[0, 0, angle]}>
-                  <mesh geometry={fletchGeo} material={fletchMat} position={[0, 0.0026, 0]} />
+              {arrowNodes.Arrow_1 && (
+                <group position={[0, 0, -0.538]} rotation={[-Math.PI * 0.5, 0, 0]} scale={20.0}>
+                  {/* Turkey Feathers */}
+                  <mesh geometry={arrowNodes.Arrow_1.geometry} material={fletchMat} />
+                  {/* Straight Cedar Shaft */}
+                  <mesh geometry={arrowNodes.Arrow_2.geometry} material={shaftMat} castShadow />
+                  {/* Carbon Steel Broadhead Razor Point */}
+                  <mesh geometry={arrowNodes.Arrow_3.geometry} material={tipMat} />
+                  {/* Steel Ferrule Collar */}
+                  <mesh geometry={arrowNodes.Arrow_4.geometry} material={ferruleMat} />
                 </group>
-              ))}
-
-              {/* Linen Thread Whipping Rings */}
-              <mesh geometry={threadGeo} material={threadMat} position={[0, 0, -0.450]} />
-              <mesh geometry={threadGeo} material={threadMat} position={[0, 0, -0.510]} />
+              )}
             </group>
           </group>
         )
@@ -567,3 +493,5 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
     </>
   )
 })
+
+useGLTF.preload('/assets/models/Arrow.glb')

@@ -80,6 +80,8 @@ class InputManager {
       useQuestStore.setState({ notification: 'Field Tools: Flint & Kindling' })
     } else if (code === 'KeyJ' || key === 'j') {
       useQuestStore.getState().toggleQuestLog()
+    } else if (code === 'KeyC' || key === 'c') {
+      useQuestStore.getState().toggleCompass()
     }
   }
 

@@ -81,10 +81,13 @@ interface QuestState {
   notification: string | null
   dayPhaseName: string
   isQuestLogCollapsed: boolean
+  isCompassVisible: boolean
 
   // Actions
   toggleQuestLog: () => void
   setQuestLogCollapsed: (collapsed: boolean) => void
+  toggleCompass: () => void
+  setCompassVisible: (visible: boolean) => void
   hitTarget: (shrineId: string, targetIdx: number) => void
   collectRune: (shrineId: string) => void
   recordShot: () => void
@@ -113,8 +116,11 @@ export const useQuestStore = create<QuestState>((set, get) => ({
   notification: 'Dispel the guardian embers around the four ancient monoliths.',
   dayPhaseName: 'DAYLIGHT',
   isQuestLogCollapsed: false,
+  isCompassVisible: true,
   toggleQuestLog: () => set((state) => ({ isQuestLogCollapsed: !state.isQuestLogCollapsed })),
   setQuestLogCollapsed: (isQuestLogCollapsed) => set({ isQuestLogCollapsed }),
+  toggleCompass: () => set((state) => ({ isCompassVisible: !state.isCompassVisible })),
+  setCompassVisible: (isCompassVisible) => set({ isCompassVisible }),
   setDayPhaseName: (dayPhaseName) => set({ dayPhaseName }),
 
   hitTarget: (shrineId: string, targetIdx: number) => {

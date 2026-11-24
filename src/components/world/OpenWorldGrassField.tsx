@@ -343,8 +343,8 @@ export default function OpenWorldGrassField({
         tree.updateMatrixWorld(true)
 
         const scale = new THREE.Vector3().setFromMatrixScale(tree.matrixWorld)
-        // Authentic physical pine trunk wood radius (0.24m to 0.35m) so the player can weave between trees
-        const trunkRadius = Math.max(0.22, Math.min(0.36, 0.28 * Math.min(scale.x, scale.z)))
+        // Authentic physical pine trunk wood radius (0.14m to 0.22m) so player easily weaves through forest gaps
+        const trunkRadius = Math.max(0.14, Math.min(0.22, 0.17 * Math.min(scale.x, scale.z)))
 
         colliders.push({
           id: `tree_${posX.toFixed(1)}_${posZ.toFixed(1)}_${tree.id}`,
@@ -466,7 +466,7 @@ export default function OpenWorldGrassField({
     if (playerPosRef?.current) {
       const p = playerPosRef.current
       if (s.uPlayerPos) {
-        s.uPlayerPos.value.set(p.x, p.y, p.z, 1.30)
+        s.uPlayerPos.value.set(p.x, p.y, p.z, 0.55)
       }
     }
 
@@ -538,10 +538,10 @@ export default function OpenWorldGrassField({
     s.uShadowRadius.value = 0.3
 
     // Trampling settings
-    s.uRockFlatten.value = 0.20
-    s.uRockBend.value = 0.35
-    s.uRockRadiusMul.value = 1.0
-    s.uRockFalloff.value = 0.35
+    s.uRockFlatten.value = 0.05
+    s.uRockBend.value = 0.15
+    s.uRockRadiusMul.value = 0.85
+    s.uRockFalloff.value = 0.25
 
     // Ground Dirt & Moss Variation - Natural organic tonal depth and micro grain
     s.uTintFloor.value = 1

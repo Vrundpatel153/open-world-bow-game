@@ -196,9 +196,9 @@ export default function ProductionFPSController({
       pos.current.z += vel.current.z * FIXED_DT
 
       // World Collision Resolution against Rocks, Trees, Pillars & Shrines
-      // Realistic human explorer radius (0.25m) and step height (0.42m) enables fluid navigation,
-      // stepping over small rocks, and squeezing through forest trees without snagging or getting stuck
-      worldCollisionSystem.resolvePlayerCollision(pos.current, vel.current, 0.25, 0.42)
+      // Slim human explorer radius (0.21m) and step height (0.42m) enables fluid navigation,
+      // stepping over small rocks, and squeezing through forest trees into the woods without snagging
+      worldCollisionSystem.resolvePlayerCollision(pos.current, vel.current, 0.21, 0.42)
 
       // World boundary constraint
       const currentRadius = Math.hypot(pos.current.x, pos.current.z)

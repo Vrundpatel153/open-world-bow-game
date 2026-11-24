@@ -61,6 +61,8 @@ export default function GameHUD({
   const dayPhaseName = useQuestStore((s) => s.dayPhaseName)
   const isQuestLogCollapsed = useQuestStore((s) => s.isQuestLogCollapsed)
   const toggleQuestLog = useQuestStore((s) => s.toggleQuestLog)
+  const isCompassVisible = useQuestStore((s) => s.isCompassVisible)
+  const toggleCompass = useQuestStore((s) => s.toggleCompass)
   const resetGame = useQuestStore((s) => s.resetGame)
 
   const nearestShrine = useMemo(() => {
@@ -182,8 +184,10 @@ export default function GameHUD({
           pointerEvents: 'none',
         }}
       >
-        {/* Subtle Celestial Phase Header Capsule */}
+        {/* Subtle Celestial Phase Header Capsule (Click to toggle compass [C]) */}
         <div
+          onClick={toggleCompass}
+          title="Toggle compass ribbon [C]"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -191,7 +195,7 @@ export default function GameHUD({
             marginBottom: 4,
             padding: '2px 10px',
             borderRadius: 12,
-            background: 'rgba(10, 16, 12, 0.45)',
+            background: 'rgba(10, 16, 12, 0.35)',
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(214, 184, 120, 0.20)',
             fontSize: 9,
@@ -199,6 +203,9 @@ export default function GameHUD({
             textTransform: 'uppercase',
             color: '#d4af37',
             textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+            cursor: 'pointer',
+            pointerEvents: 'auto',
+            transition: 'all 0.2s ease',
           }}
         >
           <span style={{ fontSize: 7, opacity: 0.7 }}>◆</span>
@@ -207,20 +214,33 @@ export default function GameHUD({
           <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 8.5, color: '#f0ede6' }}>
             {String(Math.round(playerHeading)).padStart(3, '0')}°
           </span>
-          <span style={{ fontSize: 7, opacity: 0.7 }}>◆</span>
+          <span
+            style={{
+              fontSize: 7.5,
+              opacity: 0.75,
+              padding: '0 4px',
+              borderRadius: 3,
+              background: 'rgba(214, 184, 120, 0.15)',
+              border: '1px solid rgba(214, 184, 120, 0.3)',
+            }}
+          >
+            [C] {isCompassVisible ? '▲' : '▼'}
+          </span>
         </div>
 
         {/* Compass Ribbon Housing - Streamlined & Translucent Frosted Glass */}
-        <div
-          style={{
+        {isCompassVisible && (
+          <>
+            <div
+              style={{
             position: 'relative',
             width: 420,
             height: 32,
-            background: 'linear-gradient(180deg, rgba(14, 20, 15, 0.42) 0%, rgba(8, 12, 9, 0.55) 100%)',
+            background: 'linear-gradient(180deg, rgba(14, 22, 16, 0.22) 0%, rgba(8, 14, 10, 0.32) 100%)',
             backdropFilter: 'blur(12px)',
-            borderTop: '1px solid rgba(214, 184, 120, 0.25)',
-            borderBottom: '1px solid rgba(214, 184, 120, 0.15)',
-            boxShadow: '0 6px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
+            borderTop: '1px solid rgba(214, 184, 120, 0.18)',
+            borderBottom: '1px solid rgba(214, 184, 120, 0.10)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06)',
             maskImage:
               'linear-gradient(to right, transparent 0%, black 14%, black 86%, transparent 100%)',
             WebkitMaskImage:
@@ -406,6 +426,8 @@ export default function GameHUD({
             }}
           />
         </div>
+        </>
+        )}
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────────
@@ -423,12 +445,12 @@ export default function GameHUD({
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            background: 'rgba(10, 16, 12, 0.58)',
-            border: '1px solid rgba(214, 184, 120, 0.30)',
+            background: 'rgba(12, 20, 15, 0.38)',
+            border: '1px solid rgba(214, 184, 120, 0.25)',
             borderRadius: 4,
             padding: '4px 10px',
-            backdropFilter: 'blur(14px)',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.45)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.28)',
             cursor: 'pointer',
             pointerEvents: 'auto',
             transition: 'all 0.2s ease',
@@ -489,12 +511,12 @@ export default function GameHUD({
             top: 20,
             left: 20,
             width: 285,
-            background: 'linear-gradient(150deg, rgba(14, 20, 16, 0.62) 0%, rgba(8, 12, 10, 0.72) 100%)',
-            border: '1px solid rgba(214, 184, 120, 0.28)',
+            background: 'linear-gradient(150deg, rgba(16, 26, 20, 0.35) 0%, rgba(10, 18, 14, 0.45) 100%)',
+            border: '1px solid rgba(214, 184, 120, 0.22)',
             borderRadius: 4,
             padding: '10px 14px',
-            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
-            backdropFilter: 'blur(16px)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+            backdropFilter: 'blur(14px)',
             pointerEvents: 'auto',
             transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
           }}
