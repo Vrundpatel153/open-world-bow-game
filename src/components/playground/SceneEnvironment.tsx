@@ -1,7 +1,21 @@
 
+import React, { Component, ReactNode, Suspense } from "react";
 import { Environment } from "@react-three/drei";
-import { useControls, folder } from "leva";
 import type { SceneMode } from "./SceneContent";
+
+class SafeEnvironmentBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(err: any) {
+    console.warn("SceneEnvironment HDR network load failed, falling back to scene lighting:", err);
+  }
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
 
 type EnvPreset =
   | "apartment"
@@ -44,12 +58,17 @@ export default function SceneEnvironment({
   const envIntensity = defaults?.envIntensity ?? 0;
 
   return (
-    <Environment
-      preset={preset}
-      background={background ?? mode === "Background"}
-      backgroundBlurriness={bgBlurriness}
-      backgroundIntensity={bgIntensity}
-      environmentIntensity={envIntensity}
-    />
+    <SafeEnvironmentBoundary>
+      <Suspense fallback={null}>
+        <Environment
+          preset={preset}
+          background={background ?? mode === "Background"}
+          backgroundBlurriness={bgBlurriness}
+          backgroundIntensity={bgIntensity}
+          environmentIntensity={envIntensity}
+        />
+      </Suspense>
+    </SafeEnvironmentBoundary>
   );
 }
+

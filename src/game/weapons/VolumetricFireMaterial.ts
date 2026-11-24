@@ -143,74 +143,82 @@ const fragmentShader = /* glsl */ `
 
   // ── Procedural Volumetric Sample ───────────────────────────────────────────
   vec4 sampleVolumetricFire(vec3 p) {
-    // p.y is in [0.0, 1.0] (0 = base coals, 1 = flame tip)
-    // p.xz is in [-1.0, 1.0]
+    // p.y in [0.0, 1.0], p.xz in [-1.0, 1.0]
     float r = length(p.xz);
     float y = p.y;
-
-    // Strict boundary margin rejection
-    if (r >= 0.95 || y <= 0.01 || y >= 0.98) return vec4(0.0);
+    if (r >= 0.95 || y <= 0.005 || y >= 0.98) return vec4(0.0);
 
     // Dynamic wind and movement drag deflection: tilts flame backward
-    vec2 windOffset = uWind.xz * (y * y * 0.45) * uWindStrength;
+    vec2 windOffset = uWind.xz * (y * y * 0.40) * uWindStrength;
     vec3 warpedP = p;
     warpedP.xz -= windOffset;
     float wr = length(warpedP.xz);
 
-    // Organic teardrop envelope:
-    // Rooted closely to the circular coals bed (y=0.0..0.08), swelling slightly in the buoyant belly,
-    // and naturally tapering to curling tendril tips.
-    float taper = 1.0 - pow(y, 1.25);
+    // Multi-tongued organic teardrop envelope:
+    // Base fits inside the cloth rim (radius ~0.026m), buoyant belly, tapering to licking tendrils
+    float taper = pow(1.0 - y, 1.15);
     float belly = sin(clamp(y * 3.14159, 0.0, 3.14159));
-    float baseFit = mix(0.68, 0.85, smoothstep(0.0, 0.22, y));
-    float envelope = baseFit * taper * (0.85 + 0.15 * belly) * smoothstep(0.0, 0.025, y);
-    if (wr > envelope) return vec4(0.0);
+    float baseFit = mix(0.72, 0.88, smoothstep(0.0, 0.18, y));
+    float envelope = baseFit * taper * (0.85 + 0.15 * belly) * smoothstep(0.0, 0.015, y);
+
+    // Angular tongue modulation: carves the volume into 3-4 distinct licking tongues of flame
+    float angle = atan(warpedP.z, warpedP.x);
+    float tongueMod = sin(angle * 3.0 + time * 3.8) * 0.22 + cos(angle * 5.0 - time * 2.8) * 0.14;
+    float dynEnvelope = envelope * (1.0 + tongueMod * smoothstep(0.08, 0.70, y));
+
+    if (wr > dynEnvelope) return vec4(0.0);
 
     // Convective upward velocity & 3D noise coordinates
     vec3 np = warpedP;
-    np.y -= (seed + time * 3.0) * noiseScale.w;
-    np.xz *= noiseScale.xz;
-    np.y *= noiseScale.y;
+    np.y -= (seed + time * 3.2) * noiseScale.w;
+    np.xz *= noiseScale.xz * 1.5;
+    np.y *= noiseScale.y * 1.2;
 
     // 3D Domain warp: curling tendrils and turbulent licking tongues
     vec3 curl = vec3(
-      snoise(np * 1.5 + vec3(0.0, -time * 1.8, 2.3)),
-      snoise(np * 1.5 + vec3(5.1, -time * 2.2, 0.9)),
-      snoise(np * 1.5 + vec3(1.7, -time * 2.0, 4.7))
+      snoise(np * 1.6 + vec3(0.0, -time * 1.8, 2.3)),
+      snoise(np * 1.6 + vec3(5.1, -time * 2.2, 0.9)),
+      snoise(np * 1.6 + vec3(1.7, -time * 2.0, 4.7))
     );
-    np += curl * 0.26;
+    np += curl * 0.28;
 
     float turb = turbulence(np);
 
-    // Convective distortion of flame profile
-    float st_y = clamp(y + (turb - 0.5) * 0.26 * sqrt(max(0.0, y)), 0.01, 0.99);
-    float st_x = clamp(wr / max(0.001, envelope), 0.01, 0.99);
+    // Radial distance ratio [0..1]
+    float st_x = wr / max(0.001, dynEnvelope);
 
-    // Sample the authentic 3D fire gradient lookup texture
-    vec4 tex = texture2D(fireTex, vec2(st_x, st_y));
+    // Density: core is dense, outer edges and negative space between tongues fall to zero
+    float rawDensity = (1.0 - pow(st_x, 1.4)) * (1.0 - y * 0.6) * (turb * 1.6 - 0.25);
+    float edgeMask = smoothstep(1.0, 0.55, st_x) * smoothstep(0.0, 0.015, y) * smoothstep(1.0, 0.75, y);
+    float density = clamp(rawDensity * edgeMask, 0.0, 1.0);
+    if (density <= 0.001) return vec4(0.0);
 
-    // Radial and vertical soft feathering to guarantee zero hard box edges
-    float edgeMask = smoothstep(1.0, 0.65, st_x) * smoothstep(0.0, 0.03, y) * smoothstep(1.0, 0.70, y);
+    // Authentic Blackbody thermal radiation palette:
+    // Core: incandescent golden-white fuel reaction zone
+    // Body: vibrant roaring golden amber
+    // Licking tendrils: deep fire orange
+    // Outer tips: ember crimson
+    vec3 colCore = vec3(1.0, 0.96, 0.85);
+    vec3 colGold = vec3(1.0, 0.64, 0.08);
+    vec3 colOrange = vec3(0.96, 0.26, 0.02);
+    vec3 colCrimson = vec3(0.42, 0.05, 0.01);
 
-    // Blackbody thermal color ramp & incandescence
-    float density = tex.r * edgeMask;
     vec3 fireColor;
-
-    // Center fuel bed: incandescent white-hot core right above burning coals
-    if (st_x < 0.28 && y < 0.35) {
-      float coreU = (1.0 - st_x / 0.28) * (1.0 - y / 0.35);
-      fireColor = mix(vec3(1.0, 0.72, 0.12), vec3(1.0, 0.96, 0.85) * 1.8, coreU);
-    } else if (st_x < 0.65) {
-      float midU = (st_x - 0.28) / 0.37;
-      fireColor = mix(vec3(1.0, 0.72, 0.12), vec3(1.0, 0.38, 0.03), midU);
+    float temp = clamp((1.0 - y * 0.75) * (1.0 - st_x * 0.45) * (density * 0.5 + 0.5), 0.0, 1.0);
+    if (temp > 0.65) {
+      fireColor = mix(colGold * 2.0, colCore * 2.8, (temp - 0.65) / 0.35);
+    } else if (temp > 0.30) {
+      fireColor = mix(colOrange * 1.5, colGold * 2.0, (temp - 0.30) / 0.35);
     } else {
-      float edgeU = (st_x - 0.65) / 0.35;
-      fireColor = mix(vec3(1.0, 0.38, 0.03), vec3(0.70, 0.12, 0.01), edgeU);
+      fireColor = mix(colCrimson * 0.9, colOrange * 1.5, temp / 0.30);
     }
 
     fireColor *= (1.0 + uSurge * 0.45);
 
-    return vec4(fireColor, density);
+    // Emission is strictly gated by optical density so gaps between licking tongues are transparent!
+    vec3 emission = fireColor * pow(density, 1.25) * 4.2;
+
+    return vec4(emission, density);
   }
 
   void main() {
@@ -231,16 +239,19 @@ const fragmentShader = /* glsl */ `
         // Map local box to fire space: Y in [0, 1], XZ in [-1, 1]
         vec3 p = vec3(rayPos.x * 2.0, rayPos.y, rayPos.z * 2.0);
         vec4 s = sampleVolumetricFire(p);
-        accumColor += s * (stepLen * 3.0);
+
+        // Accumulate emission gated by density
+        accumColor.rgb += s.rgb * stepLen;
+        accumColor.a += s.a * stepLen;
 
         // Early saturation exit
-        if (accumColor.r > 2.6) break;
+        if (accumColor.r > 2.4) break;
       }
 
       rayPos += rayDir * stepLen;
     }
 
-    accumColor.a = clamp(accumColor.r * 1.15, 0.0, 1.0);
+    accumColor.a = clamp(accumColor.a * 1.8, 0.0, 1.0);
     if (accumColor.a < 0.015) discard;
 
     gl_FragColor = accumColor;

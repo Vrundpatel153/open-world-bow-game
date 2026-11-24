@@ -192,33 +192,25 @@ export default function TorchViewModel() {
   // ── Dedicated Materials for 3D Mesh Nodes ───────────────────────────────────
   const materials = useMemo(() => {
     const woodMat = new THREE.MeshStandardMaterial({
-      color: '#3a2414',
-      map: barkTexture,
-      bumpMap: barkTexture,
-      bumpScale: 0.003,
-      roughness: 0.88,
-      metalness: 0.0,
+      color: '#2d1c10',
+      roughness: 0.85,
+      metalness: 0.02,
     })
 
     const burlapMat = new THREE.MeshStandardMaterial({
-      color: '#1a130e',
-      map: burlapTexture,
-      bumpMap: burlapTexture,
-      bumpScale: 0.0035,
+      color: '#160f0a',
       roughness: 0.94,
       metalness: 0.02,
     })
 
     const coalMat = new THREE.MeshStandardMaterial({
-      color: '#180702',
-      emissive: '#ff3b00',
-      emissiveIntensity: 2.8,
-      roughness: 0.90,
+      color: '#140803',
+      roughness: 0.95,
       metalness: 0.02,
     })
 
     return { woodMat, burlapMat, coalMat }
-  }, [barkTexture, burlapTexture])
+  }, [])
 
   // Open-Source 3D Volumetric Raymarched Fire Geometry
   const fireBoxGeo = useMemo(() => {
@@ -380,10 +372,10 @@ export default function TorchViewModel() {
     const flicker3 = (Math.random() - 0.5) * 0.28
 
     if (flameLightRef.current) {
-      const baseIntensity = 14.0 * equipProgress.current
+      const baseIntensity = 6.0 * equipProgress.current
       flameLightRef.current.intensity = Math.max(
-        3.5,
-        baseIntensity + flicker1 * 2.0 + flicker2 * 1.4 + flicker3 + (waveTimer.current > 0 ? 5.0 : 0.0)
+        2.0,
+        baseIntensity + flicker1 * 1.2 + flicker2 * 0.8 + flicker3 + (waveTimer.current > 0 ? 3.0 : 0.0)
       )
     }
 
@@ -519,36 +511,24 @@ export default function TorchViewModel() {
             </group>
           )}
 
-          {/* Burning Pine-Pitch Coal Head Core (anchored snugly inside the burlap rim) */}
-          <mesh position={[0, 0.238, 0]}>
-            <cylinderGeometry args={[0.024, 0.021, 0.014, 16]} />
-            <meshStandardMaterial
-              color="#1c0702"
-              emissive="#ff3d00"
-              emissiveIntensity={3.4}
-              roughness={0.88}
-              metalness={0.02}
-            />
-          </mesh>
-
-          {/* Authentic 3D Volumetric Raymarched Fire (snugly rooted on coals, diameter matches stick head) */}
+          {/* Authentic 3D Volumetric Raymarched Fire (originates inside head rim, licking tongues envelope torch top) */}
           <mesh
             ref={fireMeshRef}
             geometry={fireBoxGeo}
             material={volumetricFireMat}
-            position={[0, 0.238, 0]}
-            scale={[0.062, 0.26, 0.062]}
+            position={[0, 0.218, 0]}
+            scale={[0.13, 0.38, 0.13]}
             renderOrder={1000}
           />
 
           {/* Dynamic PointLight Illuminating the Forest (32m Reach) */}
           <pointLight
             ref={flameLightRef}
-            position={[0, 0.28, 0]}
+            position={[0, 0.36, -0.06]}
             color="#ff8820"
-            intensity={14.0}
+            intensity={6.0}
             distance={34}
-            decay={1.15}
+            decay={1.25}
           />
         </group>
       </group>
