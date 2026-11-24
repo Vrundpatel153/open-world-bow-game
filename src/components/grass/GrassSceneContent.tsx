@@ -81,6 +81,12 @@ export default function GrassSceneContent({
     if (scene.fog) {
       (scene.fog as THREE.Fog).color.copy(skyHorizonRef.current);
     }
+    // Modulate IBL reflection intensity with sun elevation:
+    // Midday (elev > 16°): 0.35 -> Sunset: 0.20 -> Twilight: 0.08 -> Midnight (elev < -14°): 0.04
+    const elev = trueSunElevRef.current;
+    const dayFactor = THREE.MathUtils.clamp((elev + 10.0) / 26.0, 0.0, 1.0);
+    const envInt = THREE.MathUtils.lerp(0.04, 0.35, dayFactor);
+    (scene as any).environmentIntensity = envInt;
   });
 
   // Blend State for Autonomous Day-Night Cycle

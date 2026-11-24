@@ -62,36 +62,61 @@ export default function GrassLighting({
       if (fl) {
         const fillDir = new THREE.Vector3(-sunDir.x, Math.max(0.3, sunDir.y * 0.5), -sunDir.z).normalize();
         fl.position.copy(targetPos).addScaledVector(fillDir, 45);
-        fl.intensity = effIntensity > 1.0 ? 0.85 : (effIntensity > 0.45 ? 0.30 : 0.18);
+        if (effIntensity > 1.8) {
+          fl.color.set("#e0f0ff");
+          fl.intensity = 0.80;
+        } else if (effIntensity > 0.8) {
+          fl.color.set("#ffcaa0");
+          fl.intensity = 0.45;
+        } else if (effIntensity > 0.45) {
+          fl.color.set("#2e3e5c");
+          fl.intensity = 0.25;
+        } else {
+          fl.color.set("#263852");
+          fl.intensity = 0.22;
+        }
       }
 
       // Dynamic ambient and environmental lighting (Full daylight -> atmospheric silver-blue night)
       if (hemi) {
         if (effIntensity > 1.8) {
           // Broad Daylight: Radiant blue sky and lush mossy turf bounce
-          hemi.intensity = 1.8;
+          hemi.intensity = 1.7;
           hemi.color.set("#b8e2ff");
           hemi.groundColor.set("#46702c");
         } else if (effIntensity > 0.8) {
           // Dawn / Dusk: Warm peach sky and amber earth bounce
-          hemi.intensity = 1.35;
+          hemi.intensity = 1.3;
           hemi.color.set("#ffd8b4");
           hemi.groundColor.set("#5a4028");
         } else if (effIntensity > 0.45) {
           // Twilight: Soft deep indigo
-          hemi.intensity = 0.55;
-          hemi.color.set("#283e5c");
-          hemi.groundColor.set("#101a14");
+          hemi.intensity = 0.65;
+          hemi.color.set("#324a70");
+          hemi.groundColor.set("#14221a");
         } else {
           // Atmospheric Moonlight: Visible, moody night with silver-blue skylight and deep forest bounce
-          hemi.intensity = 0.42;
-          hemi.color.set("#1e2e4a");
-          hemi.groundColor.set("#0a1610");
+          hemi.intensity = 0.72;
+          hemi.color.set("#3c5682");
+          hemi.groundColor.set("#1c3024");
         }
       }
 
       if (amb) {
-        amb.intensity = effIntensity > 1.0 ? 0.82 : (effIntensity > 0.45 ? 0.28 : 0.22);
+        if (effIntensity > 1.8) {
+          amb.color.set("#fff8ee");
+          amb.intensity = 0.72;
+        } else if (effIntensity > 0.8) {
+          amb.color.set("#ffd2a0");
+          amb.intensity = 0.55;
+        } else if (effIntensity > 0.45) {
+          amb.color.set("#364a6c");
+          amb.intensity = 0.40;
+        } else {
+          // Cool atmospheric nocturnal skylight fill — keeps shadows and foliage visible above ACES toe
+          amb.color.set("#283d5e");
+          amb.intensity = 0.58;
+        }
       }
     } else {
       const l = preset.light;

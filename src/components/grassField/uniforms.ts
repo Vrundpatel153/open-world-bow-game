@@ -150,6 +150,14 @@ export type BarkUniforms = {
   uBarkRelief: THREE.IUniform<number>;
 };
 
+export type RockUniforms = {
+  uRockColor: THREE.IUniform<THREE.Color>;
+  uRockBrightness: THREE.IUniform<number>;
+  uTorchPos: THREE.IUniform<THREE.Vector3>;
+  uTorchColor: THREE.IUniform<THREE.Color>;
+  uTorchParams: THREE.IUniform<THREE.Vector4>;
+};
+
 /** The dirt colormap. Read by the ground, the blades AND the flowers — they all
  *  call the same groundDirt(), which is what makes them agree on where the bare
  *  earth is. */
@@ -196,11 +204,11 @@ export interface GrassFieldUniforms {
   flowerTexA: FlowerTextures;
   flowerTexB: FlowerTextures;
   bark: BarkUniforms;
+  rock: RockUniforms;
 }
 
 export function createGrassFieldUniforms(): GrassFieldUniforms {
-  return {
-    surface: {
+  const surface: SurfaceUniforms = {
       uTime: { value: 0 },
 
       uWindStrength: { value: 0.3 },
@@ -292,9 +300,11 @@ export function createGrassFieldUniforms(): GrassFieldUniforms {
       uLeafFlutterAmp: { value: 0.35 },
       uLeafFlutterSpeed: { value: 3.2 },
       uLeafDip: { value: 0.25 },
-    },
+    };
 
-    flower: {
+    return {
+      surface,
+      flower: {
       uColorR: { value: new THREE.Color("#b084c7") },
       uColorG: { value: new THREE.Color("#cbb36a") },
       uColorB: { value: new THREE.Color("#9287ff") },
@@ -336,6 +346,13 @@ export function createGrassFieldUniforms(): GrassFieldUniforms {
       uBarkBrightness: { value: 1.55 },
       uBarkAOStrength: { value: 0.45 },
       uBarkRelief: { value: 1.5 },
+    },
+    rock: {
+      uRockColor: { value: new THREE.Color("#8c867e") },
+      uRockBrightness: { value: 1.10 },
+      uTorchPos: surface.uTorchPos,
+      uTorchColor: surface.uTorchColor,
+      uTorchParams: surface.uTorchParams,
     },
   };
 }

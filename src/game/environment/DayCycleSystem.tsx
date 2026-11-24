@@ -81,8 +81,8 @@ export default function DayCycleSystem({
       cycleTimeRef.current = 360; // Midday
       useQuestStore.setState({ notification: 'Time shifted to Midday (12:00 PM)' });
     } else if (cur < 650) {
-      cycleTimeRef.current = 720; // Sunset
-      useQuestStore.setState({ notification: 'Time shifted to Sunset (06:00 PM)' });
+      cycleTimeRef.current = 670; // Sunset (~05:35 PM, sun elevation ~11° in warm golden hour)
+      useQuestStore.setState({ notification: 'Time shifted to Golden Sunset (05:35 PM)' });
     } else if (cur < 1000) {
       cycleTimeRef.current = 1080; // Midnight
       useQuestStore.setState({ notification: 'Time shifted to Nocturnal Midnight (12:00 AM)' });
@@ -138,7 +138,8 @@ export default function DayCycleSystem({
       // 2. Horizon Transitions (sun elevation -2° to 16°)
       const tSun = THREE.MathUtils.smoothstep((sunElevation + 2) / 18, 0, 1);
 
-      if (progress < 0.5) {
+      const isMorning = progress < 0.25 || progress >= 0.75;
+      if (isMorning) {
         // Morning / Dawn: from Twilight -> Dawn -> Day
         const tMorning = (sunElevation + 2) / 18;
         if (tMorning < 0.35) {
