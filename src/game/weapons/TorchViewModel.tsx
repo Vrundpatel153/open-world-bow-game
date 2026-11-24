@@ -19,7 +19,7 @@ import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useQuestStore } from '../stores/questStore'
 import { sound } from '../audio/SoundSynthesizer'
-import { createTeardropFlameMaterial } from './TeardropFlameMaterial'
+import { createVolumetricFireMaterial } from './VolumetricFireMaterial'
 
 const MAX_TORCH_EMBERS = 60
 
@@ -158,7 +158,7 @@ function createBurlapClothTexture(): THREE.CanvasTexture {
 export default function TorchViewModel() {
   const { camera } = useThree()
   const torchRootRef = useRef<THREE.Group>(null!)
-  const flameGroupRef = useRef<THREE.Group>(null!)
+  const fireMeshRef = useRef<THREE.Mesh>(null!)
   const flameLightRef = useRef<THREE.PointLight>(null!)
   const emberPointsRef = useRef<THREE.Points>(null!)
 
@@ -220,21 +220,19 @@ export default function TorchViewModel() {
     return { woodMat, burlapMat, coalMat }
   }, [barkTexture, burlapTexture])
 
-  // Quad-planar volumetric flame plane geometries
-  const { flamePlaneGeo, coreFlamePlaneGeo } = useMemo(() => {
-    const flamePlane = new THREE.PlaneGeometry(0.14, 0.20)
-    flamePlane.translate(0, 0.10, 0)
-
-    const coreFlamePlane = new THREE.PlaneGeometry(0.09, 0.14)
-    coreFlamePlane.translate(0, 0.07, 0)
-
-    return { flamePlaneGeo: flamePlane, coreFlamePlaneGeo: coreFlamePlane }
+  // Open-Source 3D Volumetric Raymarched Fire
+  const fireBoxGeo = useMemo(() => {
+    return new THREE.BoxGeometry(0.18, 0.28, 0.18)
   }, [])
 
-  // Procedural Teardrop Flame Material
-  const flameMaterial = useMemo(() => {
-    return createTeardropFlameMaterial()
+  const fireTexture = useMemo(() => {
+    const loader = new THREE.TextureLoader()
+    return loader.load('/assets/Fire.png')
   }, [])
+
+  const volumetricFireMat = useMemo(() => {
+    return createVolumetricFireMaterial(fireTexture)
+  }, [fireTexture])
 
   // Soft glowing ember spark particle texture
   const sparkTexture = useMemo(() => {
@@ -360,18 +358,16 @@ export default function TorchViewModel() {
       localGroup.rotation.set(curRot.x, curRot.y, curRot.z, 'YXZ')
     }
 
-    // 5. Multi-Octave Volumetric Flame Shader Updates
-    const flameMat = flameMaterial as any
-    if (flameMat && flameMat.uniforms) {
-      if (flameMat.uniforms.uTime) flameMat.uniforms.uTime.value = time
-      if (flameMat.uniforms.uFlameSurge) {
-        flameMat.uniforms.uFlameSurge.value = waveTimer.current > 0 ? 0.45 : 0.0
-      }
-      if (flameMat.uniforms.uWindStrength) {
-        flameMat.uniforms.uWindStrength.value = 0.25 + (waveTimer.current > 0 ? 0.4 : 0.0)
-      }
-      if (flameMat.uniforms.uWind) {
-        flameMat.uniforms.uWind.value.set(windDir.x, 0, windDir.z)
+    // 5. Open-Source 3D Volumetric Raymarched Fire Shader Updates
+    if (volumetricFireMat && volumetricFireMat.uniforms) {
+      volumetricFireMat.uniforms.time.value = time
+      volumetricFireMat.uniforms.uSurge.value = waveTimer.current > 0 ? 0.6 : 0.0
+      volumetricFireMat.uniforms.uWindStrength.value = 0.35 + (waveTimer.current > 0 ? 0.5 : 0.0)
+      volumetricFireMat.uniforms.uWind.value.set(windDir.x, 0, windDir.z)
+
+      if (fireMeshRef.current) {
+        fireMeshRef.current.updateMatrixWorld(true)
+        volumetricFireMat.uniforms.invModelMatrix.value.copy(fireMeshRef.current.matrixWorld).invert()
       }
     }
 
@@ -520,36 +516,14 @@ export default function TorchViewModel() {
             </group>
           )}
 
-          {/* Quad-Planar Procedural Convective Wood Fire (0°, 45°, 90°, 135°) */}
-          <group ref={flameGroupRef} position={[0, 0.245, 0]}>
-            <mesh geometry={flamePlaneGeo} material={flameMaterial} />
-            <mesh
-              geometry={flamePlaneGeo}
-              material={flameMaterial}
-              rotation={[0, Math.PI * 0.25, 0]}
-            />
-            <mesh
-              geometry={flamePlaneGeo}
-              material={flameMaterial}
-              rotation={[0, Math.PI * 0.5, 0]}
-            />
-            <mesh
-              geometry={flamePlaneGeo}
-              material={flameMaterial}
-              rotation={[0, Math.PI * 0.75, 0]}
-            />
-            {/* Inner core flame for deep multi-layered roaring wood fire */}
-            <mesh
-              geometry={coreFlamePlaneGeo}
-              material={flameMaterial}
-              rotation={[0, Math.PI * 0.125, 0]}
-            />
-            <mesh
-              geometry={coreFlamePlaneGeo}
-              material={flameMaterial}
-              rotation={[0, Math.PI * 0.625, 0]}
-            />
-          </group>
+          {/* Authentic Open-Source 3D Volumetric Raymarched Fire (Zero Flat Quads, 100% 3D Fluid) */}
+          <mesh
+            ref={fireMeshRef}
+            geometry={fireBoxGeo}
+            material={volumetricFireMat}
+            position={[0, 0.385, 0]}
+            renderOrder={1000}
+          />
 
           {/* Dynamic PointLight Illuminating the Forest (32m Reach) */}
           <pointLight
