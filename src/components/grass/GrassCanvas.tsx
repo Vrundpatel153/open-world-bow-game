@@ -19,7 +19,9 @@ import GrassSceneContent from "./GrassSceneContent";
 import FpsSystem from "@/systems/FpsSystem";
 import { inputManager } from "@/systems/KeyboardInput";
 import GameHUD from "@/game/ui/GameHUD";
+import QuickPauseMenu from "@/game/ui/QuickPauseMenu";
 import { useQuestStore } from "@/game/stores/questStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 const CAMERA_FAR = 3000;
 
@@ -27,6 +29,11 @@ export default function GrassCanvas() {
   const [isLoadingModel, setIsLoadingModel] = useState(true);
   const [isPointerLocked, setIsPointerLocked] = useState(false);
   const isCardsHidden = useQuestStore((s) => s.isCardsHidden);
+  const isQuickMenuOpen = useSettingsStore((s) => s.isQuickMenuOpen);
+
+  const resolutionScale = useSettingsStore((s) => s.graphics.resolutionScale);
+  const shadowQuality = useSettingsStore((s) => s.graphics.shadowQuality);
+  const antiAliasing = useSettingsStore((s) => s.graphics.antiAliasing);
 
   const playerPosRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
   const cameraYawRef = useRef<number>(0);
@@ -67,16 +74,16 @@ export default function GrassCanvas() {
   return (
     <div style={{ position: "fixed", inset: 0, overflow: "hidden", background: "#060c04" }}>
       <Canvas
-        shadows={{ type: PCFShadowMap }}
+        shadows={shadowQuality !== "off" ? { type: PCFShadowMap } : false}
         camera={{ position: [0, 2, 0], fov: 68, near: 0.05, far: CAMERA_FAR }}
         gl={{
-          antialias: false,
+          antialias: antiAliasing !== "off",
           alpha: false,
           powerPreference: "high-performance",
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 1.1,
         }}
-        dpr={[1, 1.0]}
+        dpr={[1, Math.min(window.devicePixelRatio || 1, 1.5) * resolutionScale]}
         style={{ background: "#060c04" }}
       >
         {/* Dynamic Atmospheric Fog seamlessly synced with Sky Horizon */}
@@ -109,7 +116,7 @@ export default function GrassCanvas() {
       />
 
       {/* ── First-Person Pointer Lock Prompt (Clean RPG Style) ────────────── */}
-      {!isPointerLocked && !isLoadingModel && !isCardsHidden && (
+      {!isPointerLocked && !isLoadingModel && !isCardsHidden && !isQuickMenuOpen && (
         <div
           onClick={() => {
             const canvas = document.querySelector('canvas')
@@ -153,6 +160,9 @@ export default function GrassCanvas() {
           <span style={{ color: "#d4af37" }}>◆</span>
         </div>
       )}
+
+      {/* ── Professional Quick Pause Menu & Settings Modal ──────────────── */}
+      <QuickPauseMenu />
 
       <LoadingOverlay visible={isLoadingModel} />
     </div>

@@ -9,6 +9,7 @@ import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { SkyPreset } from "@/components/skyDome/constants";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 interface GrassLightingProps {
   preset: SkyPreset;
@@ -30,6 +31,9 @@ export default function GrassLighting({
   const hemiRef = useRef<THREE.HemisphereLight>(null!);
   const ambientRef = useRef<THREE.AmbientLight>(null!);
   const targetRef = useRef<THREE.Object3D>(new THREE.Object3D());
+  const shadowQuality = useSettingsStore((s) => s.graphics.shadowQuality);
+  const isShadowOff = shadowQuality === "off";
+  const shadowMapDim = shadowQuality === "low" ? 512 : shadowQuality === "medium" ? 1024 : 2048;
 
   const lightDistance = 80;
 
@@ -156,9 +160,9 @@ export default function GrassLighting({
         color="#fff8eb"
         intensity={3.1}
         position={[-45, 60, -25]}
-        castShadow
-        shadow-mapSize-width={512}
-        shadow-mapSize-height={512}
+        castShadow={!isShadowOff}
+        shadow-mapSize-width={shadowMapDim}
+        shadow-mapSize-height={shadowMapDim}
         shadow-camera-near={1}
         shadow-camera-far={180}
         shadow-camera-left={-38}

@@ -15,6 +15,7 @@ import {
   type BlendState,
 } from "@/components/skyDome/constants";
 import { useQuestStore } from "@/game/stores/questStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 export const FULL_CYCLE_SECONDS = 1440; // Realistic 24 minutes per full day-night cycle (1 real second = 1 in-game minute)
 
@@ -97,6 +98,8 @@ export default function DayCycleSystem({
   }, [onPhaseChange]);
 
   useFrame((_, delta) => {
+    if (useSettingsStore.getState().isPaused) return;
+
     const dt = Math.min(delta, 0.1);
     cycleTimeRef.current = (cycleTimeRef.current + dt) % FULL_CYCLE_SECONDS;
     const progress = cycleTimeRef.current / FULL_CYCLE_SECONDS; // 0.0 to 1.0

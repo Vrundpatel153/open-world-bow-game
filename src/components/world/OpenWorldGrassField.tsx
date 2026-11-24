@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF, useTexture } from '@react-three/drei'
+import { useSettingsStore } from '@/stores/settingsStore'
 import * as THREE from 'three'
 
 import { createGrassFieldUniforms } from '../grassField/uniforms'
@@ -665,15 +666,40 @@ export default function OpenWorldGrassField({
     r.uRockColor.value.copy(c.rockTint)
 
     // Dynamic Distance-based Lazy Loading for Foliage Clusters (Zero per-frame traversal)
+    const viewDistSetting = useSettingsStore.getState().graphics.viewDistance
+    let grassCullStart = 70.0
+    let grassCullEnd = 88.0
+    let foliageCullDist = 72.0
+
+    if (viewDistSetting === 'low') {
+      grassCullStart = 40.0
+      grassCullEnd = 52.0
+      foliageCullDist = 48.0
+    } else if (viewDistSetting === 'medium') {
+      grassCullStart = 55.0
+      grassCullEnd = 70.0
+      foliageCullDist = 64.0
+    } else if (viewDistSetting === 'high') {
+      grassCullStart = 70.0
+      grassCullEnd = 88.0
+      foliageCullDist = 80.0
+    } else if (viewDistSetting === 'ultra') {
+      grassCullStart = 95.0
+      grassCullEnd = 120.0
+      foliageCullDist = 110.0
+    }
+    s.uCullDistance.value.set(grassCullStart, grassCullEnd)
+
     const camPos = state.camera.position
+    const foliageCullDistSq = foliageCullDist * foliageCullDist
     for (let ci = 0; ci < foliageClustersRef.current.length; ci++) {
       const cl = foliageClustersRef.current[ci]
       const dx = cl.position.x - camPos.x
       const dz = cl.position.z - camPos.z
       const distSq = dx * dx + dz * dz
 
-      // Dynamic distance lazy-loading: cull clusters > 72m away
-      cl.visible = distSq <= 72 * 72
+      // Dynamic distance lazy-loading
+      cl.visible = distSq <= foliageCullDistSq
     }
   })
 

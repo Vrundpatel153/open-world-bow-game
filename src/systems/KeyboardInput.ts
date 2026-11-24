@@ -5,11 +5,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useQuestStore } from '@/game/stores/questStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import { sound } from '@/game/audio/SoundSynthesizer'
 
 class InputManager {
   private keys = new Set<string>()
   private _isLocked = false
+  private _wasLocked = false
   private _isMouseDown = false
   private _mouseDeltaX = 0
   private _mouseDeltaY = 0
@@ -68,6 +70,13 @@ class InputManager {
     this.keys.add(code)
     this.keys.add(key)
 
+    // ESC Quick Pause Menu Toggle
+    if (code === 'Escape' || key === 'escape') {
+      e.preventDefault()
+      useSettingsStore.getState().toggleQuickMenu()
+      return
+    }
+
     // Hotbar Item Toggles: [1] Bow, [2] Torch, [3] Wooden Sword, [4] Herbal Bandages, [5] Field Tools
     if (code === 'Digit1' || key === '1') {
       useQuestStore.getState().toggleItem('bow')
@@ -119,7 +128,12 @@ class InputManager {
   }
 
   private handlePointerLockChange = () => {
-    this._isLocked = !!document.pointerLockElement
+    const isNowLocked = !!document.pointerLockElement
+    if (this._wasLocked && !isNowLocked) {
+      useSettingsStore.getState().setQuickMenuOpen(true)
+    }
+    this._wasLocked = isNowLocked
+    this._isLocked = isNowLocked
     for (const cb of this.lockListeners) {
       cb(this._isLocked)
     }

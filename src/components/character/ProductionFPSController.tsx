@@ -13,6 +13,7 @@ import { inputManager } from '@/systems/KeyboardInput'
 import { useQuestStore } from '@/game/stores/questStore'
 import { sound } from '@/game/audio/SoundSynthesizer'
 import { worldCollisionSystem } from '@/game/physics/WorldCollisionSystem'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 interface ProductionFPSControllerProps {
   onPositionUpdate?: (pos: THREE.Vector3, vel: THREE.Vector3) => void
@@ -117,6 +118,11 @@ export default function ProductionFPSController({
   }, [camera, gl, getTerrainHeight])
 
   useFrame((_, delta) => {
+    if (useSettingsStore.getState().isPaused) {
+      inputManager.consumeMouseDelta()
+      return
+    }
+
     // Clamp delta time to avoid spiral of death on long frames
     const dt = Math.min(delta, 0.1)
 

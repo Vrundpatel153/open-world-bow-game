@@ -19,6 +19,7 @@ class SoundSynthesizer {
   private ctx: AudioContext | null = null
   private masterGain: GainNode | null = null
   private ambienceGain: GainNode | null = null
+  private sfxGain: GainNode | null = null
   private isMuted: boolean = false
   private sharedNoiseBuffer: AudioBuffer | null = null
 
@@ -60,6 +61,11 @@ class SoundSynthesizer {
     this.ambienceGain = this.ctx.createGain()
     this.ambienceGain.gain.setValueAtTime(0.20, this.ctx.currentTime)
     this.ambienceGain.connect(this.masterGain)
+
+    // Dedicated SFX & Combat sub-bus
+    this.sfxGain = this.ctx.createGain()
+    this.sfxGain.gain.setValueAtTime(0.90, this.ctx.currentTime)
+    this.sfxGain.connect(this.masterGain)
   }
 
   public ensureContext() {
@@ -73,6 +79,24 @@ class SoundSynthesizer {
     this.isMuted = muted
     if (this.masterGain && this.ctx) {
       this.masterGain.gain.setValueAtTime(muted ? 0 : 0.38, this.ctx.currentTime)
+    }
+  }
+
+  public setMasterVolume(vol: number) {
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : Math.max(0, Math.min(1, vol)) * 0.45, this.ctx.currentTime)
+    }
+  }
+
+  public setAmbienceVolume(vol: number) {
+    if (this.ambienceGain && this.ctx) {
+      this.ambienceGain.gain.setValueAtTime(Math.max(0, Math.min(1, vol)) * 0.28, this.ctx.currentTime)
+    }
+  }
+
+  public setSfxVolume(vol: number) {
+    if (this.sfxGain && this.ctx) {
+      this.sfxGain.gain.setValueAtTime(Math.max(0, Math.min(1, vol)), this.ctx.currentTime)
     }
   }
 

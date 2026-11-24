@@ -29,6 +29,7 @@ import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useQuestStore } from '../stores/questStore'
 import { sound } from '../audio/SoundSynthesizer'
+import { useSettingsStore } from '@/stores/settingsStore'
 import { worldCollisionSystem } from '@/game/physics/WorldCollisionSystem'
 import { createSwordSlashMaterial, createSlashCrescentMaterial } from './SwordSlashMaterial'
 
@@ -190,6 +191,7 @@ interface TrailSlice {
 
 export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordViewModelProps) {
   const { camera } = useThree()
+  const viewmodelLighting = useSettingsStore((s) => s.graphics.viewmodelLighting)
   const swordRootRef = useRef<THREE.Group>(null!)
   const swordMeshGroupRef = useRef<THREE.Group>(null!)
   const trailMeshRef = useRef<THREE.Mesh>(null!)
@@ -940,8 +942,12 @@ export default function SwordViewModel({ onHitRock, onSwordSwingWind }: SwordVie
       }}
     >
       {/* Dedicated Viewmodel Key & Fill Lights (Ensures blade reflections always gleam) */}
-      <directionalLight position={[0.6, 1.2, 0.4]} intensity={2.2} color="#f0f6ff" />
-      <directionalLight position={[-0.6, -0.4, -0.2]} intensity={0.8} color="#dbe6f2" />
+      {viewmodelLighting && (
+        <>
+          <directionalLight position={[0.6, 1.2, 0.4]} intensity={2.2} color="#f0f6ff" />
+          <directionalLight position={[-0.6, -0.4, -0.2]} intensity={0.8} color="#dbe6f2" />
+        </>
+      )}
 
       <group ref={swordMeshGroupRef}>
         {/* Authentic 3D Handcrafted Steel Sword Model */}

@@ -103,6 +103,8 @@ export type BladeUniforms = {
   /** 0 reintroduces the fan-out bug: the world-space wind vector is applied as
    *  if it were blade-local, so every blade leans along its own random rotation. */
   uWindFixLocal: THREE.IUniform<number>;
+  /** Dynamic distance culling range (x = inner fade start, y = outer cull threshold) */
+  uCullDistance: THREE.IUniform<THREE.Vector2>;
 };
 
 /** Ground plane: how it matches the blades, plus its own texture and relief. */
@@ -278,6 +280,7 @@ export function createGrassFieldUniforms(): GrassFieldUniforms {
 
     uDebugChannel: { value: 0 },
     uWindFixLocal: { value: 1 },
+    uCullDistance: { value: new THREE.Vector2(70.0, 88.0) },
 
     uTintFloor: { value: 1 },
     uFlatFloorNormal: { value: 1 },

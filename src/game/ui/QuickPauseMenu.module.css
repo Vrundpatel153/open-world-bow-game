@@ -1,0 +1,446 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   QuickPauseMenu — Professional AAA Diegetic Game Pause Menu & Graphics Panel
+   Dark glassmorphism, antique gold borders, Cinzel typography, zero emojis.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, rgba(10, 16, 12, 0.78) 0%, rgba(4, 7, 5, 0.94) 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 24px;
+  box-sizing: border-box;
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.panel {
+  width: 100%;
+  max-width: 920px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(16, 24, 18, 0.96) 0%, rgba(9, 14, 10, 0.98) 100%);
+  border: 1px solid rgba(214, 184, 120, 0.40);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  color: #e8ede4;
+  font-family: 'Marcellus', serif;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 28px;
+  border-bottom: 1px solid rgba(214, 184, 120, 0.22);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.titleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mainTitle {
+  margin: 0;
+  font-family: 'Cinzel', serif;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: #f7eed8;
+  text-transform: uppercase;
+}
+
+.subTitle {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: rgba(214, 184, 120, 0.75);
+  text-transform: uppercase;
+}
+
+.closeBtn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(214, 184, 120, 0.3);
+  color: #d6b878;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 8px 18px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.15s ease;
+}
+
+.closeBtn:hover {
+  background: rgba(214, 184, 120, 0.15);
+  border-color: #d6b878;
+  color: #fff;
+}
+
+/* ── Navigation Tabs ────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0 16px;
+  gap: 4px;
+}
+
+.tab {
+  padding: 13px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(232, 237, 228, 0.65);
+  font-family: 'Cinzel', serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab:hover {
+  color: #f7eed8;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.activeTab {
+  color: #d6b878;
+  border-bottom-color: #d6b878;
+  background: rgba(214, 184, 120, 0.06);
+}
+
+/* ── Content Area ───────────────────────────────────────────────────────────── */
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.body::-webkit-scrollbar-thumb {
+  background: rgba(214, 184, 120, 0.35);
+  border-radius: 3px;
+}
+
+/* ── Section Blocks ─────────────────────────────────────────────────────────── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding-bottom: 6px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  color: #d6b878;
+  text-transform: uppercase;
+}
+
+.sectionDesc {
+  font-size: 11px;
+  color: rgba(232, 237, 228, 0.55);
+}
+
+/* ── One-Click Preset Grid ─────────────────────────────────────────────────── */
+.presetGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.presetCard {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  padding: 14px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.16s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.presetCard:hover {
+  background: rgba(214, 184, 120, 0.08);
+  border-color: rgba(214, 184, 120, 0.4);
+}
+
+.presetCardActive {
+  background: rgba(214, 184, 120, 0.14);
+  border-color: #d6b878;
+  box-shadow: 0 0 16px rgba(214, 184, 120, 0.2);
+}
+
+.presetName {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: #f7eed8;
+}
+
+.presetTarget {
+  font-size: 10.5px;
+  color: #d6b878;
+  font-weight: 600;
+}
+
+.presetBullets {
+  font-size: 10px;
+  line-height: 1.4;
+  color: rgba(232, 237, 228, 0.65);
+  margin: 0;
+  padding-left: 14px;
+}
+
+/* ── Setting Rows ───────────────────────────────────────────────────────────── */
+.settingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 12px 16px;
+  border-radius: 3px;
+  gap: 16px;
+}
+
+.settingMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 50%;
+}
+
+.settingLabel {
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #f7eed8;
+}
+
+.settingSub {
+  font-size: 10.5px;
+  color: rgba(232, 237, 228, 0.55);
+}
+
+.buttonGroup {
+  display: flex;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.optBtn {
+  background: transparent;
+  border: none;
+  padding: 7px 14px;
+  color: rgba(232, 237, 228, 0.65);
+  font-family: 'Cinzel', serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.optBtn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.optBtnActive {
+  background: #d6b878;
+  color: #0b120c;
+  font-weight: 800;
+}
+
+/* ── Slider Row ─────────────────────────────────────────────────────────────── */
+.sliderControl {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 260px;
+}
+
+.rangeSlider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 2px;
+  outline: none;
+}
+
+.rangeSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  background: #d6b878;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(214, 184, 120, 0.6);
+}
+
+.sliderValue {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #d6b878;
+  min-width: 48px;
+  text-align: right;
+}
+
+/* ── Keybinds Table ─────────────────────────────────────────────────────────── */
+.keyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 16px;
+}
+
+.keyItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 8px 12px;
+  border-radius: 2px;
+}
+
+.keyBadge {
+  background: rgba(214, 184, 120, 0.12);
+  border: 1px solid rgba(214, 184, 120, 0.35);
+  color: #f7eed8;
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+
+.keyAction {
+  font-size: 11px;
+  color: rgba(232, 237, 228, 0.8);
+}
+
+/* ── Hardware Specs Table ───────────────────────────────────────────────────── */
+.specList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.specRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 2px;
+}
+
+.specName {
+  font-size: 11.5px;
+  color: rgba(232, 237, 228, 0.65);
+}
+
+.specVal {
+  font-family: 'Cinzel', serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #f7eed8;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────────── */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  background: rgba(0, 0, 0, 0.35);
+  border-top: 1px solid rgba(214, 184, 120, 0.22);
+}
+
+.footActions {
+  display: flex;
+  gap: 12px;
+}
+
+.actionBtn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(214, 184, 120, 0.3);
+  color: #f7eed8;
+  font-family: 'Cinzel', serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  padding: 9px 18px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.15s ease;
+}
+
+.actionBtn:hover {
+  background: rgba(214, 184, 120, 0.15);
+  border-color: #d6b878;
+}
+
+.primaryBtn {
+  background: linear-gradient(180deg, #d6b878 0%, #b89755 100%);
+  border: 1px solid #ffe082;
+  color: #0b120c;
+  font-weight: 800;
+  box-shadow: 0 4px 14px rgba(214, 184, 120, 0.3);
+}
+
+.primaryBtn:hover {
+  background: linear-gradient(180deg, #ebd298 0%, #c4a45f 100%);
+  box-shadow: 0 6px 18px rgba(214, 184, 120, 0.45);
+}

@@ -14,6 +14,7 @@ import { sound } from '../audio/SoundSynthesizer'
 import { getOpenWorldHeight } from '@/components/world/OpenWorldGrassField'
 import { worldCollisionSystem } from '../physics/WorldCollisionSystem'
 import { createArrowTrackMaterial } from './ArrowTrackMaterial'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 export interface ArrowSystemHandle {
   spawnArrow: (origin: THREE.Vector3, direction: THREE.Vector3, power: number) => void
@@ -259,6 +260,7 @@ export const ArrowSystem = forwardRef<ArrowSystemHandle>((_, ref) => {
 
   // ── Physics Integration Loop ───────────────────────────────────────────────
   useFrame((_, delta) => {
+    if (useSettingsStore.getState().isPaused) return
     const dt = Math.min(delta, 0.05)
     let arrowsUpdated = false
     const activeArrows = [...arrowsRef.current]

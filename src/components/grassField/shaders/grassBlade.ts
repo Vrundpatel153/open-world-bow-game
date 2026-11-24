@@ -29,6 +29,7 @@ export const GRASS_BLADE_UNIFORMS = /* glsl */ `
   uniform float uWindTurb;
   uniform float uWindLean;
   uniform vec2  uWindDir;
+  uniform vec2  uCullDistance;
 
   varying float vBH;        // blade height [0 = base, 1 = tip], after shrinking
   varying vec3  vWorldPos;
@@ -120,7 +121,7 @@ export const GRASS_BLADE_VERTEX = /* glsl */ `
   // Open-world Lazy Loading & Distance Culling:
   // Blades beyond exploration boundary smoothly fade into ground, eliminating distant ridge noise & GPU overhead
   float camDist = length(baseXZ - cameraPosition.xz);
-  float distFade = 1.0 - smoothstep(64.0, 80.0, camDist);
+  float distFade = 1.0 - smoothstep(uCullDistance.x, uCullDistance.y, camDist);
   if (distFade <= 0.001) {
     transformed = vec3(0.0);
   }
